@@ -13,8 +13,13 @@ readonly final class Makefile
         public array $targets = [],
     ) {}
 
-    public function run(string $target): void
+    public function run(string|null $target): void
     {
+        if ($target === null) {
+            $this->targets[0]->run();
+            return;
+        }
+
         $foundTarget = null;
         foreach ($this->targets as $makefileTarget) {
             if ($makefileTarget->name === $target) {
