@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use Tamiroh\Phmake\Console\Process;
+
 readonly final class Makefile
 {
     /**
@@ -28,6 +30,10 @@ readonly final class Makefile
             }
         }
 
-        $foundTarget?->run();
+        if ($foundTarget === null) {
+            Process::stop("No rule to make target `$target'");
+        }
+
+        $foundTarget->run();
     }
 }
