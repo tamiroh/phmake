@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake;
+namespace Tamiroh\Phmake\Makefile;
+
+use Tamiroh\Phmake\Command;
 
 readonly final class Target
 {

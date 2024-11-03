@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake;
 
+use Tamiroh\Phmake\Parser\MakefileParser;
+
 readonly final class Application
 {
     public function run(): void
@@ -11,7 +13,7 @@ readonly final class Application
         global $argv;
 
         $makefileRaw = file_get_contents('Makefile');
-        $makefile = (new Parser($makefileRaw))->parse();
+        $makefile = (new MakefileParser($makefileRaw))->parse();
 
         $makefile->run($argv[1] ?? null);
     }

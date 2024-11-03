@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake;
+namespace Tamiroh\Phmake\Parser;
 
-readonly final class Parser
+use Tamiroh\Phmake\Command;
+use Tamiroh\Phmake\Makefile\Makefile;
+use Tamiroh\Phmake\Makefile\Target;
+
+readonly final class MakefileParser
 {
     /** @var list<string> */
     private array $makefileLines;
