@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
+use Tamiroh\Phmake\Exceptions\MakefileException;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
 readonly final class Application
@@ -20,6 +21,10 @@ readonly final class Application
 
         $makefile = (new MakefileParser($makefileRaw))->parse();
 
-        $makefile->run($argv[1] ?? null);
+        try {
+            $makefile->run($argv[1] ?? null);
+        } catch (MakefileException $e) {
+            Process::stop($e->getMessage());
+        }
     }
 }

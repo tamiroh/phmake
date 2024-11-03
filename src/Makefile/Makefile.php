@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-use Tamiroh\Phmake\Console\Process;
+use Tamiroh\Phmake\Exceptions\MakefileException;
 
 readonly final class Makefile
 {
@@ -15,6 +15,9 @@ readonly final class Makefile
         public array $targets = [],
     ) {}
 
+    /**
+     * @throws MakefileException
+     */
     public function run(string|null $target): void
     {
         if ($target === null) {
@@ -31,7 +34,7 @@ readonly final class Makefile
         }
 
         if ($foundTarget === null) {
-            Process::stop("No rule to make target `$target'");
+            throw new MakefileException("No rule to make target `$target'");
         }
 
         $foundTarget->run();
