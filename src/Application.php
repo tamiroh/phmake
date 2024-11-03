@@ -12,7 +12,12 @@ readonly final class Application
     {
         global $argv;
 
-        $makefileRaw = file_get_contents('Makefile');
+        $makefileRaw = @file_get_contents('Makefile');
+
+        if ($makefileRaw === false) {
+            Process::stop('No targets specified and no makefile found');
+        }
+
         $makefile = (new MakefileParser($makefileRaw))->parse();
 
         $makefile->run($argv[1] ?? null);
