@@ -1,6 +1,6 @@
 <?php
 
-namespace Tamiroh\Phmake;
+namespace Tamiroh\Phmake\Console;
 
 final class Process
 {

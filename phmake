@@ -3,7 +3,7 @@
 
 declare(strict_types=1);
 
-use Tamiroh\Phmake\Application;
+use Tamiroh\Phmake\Console\Application;
 
 require __DIR__ . '/vendor/autoload.php';
 

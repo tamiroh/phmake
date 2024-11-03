@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake;
+namespace Tamiroh\Phmake\Console;
 
 use Tamiroh\Phmake\Parser\MakefileParser;
 
