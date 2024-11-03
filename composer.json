@@ -1,0 +1,17 @@
+{
+    "name": "tamiroh/phmake",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Tamiroh\\Phmake\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "tamiroh",
+            "email": "tamiroh71@gmail.com"
+        }
+    ],
+    "require": {}
+}
