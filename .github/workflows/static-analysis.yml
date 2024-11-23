@@ -14,5 +14,8 @@ jobs:
         with:
           php-version: '8.3'
 
+      - name: Install dependencies
+        run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
+
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse src
