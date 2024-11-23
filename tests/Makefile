@@ -6,3 +6,6 @@ bar:
 baz:
 	echo "baz"
 	echo "baz"
+foobar:
+	echo "foofoo"
+	echo "foofoo"
