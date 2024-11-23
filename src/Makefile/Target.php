@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-use Tamiroh\Phmake\Console\Command;
-
 readonly final class Target
 {
     /**

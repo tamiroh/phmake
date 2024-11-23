@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Makefile;
 
 readonly final class Command
 {

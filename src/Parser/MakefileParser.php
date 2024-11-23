@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser;
 
 use LogicException;
-use Tamiroh\Phmake\Console\Command;
+use Tamiroh\Phmake\Makefile\Command;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\Target;
 
