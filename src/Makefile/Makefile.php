@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use DateTime;
 use Tamiroh\Phmake\Exceptions\MakefileException;
 
 readonly final class Makefile
@@ -16,9 +17,11 @@ readonly final class Makefile
     ) {}
 
     /**
+     * @param array<string, ?DateTime> $lastModified
+     *
      * @throws MakefileException
      */
-    public function run(string|null $target): void
+    public function run(string|null $target, array $lastModified): void
     {
         if ($target === null) {
             $this->targets[0]->run();
@@ -37,6 +40,12 @@ readonly final class Makefile
             throw new MakefileException("No rule to make target `$target'");
         }
 
-        $foundTarget->run();
+        if ($lastModified[$foundTarget->name] === null) {
+            $foundTarget->run();
+        } else {
+            // TODO: Check dependencies
+            // TODO: `echo` should be moved to Application
+            echo 'phmake: `' . $foundTarget->name . '\' is up to date.' . PHP_EOL;
+        }
     }
 }
