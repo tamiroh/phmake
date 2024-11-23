@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use LogicException;
 use Tamiroh\Phmake\Console\Command;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\Target;
@@ -18,7 +19,8 @@ readonly final class MakefileParser
     public function __construct(string $makefile)
     {
         $this->makefileLines = explode("\n", $makefile);
-        $this->firstTarget = $this->getTarget(0);
+        // TODO: Smartly find the first target
+        $this->firstTarget = $this->getTarget(0) ?? throw new LogicException('Default target not found');
     }
 
     public function parse(): Makefile
