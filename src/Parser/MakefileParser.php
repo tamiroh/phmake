@@ -19,8 +19,7 @@ readonly final class MakefileParser
     public function __construct(string $makefile)
     {
         $this->makefileLines = explode("\n", $makefile);
-        // TODO: Smartly find the first target
-        $this->firstTarget = $this->getTarget(0) ?? throw new LogicException('Default target not found');
+        $this->firstTarget = $this->findFirstTarget() ?? throw new LogicException('Default target not found');
     }
 
     public function parse(): Makefile
@@ -37,6 +36,18 @@ readonly final class MakefileParser
         }
 
         return new Makefile($targets);
+    }
+
+    private function findFirstTarget(): ?Target
+    {
+        foreach (array_keys($this->makefileLines) as $lineIndex) {
+            $target = $this->getTarget($lineIndex);
+            if ($target !== null) {
+                return $target;
+            }
+        }
+
+        return null;
     }
 
     private function getTarget(int $lineIndex): ?Target
