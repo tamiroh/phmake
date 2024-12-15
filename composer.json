@@ -1,10 +1,16 @@
 {
     "name": "tamiroh/phmake",
+    "description": "Re-implementation of GNU Make written in PHP.",
     "type": "project",
     "license": "MIT",
     "autoload": {
         "psr-4": {
             "Tamiroh\\Phmake\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tamiroh\\Phmake\\Tests\\": "tests/"
         }
     },
     "authors": [
@@ -14,6 +20,7 @@
         }
     ],
     "require-dev": {
-        "phpstan/phpstan": "^1.12"
+        "phpstan/phpstan": "^1.12",
+        "phpunit/phpunit": "^11.5"
     }
 }
