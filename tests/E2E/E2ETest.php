@@ -14,8 +14,9 @@ final class E2ETest extends TestCase
     public function runAsExpected(string $makefile, string $arguments, string $expectedOutput): void
     {
         $sandbox = Sandbox::create()->placeMakefile($makefile);
+        $result = $sandbox->runPhMake($arguments);
 
-        $this->assertSame($expectedOutput, $sandbox->runPhMake($arguments));
+        $this->assertSame($expectedOutput, $result);
     }
 
     /**
