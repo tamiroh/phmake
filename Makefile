@@ -4,4 +4,4 @@ test:
 
 .PHONY: lint
 lint:
-	vendor/bin/phpstan analyse src
+	vendor/bin/phpstan analyse src --memory-limit=2G
