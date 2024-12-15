@@ -56,6 +56,20 @@ MAKEFILE,
             "echo 'foo'\nfoo\n",
         ];
 
+        yield 'foo target with existing foo file' => [
+            <<<'MAKEFILE'
+foo:
+    echo 'foo'
+bar:
+    echo 'bar'
+MAKEFILE,
+            'foo',
+            [
+                ['name' => 'foo', 'content' => 'foo'],
+            ],
+            "phmake: `foo' is up to date.\n",
+        ];
+
         yield 'two targets' => [
             <<<'MAKEFILE'
 foo:
