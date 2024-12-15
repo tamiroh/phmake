@@ -28,14 +28,7 @@ readonly final class Makefile
             return;
         }
 
-        $foundTarget = null;
-        foreach ($this->targets as $makefileTarget) {
-            if ($makefileTarget->name === $target) {
-                $foundTarget = $makefileTarget;
-                break;
-            }
-        }
-
+        $foundTarget = $this->findTarget($target);
         if ($foundTarget === null) {
             throw new MakefileException("No rule to make target `$target'");
         }
@@ -47,5 +40,17 @@ readonly final class Makefile
             // TODO: `echo` should be moved to Application
             echo 'phmake: `' . $foundTarget->name . '\' is up to date.' . PHP_EOL;
         }
+    }
+
+    private function findTarget(string $target): ?Target
+    {
+        $foundTarget = null;
+        foreach ($this->targets as $makefileTarget) {
+            if ($makefileTarget->name === $target) {
+                $foundTarget = $makefileTarget;
+                break;
+            }
+        }
+        return $foundTarget;
     }
 }
