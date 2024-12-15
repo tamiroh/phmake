@@ -18,4 +18,4 @@ jobs:
         run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
 
       - name: Run PHPStan
-        run: vendor/bin/phpstan analyse src
+        run: vendor/bin/phpstan analyse src tests --memory-limit=2G
