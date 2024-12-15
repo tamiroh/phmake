@@ -1,0 +1,21 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install dependencies
+        run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
+
+      - name: Run E2E test
+        run: vendor/bin/phpunit tests/E2E
