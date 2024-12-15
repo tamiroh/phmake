@@ -19,7 +19,7 @@ readonly final class Application
         $lastModified = $this->getLastModifiedTimesOfTargets($makefile);
 
         try {
-            $makefile->run($argv[1] ?? null, $lastModified);
+            $makefile->run(array_slice($argv, 1), $lastModified);
         } catch (MakefileException $e) {
             Process::stop($e->getMessage());
         }

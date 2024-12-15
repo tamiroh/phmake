@@ -21,24 +21,26 @@ readonly final class Makefile
      *
      * @throws MakefileException
      */
-    public function run(string|null $target, array $lastModified): void
+    public function run(array $targets, array $lastModified): void
     {
-        if ($target === null) {
+        if ($targets === []) {
             $this->targets[0]->run();
             return;
         }
 
-        $foundTarget = $this->findTarget($target);
-        if ($foundTarget === null) {
-            throw new MakefileException("No rule to make target `$target'");
-        }
+        foreach ($targets as $target) {
+            $foundTarget = $this->findTarget($target);
+            if ($foundTarget === null) {
+                throw new MakefileException("No rule to make target `$target'");
+            }
 
-        if ($lastModified[$foundTarget->name] === null) {
-            $foundTarget->run();
-        } else {
-            // TODO: Check dependencies
-            // TODO: `echo` should be moved to Application
-            echo 'phmake: `' . $foundTarget->name . '\' is up to date.' . PHP_EOL;
+            if ($lastModified[$foundTarget->name] === null) {
+                $foundTarget->run();
+            } else {
+                // TODO: Check dependencies
+                // TODO: `echo` should be moved to Application
+                echo 'phmake: `' . $foundTarget->name . '\' is up to date.' . PHP_EOL;
+            }
         }
     }
 

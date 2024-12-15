@@ -46,6 +46,17 @@ MAKEFILE,
             "echo 'foo'\nfoo\n",
         ];
 
+        yield 'two targets' => [
+            <<<'MAKEFILE'
+foo:
+    echo 'foo'
+bar:
+    echo 'bar'
+MAKEFILE,
+            'bar foo',
+            "echo 'bar'\nbar\necho 'foo'\nfoo\n",
+        ];
+
         yield 'invalid target' => [
             <<<'MAKEFILE'
 foo:
