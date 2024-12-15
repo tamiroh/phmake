@@ -17,6 +17,7 @@ readonly final class Makefile
     ) {}
 
     /**
+     * @param list<string> $targets
      * @param array<string, ?DateTime> $lastModified
      *
      * @throws MakefileException
