@@ -16,14 +16,7 @@ readonly final class Application
         global $argv;
 
         $makefile = $this->createMakefile();
-
-        $lastModified = [];
-        foreach ($makefile->targets as $target) {
-            $lastModifiedAsUnixTime = @filemtime($target->name);
-            $lastModified[$target->name] = $lastModifiedAsUnixTime === false
-                ? null
-                : (new DateTime())->setTimestamp($lastModifiedAsUnixTime);
-        }
+        $lastModified = $this->getLastModifiedTimesOfTargets($makefile);
 
         try {
             $makefile->run($argv[1] ?? null, $lastModified);
@@ -41,5 +34,22 @@ readonly final class Application
         }
 
         return (new MakefileParser($makefileRaw))->parse();
+    }
+
+    /**
+     * @param Makefile $makefile
+     *
+     * @return array<string, DateTime|null>
+     */
+    public function getLastModifiedTimesOfTargets(Makefile $makefile): array
+    {
+        $lastModified = [];
+        foreach ($makefile->targets as $target) {
+            $lastModifiedAsUnixTime = @filemtime($target->name);
+            $lastModified[$target->name] = $lastModifiedAsUnixTime === false
+                ? null
+                : (new DateTime())->setTimestamp($lastModifiedAsUnixTime);
+        }
+        return $lastModified;
     }
 }
