@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Console;
 
 use DateTime;
 use Tamiroh\Phmake\Exceptions\MakefileException;
+use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
 readonly final class Application
@@ -14,13 +15,7 @@ readonly final class Application
     {
         global $argv;
 
-        $makefileRaw = @file_get_contents('Makefile');
-
-        if ($makefileRaw === false) {
-            Process::stop('No targets specified and no makefile found');
-        }
-
-        $makefile = (new MakefileParser($makefileRaw))->parse();
+        $makefile = $this->createMakefile();
 
         $lastModified = [];
         foreach ($makefile->targets as $target) {
@@ -35,5 +30,16 @@ readonly final class Application
         } catch (MakefileException $e) {
             Process::stop($e->getMessage());
         }
+    }
+
+    private function createMakefile(): Makefile
+    {
+        $makefileRaw = @file_get_contents('Makefile');
+
+        if ($makefileRaw === false) {
+            Process::stop('No targets specified and no makefile found');
+        }
+
+        return (new MakefileParser($makefileRaw))->parse();
     }
 }
