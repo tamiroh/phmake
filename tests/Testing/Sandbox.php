@@ -35,6 +35,18 @@ final class Sandbox
         return $this;
     }
 
+    /**
+     * @param list<array{name: string, content: string}> $files
+     */
+    public function placeFiles(array $files): self
+    {
+        foreach ($files as $file) {
+            file_put_contents($this->path . '/' . $file['name'], $file['content']);
+        }
+
+        return $this;
+    }
+
     public function runPhMake(string $arguments = ''): string
     {
         $phMakePath = realpath(__DIR__ . '/../../phmake');

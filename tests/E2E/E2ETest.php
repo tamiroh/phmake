@@ -9,18 +9,26 @@ use Tamiroh\Phmake\Tests\Testing\Sandbox;
 
 final class E2ETest extends TestCase
 {
+    /**
+     * @param string $makefile
+     * @param string $arguments
+     * @param list<array{name: string, content: string}> $files
+     * @param string $expectedOutput
+     *
+     * @return void
+     */
     #[Test]
     #[DataProvider('provideMakefiles')]
-    public function runAsExpected(string $makefile, string $arguments, string $expectedOutput): void
+    public function runAsExpected(string $makefile, string $arguments, array $files, string $expectedOutput): void
     {
-        $sandbox = Sandbox::create()->placeMakefile($makefile);
+        $sandbox = Sandbox::create()->placeMakefile($makefile)->placeFiles($files);
         $result = $sandbox->runPhMake($arguments);
 
         $this->assertSame($expectedOutput, $result);
     }
 
     /**
-     * @return iterable<array{string, string, string}>
+     * @return iterable<array{string, string, list<array{name: string, content: string}>, string}>
      */
     public static function provideMakefiles(): iterable
     {
@@ -32,6 +40,7 @@ bar:
     echo 'bar'
 MAKEFILE,
             '',
+            [],
             "echo 'foo'\nfoo\n",
         ];
 
@@ -43,6 +52,7 @@ bar:
     echo 'bar'
 MAKEFILE,
             'foo',
+            [],
             "echo 'foo'\nfoo\n",
         ];
 
@@ -54,6 +64,7 @@ bar:
     echo 'bar'
 MAKEFILE,
             'bar foo',
+            [],
             "echo 'bar'\nbar\necho 'foo'\nfoo\n",
         ];
 
@@ -65,6 +76,7 @@ bar:
     echo 'bar'
 MAKEFILE,
             'baz',
+            [],
             "phmake: *** No rule to make target `baz'.  Stop.\n",
         ];
     }
