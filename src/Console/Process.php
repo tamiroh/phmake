@@ -6,7 +6,7 @@ final class Process
 {
     private const string MESSAGE_PREMIX = 'phmake: ';
 
-    public static function stop(string $message): never
+    public static function error(string $message): never
     {
         $trimmedMessage = trim($message);
         $formattedMessage = $trimmedMessage . (str_ends_with($trimmedMessage, '.') ? '' : '.');
