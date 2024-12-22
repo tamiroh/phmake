@@ -12,6 +12,7 @@ final class Process
         $formattedMessage = $trimmedMessage . (str_ends_with($trimmedMessage, '.') ? '' : '.');
 
         echo self::MESSAGE_PREMIX . "*** $formattedMessage  Stop." . PHP_EOL;
+
         exit(1);
     }
 }
