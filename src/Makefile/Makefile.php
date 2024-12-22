@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile;
 
 use DateTime;
-use Tamiroh\Phmake\Exceptions\MakefileErrorException;
-use Tamiroh\Phmake\Exceptions\MakefileUpToDateException;
 
 readonly final class Makefile
 {

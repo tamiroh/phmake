@@ -1,6 +1,6 @@
 <?php
 
-namespace Tamiroh\Phmake\Exceptions;
+namespace Tamiroh\Phmake\Makefile;
 
 use Exception;
 

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use DateTime;
-use Tamiroh\Phmake\Exceptions\MakefileErrorException;
-use Tamiroh\Phmake\Exceptions\MakefileUpToDateException;
 use Tamiroh\Phmake\Makefile\Makefile;
+use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
 readonly final class Application
