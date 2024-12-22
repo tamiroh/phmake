@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Console;
 
 use DateTime;
 use Tamiroh\Phmake\Exceptions\MakefileErrorException;
+use Tamiroh\Phmake\Exceptions\MakefileUpToDateException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
@@ -22,6 +23,8 @@ readonly final class Application
             $makefile->run(array_slice($argv, 1), $lastModified);
         } catch (MakefileErrorException $e) {
             Process::stopWithError($e->getMessage());
+        } catch (MakefileUpToDateException $e) {
+            Process::stopWithInfo("`$e->target' is up to date");
         }
     }
 

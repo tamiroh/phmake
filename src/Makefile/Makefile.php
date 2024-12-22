@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Makefile;
 
 use DateTime;
 use Tamiroh\Phmake\Exceptions\MakefileErrorException;
+use Tamiroh\Phmake\Exceptions\MakefileUpToDateException;
 
 readonly final class Makefile
 {
@@ -21,6 +22,7 @@ readonly final class Makefile
      * @param array<string, ?DateTime> $lastModified
      *
      * @throws MakefileErrorException
+     * @throws MakefileUpToDateException
      */
     public function run(array $targets, array $lastModified): void
     {
@@ -39,8 +41,7 @@ readonly final class Makefile
                 $foundTarget->run();
             } else {
                 // TODO: Check dependencies
-                // TODO: `echo` should be moved to Application
-                echo 'phmake: `' . $foundTarget->name . '\' is up to date.' . PHP_EOL;
+                throw new MakefileUpToDateException($foundTarget->name);
             }
         }
     }

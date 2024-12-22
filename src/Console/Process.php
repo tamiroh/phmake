@@ -15,4 +15,14 @@ final class Process
 
         exit(1);
     }
+
+    public static function stopWithInfo(string $message): never
+    {
+        $trimmedMessage = trim($message);
+        $formattedMessage = $trimmedMessage . (str_ends_with($trimmedMessage, '.') ? '' : '.');
+
+        echo self::MESSAGE_PREMIX . "$formattedMessage" . PHP_EOL;
+
+        exit(0);
+    }
 }
