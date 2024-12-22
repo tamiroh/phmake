@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile;
 
 use DateTime;
-use Tamiroh\Phmake\Exceptions\MakefileException;
+use Tamiroh\Phmake\Exceptions\MakefileErrorException;
 
 readonly final class Makefile
 {
@@ -20,7 +20,7 @@ readonly final class Makefile
      * @param list<string> $targets
      * @param array<string, ?DateTime> $lastModified
      *
-     * @throws MakefileException
+     * @throws MakefileErrorException
      */
     public function run(array $targets, array $lastModified): void
     {
@@ -32,7 +32,7 @@ readonly final class Makefile
         foreach ($targets as $target) {
             $foundTarget = $this->findTarget($target);
             if ($foundTarget === null) {
-                throw new MakefileException("No rule to make target `$target'");
+                throw new MakefileErrorException("No rule to make target `$target'");
             }
 
             if ($lastModified[$foundTarget->name] === null) {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use DateTime;
-use Tamiroh\Phmake\Exceptions\MakefileException;
+use Tamiroh\Phmake\Exceptions\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
@@ -20,7 +20,7 @@ readonly final class Application
 
         try {
             $makefile->run(array_slice($argv, 1), $lastModified);
-        } catch (MakefileException $e) {
+        } catch (MakefileErrorException $e) {
             Process::stopWithError($e->getMessage());
         }
     }

@@ -4,5 +4,5 @@ namespace Tamiroh\Phmake\Exceptions;
 
 use Exception;
 
-class MakefileException extends Exception
+class MakefileErrorException extends Exception
 {}
