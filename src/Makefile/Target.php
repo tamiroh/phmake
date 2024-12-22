@@ -16,10 +16,10 @@ readonly final class Target
         public array $commands,
     ) {}
 
-    public function run(): void
+    public function runWith(ShellExecInterface $shellExec): void
     {
         foreach ($this->commands as $command) {
-            $command->run();
+            $command->runWith($shellExec);
         }
     }
 }

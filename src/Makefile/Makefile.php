@@ -22,10 +22,10 @@ readonly final class Makefile
      * @throws MakefileErrorException
      * @throws MakefileUpToDateException
      */
-    public function run(array $targets, array $lastModified): void
+    public function run(array $targets, array $lastModified, ShellExecInterface $shellExec): void
     {
         if ($targets === []) {
-            $this->targets[0]->run();
+            $this->targets[0]->runWith($shellExec);
             return;
         }
 
@@ -36,7 +36,7 @@ readonly final class Makefile
             }
 
             if ($lastModified[$foundTarget->name] === null) {
-                $foundTarget->run();
+                $foundTarget->runWith($shellExec);
             } else {
                 // TODO: Check dependencies
                 throw new MakefileUpToDateException($foundTarget->name);
