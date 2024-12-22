@@ -21,7 +21,7 @@ readonly final class Application
         try {
             $makefile->run(array_slice($argv, 1), $lastModified);
         } catch (MakefileException $e) {
-            Process::error($e->getMessage());
+            Process::stopWithError($e->getMessage());
         }
     }
 
@@ -30,7 +30,7 @@ readonly final class Application
         $makefileRaw = @file_get_contents('Makefile');
 
         if ($makefileRaw === false) {
-            Process::error('No targets specified and no makefile found');
+            Process::stopWithError('No targets specified and no makefile found');
         }
 
         return (new MakefileParser($makefileRaw))->parse();
