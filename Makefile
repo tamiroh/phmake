@@ -1,6 +1,6 @@
 .PHONY: test
 test:
-	cd tests && ./test.sh
+	vendor/bin/phpunit tests
 
 .PHONY: lint
 lint:
