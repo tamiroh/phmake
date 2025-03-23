@@ -56,11 +56,15 @@ readonly final class MakefileParser
             return null;
         }
 
-        $targetName = str_replace(':', '', $this->makefileLines[$lineIndex]);
+        $targetName = explode(':', $this->makefileLines[$lineIndex])[0];
 
         $commands = [];
         for ($line = $lineIndex + 1; isset($this->makefileLines[$line]) && ! $this->isTargetName($this->makefileLines[$line]); $line++) {
-            $commands[] = new Command(trim($this->makefileLines[$line]));
+            $command = trim($this->makefileLines[$line]);
+            if ($command === '') {
+                continue;
+            }
+            $commands[] = new Command($command);
         }
 
         return new Target($targetName, $lineIndex, $line - 1, $commands);
@@ -68,6 +72,6 @@ readonly final class MakefileParser
 
     private function isTargetName(string $line): bool
     {
-        return str_ends_with($line, ':');
+        return preg_match('/^[.a-zA-Z0-9_-]+:/', $line) === 1;
     }
 }
