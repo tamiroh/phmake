@@ -56,6 +56,18 @@ MAKEFILE,
             "echo 'foo'\nfoo\n",
         ];
 
+        yield 'foo target with bar dependency' => [
+            <<<'MAKEFILE'
+foo: bar
+    echo 'foo'
+bar:
+    echo 'bar'
+MAKEFILE,
+            'foo',
+            [],
+            "echo 'bar'\nbar\necho 'foo'\nfoo\n",
+        ];
+
         yield 'foo target with existing foo file' => [
             <<<'MAKEFILE'
 foo:

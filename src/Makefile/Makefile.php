@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-use DateTime;
-
 readonly final class Makefile
 {
     /**
@@ -17,15 +15,16 @@ readonly final class Makefile
 
     /**
      * @param list<string> $targets
-     * @param array<string, ?DateTime> $lastModified
      *
      * @throws MakefileErrorException
      * @throws MakefileUpToDateException
      */
-    public function run(array $targets, array $lastModified, ShellExecInterface $shellExec): void
+    public function run(array $targets, ShellExecInterface $shellExec): void
     {
         if ($targets === []) {
-            $this->targets[0]->runWith($shellExec);
+            if (! $this->targets[0]->runWith($shellExec)) {
+                throw new MakefileUpToDateException($this->targets[0]->name);
+            }
             return;
         }
 
@@ -34,11 +33,7 @@ readonly final class Makefile
             if ($foundTarget === null) {
                 throw new MakefileErrorException("No rule to make target `$target'");
             }
-
-            if ($lastModified[$foundTarget->name] === null) {
-                $foundTarget->runWith($shellExec);
-            } else {
-                // TODO: Check dependencies
+            if (! $foundTarget->runWith($shellExec)) {
                 throw new MakefileUpToDateException($foundTarget->name);
             }
         }

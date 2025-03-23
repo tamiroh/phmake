@@ -18,10 +18,43 @@ readonly final class Target
         public array $commands,
     ) {}
 
-    public function runWith(ShellExecInterface $shellExec): void
+    public function runWith(ShellExecInterface $shellExec): bool
     {
-        foreach ($this->commands as $command) {
-            $command->runWith($shellExec);
+        $rebuilt = false;
+
+        foreach ($this->dependencies as $dependency) {
+            $dependencyRunResult = $dependency->runWith($shellExec);
+            $rebuilt = $rebuilt || $dependencyRunResult;
         }
+
+        if (! file_exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget()) {
+            foreach ($this->commands as $command) {
+                $command->runWith($shellExec);
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private function isAnyDependencyNewerThanTarget(): bool
+    {
+        $targetLastModified = @filemtime($this->name);
+        if ($targetLastModified === false) {
+            return true;
+        }
+
+        foreach ($this->dependencies as $dependency) {
+            $dependencyLastModified = @filemtime($dependency->name);
+            if ($dependencyLastModified === false) {
+                return true;
+            }
+
+            if ($dependencyLastModified > $targetLastModified) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
