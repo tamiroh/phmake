@@ -57,6 +57,24 @@ readonly final class MakefileParser
         }
 
         $targetName = explode(':', $this->makefileLines[$lineIndex])[0];
+        $dependencyNames = array_filter(
+            explode(' ', explode(':', $this->makefileLines[$lineIndex])[1] ?? ''),
+            fn ($dependencyName) => $dependencyName !== ''
+        );
+
+        $dependencies = [];
+        foreach ($dependencyNames as $dependencyName) {
+            $dependencyLineIndex = $this->getLineIndexOfTarget($dependencyName);
+            if ($dependencyLineIndex === null) {
+                continue;
+            }
+            $dependencyTarget = $this->getTarget($dependencyLineIndex);
+            if ($dependencyTarget === null) {
+                continue;
+            }
+            $dependencies[] = $dependencyTarget;
+        }
+
 
         $commands = [];
         for ($line = $lineIndex + 1; isset($this->makefileLines[$line]) && ! $this->isTargetName($this->makefileLines[$line]); $line++) {
@@ -67,7 +85,18 @@ readonly final class MakefileParser
             $commands[] = new Command($command);
         }
 
-        return new Target($targetName, $lineIndex, $line - 1, $commands);
+        return new Target($targetName, $dependencies, $lineIndex, $line - 1, $commands);
+    }
+
+    private function getLineIndexOfTarget(string $targetName): ?int
+    {
+        foreach (array_keys($this->makefileLines) as $lineIndex) {
+            if ($this->isTargetName($this->makefileLines[$lineIndex]) && explode(':', $this->makefileLines[$lineIndex])[0] === $targetName) {
+                return $lineIndex;
+            }
+        }
+
+        return null;
     }
 
     private function isTargetName(string $line): bool
