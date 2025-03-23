@@ -51,6 +51,10 @@ final class Sandbox
     {
         $phMakePath = realpath(__DIR__ . '/../../phmake');
 
+        if (PHP_OS === 'Darwin') {
+            putenv("PATH=/usr/local/bin:" . getenv("PATH"));
+        }
+
         $output = shell_exec("cd $this->path && php $phMakePath $arguments");
         if ($output === false) {
             throw new RuntimeException('Failed to run phmake');
