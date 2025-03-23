@@ -22,7 +22,7 @@ readonly final class Makefile
     public function run(array $targets, ShellExecInterface $shellExec): void
     {
         if ($targets === []) {
-            if (! $this->targets[0]->runWith($shellExec)) {
+            if (! $this->targets[0]->run($shellExec)) {
                 throw new MakefileUpToDateException($this->targets[0]->name);
             }
             return;
@@ -33,7 +33,7 @@ readonly final class Makefile
             if ($foundTarget === null) {
                 throw new MakefileErrorException("No rule to make target `$target'");
             }
-            if (! $foundTarget->runWith($shellExec)) {
+            if (! $foundTarget->run($shellExec)) {
                 throw new MakefileUpToDateException($foundTarget->name);
             }
         }

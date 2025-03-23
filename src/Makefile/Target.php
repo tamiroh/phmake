@@ -18,12 +18,12 @@ readonly final class Target
         public array $commands,
     ) {}
 
-    public function runWith(ShellExecInterface $shellExec): bool
+    public function run(ShellExecInterface $shellExec): bool
     {
         $rebuilt = false;
 
         foreach ($this->dependencies as $dependency) {
-            $dependencyRunResult = $dependency->runWith($shellExec);
+            $dependencyRunResult = $dependency->run($shellExec);
             $rebuilt = $rebuilt || $dependencyRunResult;
         }
 
