@@ -2,7 +2,7 @@
 
 namespace Tamiroh\Phmake\Makefile;
 
-interface ShellExecInterface
+interface Shell
 {
     public function exec(string $command): string;
 }

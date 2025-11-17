@@ -18,18 +18,18 @@ readonly final class Target
         public array $commands,
     ) {}
 
-    public function run(ShellExecInterface $shellExec, Filesystem $filesystem): bool
+    public function run(Shell $shell, Filesystem $filesystem): bool
     {
         $rebuilt = false;
 
         foreach ($this->dependencies as $dependency) {
-            $dependencyRunResult = $dependency->run($shellExec, $filesystem);
+            $dependencyRunResult = $dependency->run($shell, $filesystem);
             $rebuilt = $rebuilt || $dependencyRunResult;
         }
 
         if (! $filesystem->exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget($filesystem)) {
             foreach ($this->commands as $command) {
-                $command->run($shellExec);
+                $command->run($shell);
             }
             return true;
         } else {

@@ -8,7 +8,7 @@ use Tamiroh\Phmake\Makefile\Filesystem;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
-use Tamiroh\Phmake\Makefile\ShellExecInterface;
+use Tamiroh\Phmake\Makefile\Shell;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
 readonly final class Application
@@ -18,7 +18,7 @@ readonly final class Application
         global $argv;
 
         $makefile = $this->createMakefile();
-        $shellExec = new class implements ShellExecInterface {
+        $shellExec = new class implements Shell {
             public function exec(string $command): string
             {
                 return (string) shell_exec($command);
