@@ -18,16 +18,16 @@ readonly final class Target
         public array $commands,
     ) {}
 
-    public function run(ShellExecInterface $shellExec): bool
+    public function run(ShellExecInterface $shellExec, Filesystem $filesystem): bool
     {
         $rebuilt = false;
 
         foreach ($this->dependencies as $dependency) {
-            $dependencyRunResult = $dependency->run($shellExec);
+            $dependencyRunResult = $dependency->run($shellExec, $filesystem);
             $rebuilt = $rebuilt || $dependencyRunResult;
         }
 
-        if (! file_exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget()) {
+        if (! $filesystem->exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget($filesystem)) {
             foreach ($this->commands as $command) {
                 $command->run($shellExec);
             }
@@ -37,16 +37,16 @@ readonly final class Target
         }
     }
 
-    private function isAnyDependencyNewerThanTarget(): bool
+    private function isAnyDependencyNewerThanTarget(Filesystem $filesystem): bool
     {
-        $targetLastModified = @filemtime($this->name);
-        if ($targetLastModified === false) {
+        $targetLastModified = $filesystem->lastModified($this->name);
+        if ($targetLastModified === null) {
             return true;
         }
 
         foreach ($this->dependencies as $dependency) {
-            $dependencyLastModified = @filemtime($dependency->name);
-            if ($dependencyLastModified === false) {
+            $dependencyLastModified = $filesystem->lastModified($dependency->name);
+            if ($dependencyLastModified === null) {
                 return true;
             }
 
