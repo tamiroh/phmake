@@ -15,6 +15,7 @@ readonly final class Application
 {
     public function run(): void
     {
+        /** @var list<string> $argv */
         global $argv;
 
         $makefile = $this->createMakefile();
