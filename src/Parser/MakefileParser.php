@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser;
 
 use LogicException;
-use Tamiroh\Phmake\Makefile\Command;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\Target;
 
@@ -82,7 +81,7 @@ readonly final class MakefileParser
             if ($command === '') {
                 continue;
             }
-            $commands[] = new Command($command);
+            $commands[] = $command;
         }
 
         return new Target($targetName, $dependencies, $lineIndex, $line - 1, $commands);

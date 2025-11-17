@@ -8,7 +8,7 @@ readonly final class Target
 {
     /**
      * @param list<Target> $dependencies
-     * @param list<Command> $commands
+     * @param list<string> $commands
      */
     public function __construct(
         public string $name,
@@ -18,18 +18,20 @@ readonly final class Target
         public array $commands,
     ) {}
 
-    public function run(Shell $shell, Filesystem $filesystem): bool
+    public function run(Shell $shell, Filesystem $filesystem, Output $output): bool
     {
         $rebuilt = false;
 
         foreach ($this->dependencies as $dependency) {
-            $dependencyRunResult = $dependency->run($shell, $filesystem);
+            $dependencyRunResult = $dependency->run($shell, $filesystem, $output);
             $rebuilt = $rebuilt || $dependencyRunResult;
         }
 
         if (! $filesystem->exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget($filesystem)) {
             foreach ($this->commands as $command) {
-                $command->run($shell);
+                $output->writeLine($command);
+                $result = $shell->exec($command);
+                $output->write($result);
             }
             return true;
         } else {

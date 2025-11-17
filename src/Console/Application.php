@@ -8,6 +8,7 @@ use Tamiroh\Phmake\Makefile\Filesystem;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
+use Tamiroh\Phmake\Makefile\Output;
 use Tamiroh\Phmake\Makefile\Shell;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
@@ -19,7 +20,7 @@ readonly final class Application
         global $argv;
 
         $makefile = $this->createMakefile();
-        $shellExec = new class implements Shell {
+        $shell = new class implements Shell {
             public function exec(string $command): string
             {
                 return (string) shell_exec($command);
@@ -38,9 +39,20 @@ readonly final class Application
                 return $result === false ? null : $result;
             }
         };
+        $output = new class implements Output {
+            public function write(string $text): void
+            {
+                echo $text;
+            }
+
+            public function writeLine(string $line): void
+            {
+                echo $line . PHP_EOL;
+            }
+        };
 
         try {
-            $makefile->run(array_slice($argv, 1), $shellExec, $filesystem);
+            $makefile->run(array_slice($argv, 1), $shell, $filesystem, $output);
         } catch (MakefileErrorException $e) {
             Process::stopWithError($e->getMessage());
         } catch (MakefileUpToDateException $e) {
