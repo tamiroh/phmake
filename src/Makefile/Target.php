@@ -29,7 +29,7 @@ readonly final class Target
 
         if (! file_exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget()) {
             foreach ($this->commands as $command) {
-                $command->runWith($shellExec);
+                $command->run($shellExec);
             }
             return true;
         } else {

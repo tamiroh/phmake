@@ -10,7 +10,7 @@ readonly final class Command
         public string $command,
     ) {}
 
-    public function runWith(ShellExecInterface $shellExec): void
+    public function run(ShellExecInterface $shellExec): void
     {
         echo $this->command . PHP_EOL;
         echo $shellExec->exec($this->command);
