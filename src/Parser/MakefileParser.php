@@ -8,7 +8,7 @@ use LogicException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\Target;
 
-readonly final class MakefileParser
+final readonly class MakefileParser
 {
     /** @var list<string> */
     private array $makefileLines;
@@ -51,14 +51,14 @@ readonly final class MakefileParser
 
     private function getTarget(int $lineIndex): ?Target
     {
-        if (! $this->isTargetName($this->makefileLines[$lineIndex] ?? '')) {
+        if (!$this->isTargetName($this->makefileLines[$lineIndex] ?? '')) {
             return null;
         }
 
         $targetName = explode(':', $this->makefileLines[$lineIndex])[0];
         $dependencyNames = array_filter(
             explode(' ', explode(':', $this->makefileLines[$lineIndex])[1] ?? ''),
-            fn ($dependencyName) => $dependencyName !== ''
+            fn($dependencyName) => $dependencyName !== '',
         );
 
         $dependencies = [];
@@ -74,9 +74,12 @@ readonly final class MakefileParser
             $dependencies[] = $dependencyTarget;
         }
 
-
         $commands = [];
-        for ($line = $lineIndex + 1; isset($this->makefileLines[$line]) && ! $this->isTargetName($this->makefileLines[$line]); $line++) {
+        for (
+            $line = $lineIndex + 1;
+            isset($this->makefileLines[$line]) && !$this->isTargetName($this->makefileLines[$line]);
+            $line++
+        ) {
             $command = trim($this->makefileLines[$line]);
             if ($command === '') {
                 continue;
@@ -90,7 +93,10 @@ readonly final class MakefileParser
     private function getLineIndexOfTarget(string $targetName): ?int
     {
         foreach (array_keys($this->makefileLines) as $lineIndex) {
-            if ($this->isTargetName($this->makefileLines[$lineIndex]) && explode(':', $this->makefileLines[$lineIndex])[0] === $targetName) {
+            if (
+                $this->isTargetName($this->makefileLines[$lineIndex])
+                && explode(':', $this->makefileLines[$lineIndex])[0] === $targetName
+            ) {
                 return $lineIndex;
             }
         }

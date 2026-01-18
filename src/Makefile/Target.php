@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-readonly final class Target
+final readonly class Target
 {
     /**
      * @param list<Target> $dependencies
@@ -27,7 +27,7 @@ readonly final class Target
             $rebuilt = $rebuilt || $dependencyRunResult;
         }
 
-        if (! $filesystem->exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget($filesystem)) {
+        if (!$filesystem->exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget($filesystem)) {
             foreach ($this->commands as $command) {
                 $output->writeLine($command);
                 $result = $shell->exec($command);

@@ -34,11 +34,11 @@ final class E2ETest extends TestCase
     {
         yield 'default target' => [
             <<<'MAKEFILE'
-foo:
-    echo 'foo'
-bar:
-    echo 'bar'
-MAKEFILE,
+                foo:
+                    echo 'foo'
+                bar:
+                    echo 'bar'
+                MAKEFILE,
             '',
             [],
             "echo 'foo'\nfoo\n",
@@ -46,11 +46,11 @@ MAKEFILE,
 
         yield 'foo target' => [
             <<<'MAKEFILE'
-foo:
-    echo 'foo'
-bar:
-    echo 'bar'
-MAKEFILE,
+                foo:
+                    echo 'foo'
+                bar:
+                    echo 'bar'
+                MAKEFILE,
             'foo',
             [],
             "echo 'foo'\nfoo\n",
@@ -58,11 +58,11 @@ MAKEFILE,
 
         yield 'foo target with bar dependency' => [
             <<<'MAKEFILE'
-foo: bar
-    echo 'foo'
-bar:
-    echo 'bar'
-MAKEFILE,
+                foo: bar
+                    echo 'foo'
+                bar:
+                    echo 'bar'
+                MAKEFILE,
             'foo',
             [],
             "echo 'bar'\nbar\necho 'foo'\nfoo\n",
@@ -70,11 +70,11 @@ MAKEFILE,
 
         yield 'foo target with existing foo file' => [
             <<<'MAKEFILE'
-foo:
-    echo 'foo'
-bar:
-    echo 'bar'
-MAKEFILE,
+                foo:
+                    echo 'foo'
+                bar:
+                    echo 'bar'
+                MAKEFILE,
             'foo',
             [
                 ['name' => 'foo', 'content' => 'foo'],
@@ -84,11 +84,11 @@ MAKEFILE,
 
         yield 'two targets' => [
             <<<'MAKEFILE'
-foo:
-    echo 'foo'
-bar:
-    echo 'bar'
-MAKEFILE,
+                foo:
+                    echo 'foo'
+                bar:
+                    echo 'bar'
+                MAKEFILE,
             'bar foo',
             [],
             "echo 'bar'\nbar\necho 'foo'\nfoo\n",
@@ -96,11 +96,11 @@ MAKEFILE,
 
         yield 'invalid target' => [
             <<<'MAKEFILE'
-foo:
-    echo 'foo'
-bar:
-    echo 'bar'
-MAKEFILE,
+                foo:
+                    echo 'foo'
+                bar:
+                    echo 'bar'
+                MAKEFILE,
             'baz',
             [],
             "phmake: *** No rule to make target `baz'.  Stop.\n",

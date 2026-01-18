@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-readonly final class Makefile
+final readonly class Makefile
 {
     /**
      * @param list<Target> $targets
@@ -22,7 +22,7 @@ readonly final class Makefile
     public function run(array $targets, Shell $shell, Filesystem $filesystem, Output $output): void
     {
         if ($targets === []) {
-            if (! $this->targets[0]->run($shell, $filesystem, $output)) {
+            if (!$this->targets[0]->run($shell, $filesystem, $output)) {
                 throw new MakefileUpToDateException($this->targets[0]->name);
             }
             return;
@@ -33,7 +33,7 @@ readonly final class Makefile
             if ($foundTarget === null) {
                 throw new MakefileErrorException("No rule to make target `$target'");
             }
-            if (! $foundTarget->run($shell, $filesystem, $output)) {
+            if (!$foundTarget->run($shell, $filesystem, $output)) {
                 throw new MakefileUpToDateException($foundTarget->name);
             }
         }

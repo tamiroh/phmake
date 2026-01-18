@@ -12,7 +12,7 @@ use Tamiroh\Phmake\Makefile\Output;
 use Tamiroh\Phmake\Makefile\Shell;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
-readonly final class Application
+final readonly class Application
 {
     public function run(): void
     {
@@ -35,7 +35,7 @@ readonly final class Application
             public function lastModified(string $path): ?int
             {
                 $result = @filemtime($path);
-                
+
                 return $result === false ? null : $result;
             }
         };
@@ -68,6 +68,6 @@ readonly final class Application
             Process::stopWithError('No targets specified and no makefile found');
         }
 
-        return (new MakefileParser($makefileRaw))->parse();
+        return new MakefileParser($makefileRaw)->parse();
     }
 }

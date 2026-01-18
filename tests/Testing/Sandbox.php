@@ -21,7 +21,7 @@ final class Sandbox
         $instance = new self();
 
         $mkdirResult = mkdir($instance->path, recursive: true);
-        if (! $mkdirResult) {
+        if (!$mkdirResult) {
             throw new RuntimeException('Failed to create sandbox directory');
         }
 
@@ -52,7 +52,7 @@ final class Sandbox
         $phMakePath = realpath(__DIR__ . '/../../phmake');
 
         if (PHP_OS === 'Darwin') {
-            putenv("PATH=/usr/local/bin:" . getenv("PATH"));
+            putenv('PATH=/usr/local/bin:' . getenv('PATH'));
         }
 
         $output = shell_exec("cd $this->path && php $phMakePath $arguments");

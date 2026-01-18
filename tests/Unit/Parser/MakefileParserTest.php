@@ -11,17 +11,17 @@ class MakefileParserTest extends TestCase
     #[Test]
     public function parsedAsExpected(): void
     {
-        $makefile = (new MakefileParser(<<<MAKEFILE
-foo: bar baz
-    echo "foo"
-bar: qux
-    echo "bar"
-baz:
-    echo "baz"
-qux:
-    echo "qux"
+        $makefile = new MakefileParser(<<<MAKEFILE
+            foo: bar baz
+                echo "foo"
+            bar: qux
+                echo "bar"
+            baz:
+                echo "baz"
+            qux:
+                echo "qux"
 
-MAKEFILE))->parse();
+            MAKEFILE)->parse();
 
         $fooTarget = $makefile->targets[0];
         $this->assertSame('foo', $fooTarget->name);
