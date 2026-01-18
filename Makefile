@@ -10,5 +10,9 @@ lint:
 format:
 	vendor/bin/mago fmt
 
+.PHONY: format-check
+format-check:
+	vendor/bin/mago fmt --dry-run
+
 .PHONY: check
-check: lint test
+check: lint format-check test
