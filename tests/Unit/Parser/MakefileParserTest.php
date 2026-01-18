@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tamiroh\Phmake\Tests\Unit\Parser;
 
 use PHPUnit\Framework\Attributes\Test;

@@ -43,10 +43,12 @@ final readonly class Makefile
     {
         $foundTarget = null;
         foreach ($this->targets as $makefileTarget) {
-            if ($makefileTarget->name === $target) {
-                $foundTarget = $makefileTarget;
-                break;
+            if ($makefileTarget->name !== $target) {
+                continue;
             }
+
+            $foundTarget = $makefileTarget;
+            break;
         }
         return $foundTarget;
     }

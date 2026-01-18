@@ -58,7 +58,7 @@ final readonly class MakefileParser
         $targetName = explode(':', $this->makefileLines[$lineIndex])[0];
         $dependencyNames = array_filter(
             explode(' ', explode(':', $this->makefileLines[$lineIndex])[1] ?? ''),
-            fn($dependencyName) => $dependencyName !== '',
+            static fn($dependencyName) => $dependencyName !== '',
         );
 
         $dependencies = [];
@@ -94,11 +94,15 @@ final readonly class MakefileParser
     {
         foreach (array_keys($this->makefileLines) as $lineIndex) {
             if (
-                $this->isTargetName($this->makefileLines[$lineIndex])
-                && explode(':', $this->makefileLines[$lineIndex])[0] === $targetName
+                !(
+                    $this->isTargetName($this->makefileLines[$lineIndex])
+                    && explode(':', $this->makefileLines[$lineIndex])[0] === $targetName
+                )
             ) {
-                return $lineIndex;
+                continue;
             }
+
+            return $lineIndex;
         }
 
         return null;
