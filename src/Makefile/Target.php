@@ -30,8 +30,7 @@ final readonly class Target
         if (!$filesystem->exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget($filesystem)) {
             foreach ($this->commands as $command) {
                 $output->writeLine($command);
-                $result = $shell->exec($command);
-                $output->write($result);
+                $shell->exec($command);
             }
             return true;
         } else {
