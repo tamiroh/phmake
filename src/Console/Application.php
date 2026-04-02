@@ -4,14 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
-use Symfony\Component\Process\Exception\RuntimeException;
-use Symfony\Component\Process\Process as SymfonyProcess;
-use Tamiroh\Phmake\Makefile\Filesystem;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
-use Tamiroh\Phmake\Makefile\Output;
-use Tamiroh\Phmake\Makefile\Shell;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
 final readonly class Application
@@ -21,59 +16,8 @@ final readonly class Application
         /** @var list<string> $argv */
         global $argv;
 
-        $makefile = $this->createMakefile();
-        $shell = new class implements Shell {
-            public function exec(string $command): void
-            {
-                $process = SymfonyProcess::fromShellCommandline($command);
-
-                if ($this->isStdoutTty() && SymfonyProcess::isTtySupported()) {
-                    try {
-                        $process->setTty(true);
-                    } catch (RuntimeException) {
-                    }
-                }
-
-                $process->run(function (string $type, string $buffer): void {
-                    match ($type) {
-                        SymfonyProcess::OUT => print $buffer,
-                        SymfonyProcess::ERR => fwrite(STDERR, $buffer),
-                    };
-                });
-            }
-
-            private function isStdoutTty(): bool
-            {
-                return defined('STDOUT') && stream_isatty(STDOUT);
-            }
-        };
-        $filesystem = new class implements Filesystem {
-            public function exists(string $path): bool
-            {
-                return file_exists($path);
-            }
-
-            public function lastModified(string $path): ?int
-            {
-                $result = @filemtime($path);
-
-                return $result === false ? null : $result;
-            }
-        };
-        $output = new class implements Output {
-            public function write(string $text): void
-            {
-                echo $text;
-            }
-
-            public function writeLine(string $line): void
-            {
-                echo $line . PHP_EOL;
-            }
-        };
-
         try {
-            $makefile->run(array_slice($argv, 1), $shell, $filesystem, $output);
+            $this->createMakefile()->run(array_slice($argv, 1), new Shell(), new Filesystem(), new Output());
         } catch (MakefileErrorException $e) {
             Process::stopWithError($e->getMessage());
         } catch (MakefileUpToDateException $e) {
