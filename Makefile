@@ -1,18 +1,22 @@
+MAGO = vendor/bin/mago
+PHPSTAN = vendor/bin/phpstan
+PHPUNIT = vendor/bin/phpunit
+
 .PHONY: test
 test:
-	vendor/bin/phpunit tests
+	$(PHPUNIT) tests
 
 .PHONY: lint
 lint:
-	vendor/bin/phpstan analyse src tests --memory-limit=2G
+	$(PHPSTAN) analyse src tests --memory-limit=2G
 
 .PHONY: format
 format:
-	vendor/bin/mago fmt
+	$(MAGO) fmt
 
 .PHONY: format-check
 format-check:
-	vendor/bin/mago fmt --dry-run
+	$(MAGO) fmt --dry-run
 
 .PHONY: check
 check: lint format-check test

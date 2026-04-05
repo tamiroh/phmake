@@ -131,5 +131,34 @@ final class E2ETest extends TestCase
             ],
             "echo 'check'\ncheck\n",
         ];
+
+        yield 'supports phony declarations between targets' => [
+            <<<'MAKEFILE'
+                .PHONY: test
+                test:
+                    echo 'test'
+
+                .PHONY: lint
+                lint:
+                    echo 'lint'
+
+                .PHONY: check
+                check: lint test
+                MAKEFILE,
+            'check',
+            [],
+            "echo 'lint'\nlint\necho 'test'\ntest\n",
+        ];
+
+        yield 'variables are expanded in commands' => [
+            <<<'MAKEFILE'
+                GREETING = hello
+                foo:
+                    echo '$(GREETING)'
+                MAKEFILE,
+            'foo',
+            [],
+            "echo 'hello'\nhello\n",
+        ];
     }
 }

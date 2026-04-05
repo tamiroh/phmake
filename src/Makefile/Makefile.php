@@ -8,9 +8,11 @@ final readonly class Makefile
 {
     /**
      * @param list<Target> $targets
+     * @param list<Variable> $variables
      */
     public function __construct(
         public array $targets = [],
+        public array $variables = [],
     ) {}
 
     /**
@@ -23,7 +25,7 @@ final readonly class Makefile
     public function run(array $targets, Shell $shell, Filesystem $filesystem, Output $output): void
     {
         if ($targets === []) {
-            if (!$this->targets[0]->run($shell, $filesystem, $output)) {
+            if (!$this->targets[0]->run($shell, $filesystem, $output, $this->variables)) {
                 throw new MakefileUpToDateException($this->targets[0]->name);
             }
             return;
@@ -34,7 +36,7 @@ final readonly class Makefile
             if ($foundTarget === null) {
                 throw new MakefileErrorException("No rule to make target `$target'");
             }
-            if (!$foundTarget->run($shell, $filesystem, $output)) {
+            if (!$foundTarget->run($shell, $filesystem, $output, $this->variables)) {
                 throw new MakefileUpToDateException($foundTarget->name);
             }
         }

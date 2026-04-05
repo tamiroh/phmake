@@ -8,7 +8,7 @@ final readonly class Target
 {
     /**
      * @param list<Target> $dependencies
-     * @param list<string> $commands
+     * @param list<Command> $commands
      */
     public function __construct(
         public string $name,
@@ -20,14 +20,16 @@ final readonly class Target
     ) {}
 
     /**
+     * @param list<Variable> $variables
+     *
      * @throws CommandFailedException
      */
-    public function run(Shell $shell, Filesystem $filesystem, Output $output): bool
+    public function run(Shell $shell, Filesystem $filesystem, Output $output, array $variables = []): bool
     {
         $rebuilt = false;
 
         foreach ($this->dependencies as $dependency) {
-            $dependencyRunResult = $dependency->run($shell, $filesystem, $output);
+            $dependencyRunResult = $dependency->run($shell, $filesystem, $output, $variables);
             $rebuilt = $rebuilt || $dependencyRunResult;
         }
 
@@ -38,8 +40,9 @@ final readonly class Target
             || $this->isAnyDependencyNewerThanTarget($filesystem)
         ) {
             foreach ($this->commands as $command) {
-                $output->writeLine($command);
-                $exitCode = $shell->exec($command);
+                $expandedCommand = $command->expand($variables);
+                $output->writeLine($expandedCommand);
+                $exitCode = $shell->exec($expandedCommand);
                 if ($exitCode !== 0) {
                     throw new CommandFailedException($this->name, $exitCode);
                 }

@@ -7,8 +7,10 @@ namespace Tamiroh\Phmake\Tests\Unit\Makefile;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Tamiroh\Phmake\Makefile\Command;
 use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Target;
+use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Tests\Testing\FakeFilesystem;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
 use Tamiroh\Phmake\Tests\Testing\FakeShell;
@@ -26,7 +28,7 @@ final class TargetTest extends TestCase
             dependencies: [],
             startLineIndex: 0,
             endLineIndex: 1,
-            commands: ['echo bar'],
+            commands: [new Command('echo bar')],
             isPhony: false,
         );
         $foo = new Target(
@@ -34,7 +36,7 @@ final class TargetTest extends TestCase
             dependencies: [$bar],
             startLineIndex: 2,
             endLineIndex: 3,
-            commands: ['echo foo'],
+            commands: [new Command('echo foo')],
             isPhony: false,
         );
 
@@ -60,7 +62,7 @@ final class TargetTest extends TestCase
             dependencies: [],
             startLineIndex: 0,
             endLineIndex: 1,
-            commands: ['echo bar'],
+            commands: [new Command('echo bar')],
             isPhony: false,
         );
         $foo = new Target(
@@ -68,7 +70,7 @@ final class TargetTest extends TestCase
             dependencies: [$bar],
             startLineIndex: 2,
             endLineIndex: 3,
-            commands: ['echo foo'],
+            commands: [new Command('echo foo')],
             isPhony: false,
         );
 
@@ -97,7 +99,7 @@ final class TargetTest extends TestCase
             dependencies: [],
             startLineIndex: 0,
             endLineIndex: 1,
-            commands: ['echo bar'],
+            commands: [new Command('echo bar')],
             isPhony: false,
         );
         $foo = new Target(
@@ -105,7 +107,7 @@ final class TargetTest extends TestCase
             dependencies: [$bar],
             startLineIndex: 2,
             endLineIndex: 3,
-            commands: ['echo foo'],
+            commands: [new Command('echo foo')],
             isPhony: false,
         );
 
@@ -134,7 +136,7 @@ final class TargetTest extends TestCase
             dependencies: [],
             startLineIndex: 0,
             endLineIndex: 2,
-            commands: ['false', 'echo foo'],
+            commands: [new Command('false'), new Command('echo foo')],
             isPhony: false,
         );
 
@@ -162,7 +164,7 @@ final class TargetTest extends TestCase
             dependencies: [],
             startLineIndex: 0,
             endLineIndex: 1,
-            commands: ['echo foo'],
+            commands: [new Command('echo foo')],
             isPhony: true,
         );
 
@@ -177,5 +179,30 @@ final class TargetTest extends TestCase
         $this->assertTrue($rebuilt);
         $this->assertSame(['echo foo'], $shell->commands);
         $this->assertSame(['echo foo'], $output->lines);
+    }
+
+    /**
+     * @throws CommandFailedException
+     */
+    #[Test]
+    public function expandsVariablesInCommandsBeforeExecution(): void
+    {
+        $foo = new Target(
+            name: 'foo',
+            dependencies: [],
+            startLineIndex: 0,
+            endLineIndex: 1,
+            commands: [new Command('echo $(GREETING)')],
+            isPhony: false,
+        );
+
+        $shell = new FakeShell();
+        $output = new FakeOutput();
+
+        $rebuilt = $foo->run($shell, new FakeFilesystem(files: []), $output, [new Variable('GREETING', 'hello')]);
+
+        $this->assertTrue($rebuilt);
+        $this->assertSame(['echo hello'], $shell->commands);
+        $this->assertSame(['echo hello'], $output->lines);
     }
 }

@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Tests\Unit\Makefile;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Tamiroh\Phmake\Makefile\Command;
 use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
@@ -32,7 +33,7 @@ final class MakefileTest extends TestCase
                 dependencies: [],
                 startLineIndex: 0,
                 endLineIndex: 1,
-                commands: ['echo foo'],
+                commands: [new Command('echo foo')],
                 isPhony: false,
             ),
             new Target(
@@ -40,7 +41,7 @@ final class MakefileTest extends TestCase
                 dependencies: [],
                 startLineIndex: 2,
                 endLineIndex: 3,
-                commands: ['echo bar'],
+                commands: [new Command('echo bar')],
                 isPhony: false,
             ),
         ]);
@@ -69,7 +70,7 @@ final class MakefileTest extends TestCase
                 dependencies: [],
                 startLineIndex: 0,
                 endLineIndex: 1,
-                commands: ['echo foo'],
+                commands: [new Command('echo foo')],
                 isPhony: false,
             ),
         ]);
@@ -93,7 +94,7 @@ final class MakefileTest extends TestCase
                 dependencies: [],
                 startLineIndex: 0,
                 endLineIndex: 1,
-                commands: ['echo foo'],
+                commands: [new Command('echo foo')],
                 isPhony: false,
             ),
         ]);
@@ -127,7 +128,7 @@ final class MakefileTest extends TestCase
                 dependencies: [],
                 startLineIndex: 0,
                 endLineIndex: 1,
-                commands: ['false'],
+                commands: [new Command('false')],
                 isPhony: false,
             ),
             new Target(
@@ -135,7 +136,7 @@ final class MakefileTest extends TestCase
                 dependencies: [],
                 startLineIndex: 2,
                 endLineIndex: 3,
-                commands: ['echo bar'],
+                commands: [new Command('echo bar')],
                 isPhony: false,
             ),
         ]);
@@ -167,7 +168,7 @@ final class MakefileTest extends TestCase
                 dependencies: [],
                 startLineIndex: 0,
                 endLineIndex: 1,
-                commands: ['echo foo'],
+                commands: [new Command('echo foo')],
                 isPhony: true,
             ),
         ]);
