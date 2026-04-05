@@ -3,3 +3,9 @@ parameters:
 	paths:
 		- src
 		- tests
+	exceptions:
+		uncheckedExceptionClasses:
+			- LogicException
+			- RuntimeException
+		check:
+			missingCheckedExceptionInThrows: true

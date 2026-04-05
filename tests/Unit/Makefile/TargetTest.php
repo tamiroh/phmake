@@ -15,6 +15,9 @@ use Tamiroh\Phmake\Tests\Testing\FakeShell;
 
 final class TargetTest extends TestCase
 {
+    /**
+     * @throws CommandFailedException
+     */
     #[Test]
     public function runsDependencyBeforeOwnCommands(): void
     {
@@ -46,6 +49,9 @@ final class TargetTest extends TestCase
         $this->assertSame(['echo bar', 'echo foo'], $output->lines);
     }
 
+    /**
+     * @throws CommandFailedException
+     */
     #[Test]
     public function doesNotRunCommandsWhenTargetIsUpToDate(): void
     {
@@ -80,6 +86,9 @@ final class TargetTest extends TestCase
         $this->assertSame([], $output->lines);
     }
 
+    /**
+     * @throws CommandFailedException
+     */
     #[Test]
     public function runsCommandsWhenDependencyIsNewerThanTarget(): void
     {
@@ -114,6 +123,9 @@ final class TargetTest extends TestCase
         $this->assertSame(['echo foo'], $output->lines);
     }
 
+    /**
+     * @throws CommandFailedException
+     */
     #[Test]
     public function stopsWhenACommandFails(): void
     {
@@ -139,6 +151,9 @@ final class TargetTest extends TestCase
         }
     }
 
+    /**
+     * @throws CommandFailedException
+     */
     #[Test]
     public function runsCommandsForPhonyTargetsEvenWhenTheFileExists(): void
     {

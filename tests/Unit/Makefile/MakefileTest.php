@@ -18,6 +18,11 @@ use Tamiroh\Phmake\Tests\Testing\FakeShell;
 
 final class MakefileTest extends TestCase
 {
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     * @throws MakefileUpToDateException
+     */
     #[Test]
     public function runsTheDefaultTargetWhenNoArgumentsAreGiven(): void
     {
@@ -50,6 +55,11 @@ final class MakefileTest extends TestCase
         $this->assertSame(['echo foo'], $output->lines);
     }
 
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     * @throws MakefileUpToDateException
+     */
     #[Test]
     public function throwsWhenTargetDoesNotExist(): void
     {
@@ -70,6 +80,10 @@ final class MakefileTest extends TestCase
         $makefile->run(['bar'], new FakeShell(), new FakeFilesystem(files: []), new FakeOutput());
     }
 
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function throwsWhenRequestedTargetIsUpToDate(): void
     {
@@ -99,6 +113,11 @@ final class MakefileTest extends TestCase
         }
     }
 
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     * @throws MakefileUpToDateException
+     */
     #[Test]
     public function stopsRunningLaterTargetsWhenAnEarlierTargetFails(): void
     {
@@ -134,6 +153,11 @@ final class MakefileTest extends TestCase
         }
     }
 
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     * @throws MakefileUpToDateException
+     */
     #[Test]
     public function runsPhonyTargetsEvenWhenTheCorrespondingFileExists(): void
     {
