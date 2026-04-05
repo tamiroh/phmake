@@ -25,6 +25,7 @@ This file is for AI agents and other automated contributors. It describes the cu
 - Under `tests/Unit`, match the directory structure to the code under test.
 - Use `tests/E2E` only for real CLI entrypoint coverage.
 - Put shared test helpers and doubles in `tests/Testing`.
+- After code changes, run `make check` and fix failures before finishing unless the environment prevents it.
 
 ## Change Heuristics
 
