@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Tests\Unit\Makefile;
 
+use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tamiroh\Phmake\Makefile\CommandFailedException;
@@ -28,7 +29,7 @@ final class TargetTest extends TestCase
 
         $shell = new FakeShell();
         $output = new FakeOutput();
-        $filesystem = new FakeFilesystem(exists: [], lastModified: []);
+        $filesystem = new FakeFilesystem(files: []);
 
         $rebuilt = $foo->run($shell, $filesystem, $output);
 
@@ -51,9 +52,9 @@ final class TargetTest extends TestCase
 
         $shell = new FakeShell();
         $output = new FakeOutput();
-        $filesystem = new FakeFilesystem(exists: ['bar' => true, 'foo' => true], lastModified: [
-            'bar' => 100,
-            'foo' => 100,
+        $filesystem = new FakeFilesystem(files: [
+            'bar' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
+            'foo' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
         ]);
 
         $rebuilt = $foo->run($shell, $filesystem, $output);
@@ -77,9 +78,9 @@ final class TargetTest extends TestCase
 
         $shell = new FakeShell();
         $output = new FakeOutput();
-        $filesystem = new FakeFilesystem(exists: ['bar' => true, 'foo' => true], lastModified: [
-            'bar' => 200,
-            'foo' => 100,
+        $filesystem = new FakeFilesystem(files: [
+            'bar' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:01:00')],
+            'foo' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
         ]);
 
         $rebuilt = $foo->run($shell, $filesystem, $output);
@@ -109,7 +110,7 @@ final class TargetTest extends TestCase
         try {
             $foo->run(
                 $shell,
-                new FakeFilesystem(exists: [], lastModified: []),
+                new FakeFilesystem(files: []),
                 new FakeOutput(),
             );
         } finally {

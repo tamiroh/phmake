@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Tests\Unit\Makefile;
 
+use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tamiroh\Phmake\Makefile\CommandFailedException;
@@ -27,7 +28,7 @@ final class MakefileTest extends TestCase
 
         $shell = new FakeShell();
         $output = new FakeOutput();
-        $filesystem = new FakeFilesystem(exists: [], lastModified: []);
+        $filesystem = new FakeFilesystem(files: []);
 
         $makefile->run([], $shell, $filesystem, $output);
 
@@ -45,7 +46,7 @@ final class MakefileTest extends TestCase
         $this->expectException(MakefileErrorException::class);
         $this->expectExceptionMessage("No rule to make target `bar'");
 
-        $makefile->run(['bar'], new FakeShell(), new FakeFilesystem(exists: [], lastModified: []), new FakeOutput());
+        $makefile->run(['bar'], new FakeShell(), new FakeFilesystem(files: []), new FakeOutput());
     }
 
     #[Test]
@@ -59,7 +60,9 @@ final class MakefileTest extends TestCase
             $makefile->run(
                 ['foo'],
                 new FakeShell(),
-                new FakeFilesystem(exists: ['foo' => true], lastModified: ['foo' => 100]),
+                new FakeFilesystem(files: [
+                    'foo' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
+                ]),
                 new FakeOutput(),
             );
             self::fail('Expected MakefileUpToDateException to be thrown.');
@@ -86,7 +89,7 @@ final class MakefileTest extends TestCase
             $makefile->run(
                 ['foo', 'bar'],
                 $shell,
-                new FakeFilesystem(exists: [], lastModified: []),
+                new FakeFilesystem(files: []),
                 new FakeOutput(),
             );
         } finally {

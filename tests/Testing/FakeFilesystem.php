@@ -4,26 +4,25 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Tests\Testing;
 
+use DateTimeImmutable;
 use Tamiroh\Phmake\Makefile\Filesystem;
 
 final class FakeFilesystem implements Filesystem
 {
     /**
-     * @param array<string, bool> $exists
-     * @param array<string, int> $lastModified
+     * @param array<string, array{modifiedAt: DateTimeImmutable}> $files
      */
     public function __construct(
-        private readonly array $exists,
-        private readonly array $lastModified,
+        private readonly array $files,
     ) {}
 
     public function exists(string $path): bool
     {
-        return $this->exists[$path] ?? false;
+        return array_key_exists($path, $this->files);
     }
 
     public function lastModified(string $path): ?int
     {
-        return $this->lastModified[$path] ?? null;
+        return $this->files[$path]['modifiedAt']?->getTimestamp();
     }
 }
