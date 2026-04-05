@@ -10,14 +10,20 @@ use Tamiroh\Phmake\Makefile\Target;
 
 final readonly class MakefileParser
 {
+    private const string PHONY_TARGET = '.PHONY';
+
     /** @var list<string> */
     private array $makefileLines;
+
+    /** @var list<string> */
+    private array $phonyTargets;
 
     private Target $firstTarget;
 
     public function __construct(string $makefile)
     {
         $this->makefileLines = explode("\n", $makefile);
+        $this->phonyTargets = $this->findPhonyTargets();
         $this->firstTarget = $this->findFirstTarget() ?? throw new LogicException('Default target not found');
     }
 
@@ -56,6 +62,10 @@ final readonly class MakefileParser
         }
 
         $targetName = explode(':', $this->makefileLines[$lineIndex])[0];
+        if ($targetName === self::PHONY_TARGET) {
+            return null;
+        }
+
         $dependencyNames = array_filter(
             explode(' ', explode(':', $this->makefileLines[$lineIndex])[1] ?? ''),
             static fn($dependencyName) => $dependencyName !== '',
@@ -87,7 +97,14 @@ final readonly class MakefileParser
             $commands[] = $command;
         }
 
-        return new Target($targetName, $dependencies, $lineIndex, $line - 1, $commands);
+        return new Target(
+            $targetName,
+            $dependencies,
+            $lineIndex,
+            $line - 1,
+            $commands,
+            in_array($targetName, $this->phonyTargets, true),
+        );
     }
 
     private function getLineIndexOfTarget(string $targetName): ?int
@@ -111,5 +128,30 @@ final readonly class MakefileParser
     private function isTargetName(string $line): bool
     {
         return preg_match('/^[.a-zA-Z0-9_-]+:/', $line) === 1;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function findPhonyTargets(): array
+    {
+        $phonyTargets = [];
+
+        foreach ($this->makefileLines as $line) {
+            if (!str_starts_with($line, self::PHONY_TARGET . ':')) {
+                continue;
+            }
+
+            $targetNames = array_filter(
+                explode(' ', explode(':', $line)[1] ?? ''),
+                static fn(string $targetName): bool => $targetName !== '',
+            );
+
+            foreach ($targetNames as $targetName) {
+                $phonyTargets[] = $targetName;
+            }
+        }
+
+        return array_values(array_unique($phonyTargets));
     }
 }

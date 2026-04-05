@@ -16,6 +16,7 @@ final readonly class Target
         public int $startLineIndex,
         public int $endLineIndex,
         public array $commands,
+        public bool $isPhony,
     ) {}
 
     /**
@@ -30,7 +31,12 @@ final readonly class Target
             $rebuilt = $rebuilt || $dependencyRunResult;
         }
 
-        if (!$filesystem->exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget($filesystem)) {
+        if (
+            $this->isPhony
+            || !$filesystem->exists($this->name)
+            || $rebuilt
+            || $this->isAnyDependencyNewerThanTarget($filesystem)
+        ) {
             foreach ($this->commands as $command) {
                 $output->writeLine($command);
                 $exitCode = $shell->exec($command);

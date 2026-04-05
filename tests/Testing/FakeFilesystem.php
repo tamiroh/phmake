@@ -23,6 +23,10 @@ final class FakeFilesystem implements Filesystem
 
     public function lastModified(string $path): ?int
     {
-        return $this->files[$path]['modifiedAt']?->getTimestamp();
+        if (!array_key_exists($path, $this->files)) {
+            return null;
+        }
+
+        return $this->files[$path]['modifiedAt']->getTimestamp();
     }
 }

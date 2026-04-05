@@ -118,5 +118,18 @@ final class E2ETest extends TestCase
             [],
             "false\nphmake: *** [foo] Error 1\n",
         ];
+
+        yield 'phony target runs even when file exists' => [
+            <<<'MAKEFILE'
+                .PHONY: check
+                check:
+                    echo 'check'
+                MAKEFILE,
+            'check',
+            [
+                ['name' => 'check', 'content' => 'existing file'],
+            ],
+            "echo 'check'\ncheck\n",
+        ];
     }
 }

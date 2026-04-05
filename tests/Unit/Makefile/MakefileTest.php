@@ -22,8 +22,22 @@ final class MakefileTest extends TestCase
     public function runsTheDefaultTargetWhenNoArgumentsAreGiven(): void
     {
         $makefile = new Makefile([
-            new Target(name: 'foo', dependencies: [], startLineIndex: 0, endLineIndex: 1, commands: ['echo foo']),
-            new Target(name: 'bar', dependencies: [], startLineIndex: 2, endLineIndex: 3, commands: ['echo bar']),
+            new Target(
+                name: 'foo',
+                dependencies: [],
+                startLineIndex: 0,
+                endLineIndex: 1,
+                commands: ['echo foo'],
+                isPhony: false,
+            ),
+            new Target(
+                name: 'bar',
+                dependencies: [],
+                startLineIndex: 2,
+                endLineIndex: 3,
+                commands: ['echo bar'],
+                isPhony: false,
+            ),
         ]);
 
         $shell = new FakeShell();
@@ -40,7 +54,14 @@ final class MakefileTest extends TestCase
     public function throwsWhenTargetDoesNotExist(): void
     {
         $makefile = new Makefile([
-            new Target(name: 'foo', dependencies: [], startLineIndex: 0, endLineIndex: 1, commands: ['echo foo']),
+            new Target(
+                name: 'foo',
+                dependencies: [],
+                startLineIndex: 0,
+                endLineIndex: 1,
+                commands: ['echo foo'],
+                isPhony: false,
+            ),
         ]);
 
         $this->expectException(MakefileErrorException::class);
@@ -53,7 +74,14 @@ final class MakefileTest extends TestCase
     public function throwsWhenRequestedTargetIsUpToDate(): void
     {
         $makefile = new Makefile([
-            new Target(name: 'foo', dependencies: [], startLineIndex: 0, endLineIndex: 1, commands: ['echo foo']),
+            new Target(
+                name: 'foo',
+                dependencies: [],
+                startLineIndex: 0,
+                endLineIndex: 1,
+                commands: ['echo foo'],
+                isPhony: false,
+            ),
         ]);
 
         try {
@@ -75,8 +103,22 @@ final class MakefileTest extends TestCase
     public function stopsRunningLaterTargetsWhenAnEarlierTargetFails(): void
     {
         $makefile = new Makefile([
-            new Target(name: 'foo', dependencies: [], startLineIndex: 0, endLineIndex: 1, commands: ['false']),
-            new Target(name: 'bar', dependencies: [], startLineIndex: 2, endLineIndex: 3, commands: ['echo bar']),
+            new Target(
+                name: 'foo',
+                dependencies: [],
+                startLineIndex: 0,
+                endLineIndex: 1,
+                commands: ['false'],
+                isPhony: false,
+            ),
+            new Target(
+                name: 'bar',
+                dependencies: [],
+                startLineIndex: 2,
+                endLineIndex: 3,
+                commands: ['echo bar'],
+                isPhony: false,
+            ),
         ]);
 
         $shell = new FakeShell();
@@ -86,14 +128,35 @@ final class MakefileTest extends TestCase
         $this->expectExceptionMessage('[foo] Error 1');
 
         try {
-            $makefile->run(
-                ['foo', 'bar'],
-                $shell,
-                new FakeFilesystem(files: []),
-                new FakeOutput(),
-            );
+            $makefile->run(['foo', 'bar'], $shell, new FakeFilesystem(files: []), new FakeOutput());
         } finally {
             $this->assertSame(['false'], $shell->commands);
         }
+    }
+
+    #[Test]
+    public function runsPhonyTargetsEvenWhenTheCorrespondingFileExists(): void
+    {
+        $makefile = new Makefile([
+            new Target(
+                name: 'foo',
+                dependencies: [],
+                startLineIndex: 0,
+                endLineIndex: 1,
+                commands: ['echo foo'],
+                isPhony: true,
+            ),
+        ]);
+
+        $shell = new FakeShell();
+        $output = new FakeOutput();
+        $filesystem = new FakeFilesystem(files: [
+            'foo' => ['modifiedAt' => new \DateTimeImmutable('2026-04-05 10:00:00')],
+        ]);
+
+        $makefile->run(['foo'], $shell, $filesystem, $output);
+
+        $this->assertSame(['echo foo'], $shell->commands);
+        $this->assertSame(['echo foo'], $output->lines);
     }
 }

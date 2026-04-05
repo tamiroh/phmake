@@ -18,13 +18,21 @@ final class TargetTest extends TestCase
     #[Test]
     public function runsDependencyBeforeOwnCommands(): void
     {
-        $bar = new Target(name: 'bar', dependencies: [], startLineIndex: 0, endLineIndex: 1, commands: ['echo bar']);
+        $bar = new Target(
+            name: 'bar',
+            dependencies: [],
+            startLineIndex: 0,
+            endLineIndex: 1,
+            commands: ['echo bar'],
+            isPhony: false,
+        );
         $foo = new Target(
             name: 'foo',
             dependencies: [$bar],
             startLineIndex: 2,
             endLineIndex: 3,
             commands: ['echo foo'],
+            isPhony: false,
         );
 
         $shell = new FakeShell();
@@ -41,13 +49,21 @@ final class TargetTest extends TestCase
     #[Test]
     public function doesNotRunCommandsWhenTargetIsUpToDate(): void
     {
-        $bar = new Target(name: 'bar', dependencies: [], startLineIndex: 0, endLineIndex: 1, commands: ['echo bar']);
+        $bar = new Target(
+            name: 'bar',
+            dependencies: [],
+            startLineIndex: 0,
+            endLineIndex: 1,
+            commands: ['echo bar'],
+            isPhony: false,
+        );
         $foo = new Target(
             name: 'foo',
             dependencies: [$bar],
             startLineIndex: 2,
             endLineIndex: 3,
             commands: ['echo foo'],
+            isPhony: false,
         );
 
         $shell = new FakeShell();
@@ -67,13 +83,21 @@ final class TargetTest extends TestCase
     #[Test]
     public function runsCommandsWhenDependencyIsNewerThanTarget(): void
     {
-        $bar = new Target(name: 'bar', dependencies: [], startLineIndex: 0, endLineIndex: 1, commands: ['echo bar']);
+        $bar = new Target(
+            name: 'bar',
+            dependencies: [],
+            startLineIndex: 0,
+            endLineIndex: 1,
+            commands: ['echo bar'],
+            isPhony: false,
+        );
         $foo = new Target(
             name: 'foo',
             dependencies: [$bar],
             startLineIndex: 2,
             endLineIndex: 3,
             commands: ['echo foo'],
+            isPhony: false,
         );
 
         $shell = new FakeShell();
@@ -99,6 +123,7 @@ final class TargetTest extends TestCase
             startLineIndex: 0,
             endLineIndex: 2,
             commands: ['false', 'echo foo'],
+            isPhony: false,
         );
 
         $shell = new FakeShell();
@@ -108,13 +133,34 @@ final class TargetTest extends TestCase
         $this->expectExceptionMessage('[foo] Error 1');
 
         try {
-            $foo->run(
-                $shell,
-                new FakeFilesystem(files: []),
-                new FakeOutput(),
-            );
+            $foo->run($shell, new FakeFilesystem(files: []), new FakeOutput());
         } finally {
             $this->assertSame(['false'], $shell->commands);
         }
+    }
+
+    #[Test]
+    public function runsCommandsForPhonyTargetsEvenWhenTheFileExists(): void
+    {
+        $foo = new Target(
+            name: 'foo',
+            dependencies: [],
+            startLineIndex: 0,
+            endLineIndex: 1,
+            commands: ['echo foo'],
+            isPhony: true,
+        );
+
+        $shell = new FakeShell();
+        $output = new FakeOutput();
+        $filesystem = new FakeFilesystem(files: [
+            'foo' => ['modifiedAt' => new \DateTimeImmutable('2026-04-05 10:00:00')],
+        ]);
+
+        $rebuilt = $foo->run($shell, $filesystem, $output);
+
+        $this->assertTrue($rebuilt);
+        $this->assertSame(['echo foo'], $shell->commands);
+        $this->assertSame(['echo foo'], $output->lines);
     }
 }

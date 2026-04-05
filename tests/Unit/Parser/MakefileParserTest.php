@@ -14,6 +14,7 @@ class MakefileParserTest extends TestCase
     public function parsedAsExpected(): void
     {
         $makefile = new MakefileParser(<<<MAKEFILE
+            .PHONY: foo baz
             foo: bar baz
                 echo "foo"
             bar: qux
@@ -27,19 +28,23 @@ class MakefileParserTest extends TestCase
 
         $fooTarget = $makefile->targets[0];
         $this->assertSame('foo', $fooTarget->name);
+        $this->assertTrue($fooTarget->isPhony);
         $this->assertSame('bar', $fooTarget->dependencies[0]->name);
         $this->assertSame('baz', $fooTarget->dependencies[1]->name);
 
         $barTarget = $makefile->targets[1];
         $this->assertSame('bar', $barTarget->name);
+        $this->assertFalse($barTarget->isPhony);
         $this->assertSame('qux', $barTarget->dependencies[0]->name);
 
         $bazTarget = $makefile->targets[2];
         $this->assertSame('baz', $bazTarget->name);
+        $this->assertTrue($bazTarget->isPhony);
         $this->assertEmpty($bazTarget->dependencies);
 
         $quxTarget = $makefile->targets[3];
         $this->assertSame('qux', $quxTarget->name);
+        $this->assertFalse($quxTarget->isPhony);
         $this->assertEmpty($quxTarget->dependencies);
     }
 }
