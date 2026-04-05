@@ -33,3 +33,4 @@ This file is for AI agents and other automated contributors. It describes the cu
 - If a change is about rebuild decisions or target execution order, start in `Target`/`Makefile` and their unit tests.
 - If a change is about terminal output, subprocess behavior, or ANSI color, start in `src/Console`.
 - If a change crosses layers, keep the domain-facing interfaces small and move complexity outward.
+- When implementing or discussing GNU make compatibility, prefer the GNU make manual as the primary specification source: `https://www.gnu.org/software/make/manual/make.html`.
