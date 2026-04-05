@@ -27,4 +27,11 @@ final class Process
 
         exit(0);
     }
+
+    public static function stopWithCommandFailure(string $target, int $exitCode): never
+    {
+        echo self::MESSAGE_PREMIX . "*** [$target] Error $exitCode" . PHP_EOL;
+
+        exit(2);
+    }
 }

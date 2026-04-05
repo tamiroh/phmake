@@ -10,7 +10,7 @@ use Tamiroh\Phmake\Makefile\Shell as ShellInterface;
 
 final class Shell implements ShellInterface
 {
-    public function exec(string $command): void
+    public function exec(string $command): int
     {
         $process = SymfonyProcess::fromShellCommandline($command);
 
@@ -21,7 +21,7 @@ final class Shell implements ShellInterface
             }
         }
 
-        $process->run(function (string $type, string $buffer): void {
+        return $process->run(function (string $type, string $buffer): void {
             match ($type) {
                 SymfonyProcess::OUT => print $buffer,
                 SymfonyProcess::ERR => fwrite(STDERR, $buffer),

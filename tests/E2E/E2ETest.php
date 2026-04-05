@@ -107,5 +107,16 @@ final class E2ETest extends TestCase
             [],
             "phmake: *** No rule to make target `baz'.  Stop.\n",
         ];
+
+        yield 'failed command stops target execution' => [
+            <<<'MAKEFILE'
+                foo:
+                    false
+                    echo 'foo'
+                MAKEFILE,
+            'foo',
+            [],
+            "false\nphmake: *** [foo] Error 1\n",
+        ];
     }
 }

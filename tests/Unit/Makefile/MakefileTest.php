@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Tests\Unit\Makefile;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
@@ -64,6 +65,32 @@ final class MakefileTest extends TestCase
             self::fail('Expected MakefileUpToDateException to be thrown.');
         } catch (MakefileUpToDateException $e) {
             $this->assertSame('foo', $e->target);
+        }
+    }
+
+    #[Test]
+    public function stopsRunningLaterTargetsWhenAnEarlierTargetFails(): void
+    {
+        $makefile = new Makefile([
+            new Target(name: 'foo', dependencies: [], startLineIndex: 0, endLineIndex: 1, commands: ['false']),
+            new Target(name: 'bar', dependencies: [], startLineIndex: 2, endLineIndex: 3, commands: ['echo bar']),
+        ]);
+
+        $shell = new FakeShell();
+        $shell->exitCodes['false'] = 1;
+
+        $this->expectException(CommandFailedException::class);
+        $this->expectExceptionMessage('[foo] Error 1');
+
+        try {
+            $makefile->run(
+                ['foo', 'bar'],
+                $shell,
+                new FakeFilesystem(exists: [], lastModified: []),
+                new FakeOutput(),
+            );
+        } finally {
+            $this->assertSame(['false'], $shell->commands);
         }
     }
 }

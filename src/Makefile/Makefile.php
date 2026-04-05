@@ -16,6 +16,7 @@ final readonly class Makefile
     /**
      * @param list<string> $targets
      *
+     * @throws CommandFailedException
      * @throws MakefileErrorException
      * @throws MakefileUpToDateException
      */

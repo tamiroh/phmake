@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Tests\Unit\Makefile;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Tests\Testing\FakeFilesystem;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
@@ -86,5 +87,33 @@ final class TargetTest extends TestCase
         $this->assertTrue($rebuilt);
         $this->assertSame(['echo foo'], $shell->commands);
         $this->assertSame(['echo foo'], $output->lines);
+    }
+
+    #[Test]
+    public function stopsWhenACommandFails(): void
+    {
+        $foo = new Target(
+            name: 'foo',
+            dependencies: [],
+            startLineIndex: 0,
+            endLineIndex: 2,
+            commands: ['false', 'echo foo'],
+        );
+
+        $shell = new FakeShell();
+        $shell->exitCodes['false'] = 1;
+
+        $this->expectException(CommandFailedException::class);
+        $this->expectExceptionMessage('[foo] Error 1');
+
+        try {
+            $foo->run(
+                $shell,
+                new FakeFilesystem(exists: [], lastModified: []),
+                new FakeOutput(),
+            );
+        } finally {
+            $this->assertSame(['false'], $shell->commands);
+        }
     }
 }

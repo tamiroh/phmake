@@ -18,6 +18,9 @@ final readonly class Target
         public array $commands,
     ) {}
 
+    /**
+     * @throws CommandFailedException
+     */
     public function run(Shell $shell, Filesystem $filesystem, Output $output): bool
     {
         $rebuilt = false;
@@ -30,7 +33,10 @@ final readonly class Target
         if (!$filesystem->exists($this->name) || $rebuilt || $this->isAnyDependencyNewerThanTarget($filesystem)) {
             foreach ($this->commands as $command) {
                 $output->writeLine($command);
-                $shell->exec($command);
+                $exitCode = $shell->exec($command);
+                if ($exitCode !== 0) {
+                    throw new CommandFailedException($this->name, $exitCode);
+                }
             }
             return true;
         } else {

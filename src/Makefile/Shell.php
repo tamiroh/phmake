@@ -6,5 +6,5 @@ namespace Tamiroh\Phmake\Makefile;
 
 interface Shell
 {
-    public function exec(string $command): void;
+    public function exec(string $command): int;
 }

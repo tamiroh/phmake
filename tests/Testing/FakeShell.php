@@ -11,8 +11,13 @@ final class FakeShell implements Shell
     /** @var list<string> */
     public array $commands = [];
 
-    public function exec(string $command): void
+    /** @var array<string, int> */
+    public array $exitCodes = [];
+
+    public function exec(string $command): int
     {
         $this->commands[] = $command;
+
+        return $this->exitCodes[$command] ?? 0;
     }
 }

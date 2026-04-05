@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
+use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
@@ -18,6 +19,8 @@ final readonly class Application
 
         try {
             $this->createMakefile()->run(array_slice($argv, 1), new Shell(), new Filesystem(), new Output());
+        } catch (CommandFailedException $e) {
+            Process::stopWithCommandFailure($e->target, $e->exitCode);
         } catch (MakefileErrorException $e) {
             Process::stopWithError($e->getMessage());
         } catch (MakefileUpToDateException $e) {
