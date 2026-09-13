@@ -1,0 +1,55 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+
+      - name: Install dependencies
+        run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse src tests --memory-limit=2G
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+
+      - name: Install dependencies
+        run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
+
+      - name: Run Mago format check
+        run: vendor/bin/mago fmt --dry-run
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+
+      - name: Install dependencies
+        run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
+
+      - name: Run E2E test
+        run: vendor/bin/phpunit tests/E2E
