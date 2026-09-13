@@ -30,30 +30,30 @@ class MakefileParserTest extends TestCase
             MAKEFILE)->parse();
 
         $fooTarget = $makefile->targets[0];
-        $this->assertSame('foo', $fooTarget->name);
-        $this->assertTrue($fooTarget->isPhony);
-        $this->assertSame('bar', $fooTarget->dependencies[0]->name);
-        $this->assertSame('baz', $fooTarget->dependencies[1]->name);
-        $this->assertEquals([new Command('echo "$(GREETING) foo"')], $fooTarget->commands);
+        self::assertSame('foo', $fooTarget->name);
+        self::assertTrue($fooTarget->isPhony);
+        self::assertSame('bar', $fooTarget->dependencies[0]->name);
+        self::assertSame('baz', $fooTarget->dependencies[1]->name);
+        self::assertEquals([new Command('echo "$(GREETING) foo"')], $fooTarget->commands);
 
         $barTarget = $makefile->targets[1];
-        $this->assertSame('bar', $barTarget->name);
-        $this->assertFalse($barTarget->isPhony);
-        $this->assertSame('qux', $barTarget->dependencies[0]->name);
-        $this->assertEquals([new Command('echo "bar"')], $barTarget->commands);
+        self::assertSame('bar', $barTarget->name);
+        self::assertFalse($barTarget->isPhony);
+        self::assertSame('qux', $barTarget->dependencies[0]->name);
+        self::assertEquals([new Command('echo "bar"')], $barTarget->commands);
 
         $bazTarget = $makefile->targets[2];
-        $this->assertSame('baz', $bazTarget->name);
-        $this->assertTrue($bazTarget->isPhony);
-        $this->assertEmpty($bazTarget->dependencies);
-        $this->assertEquals([new Command('echo "baz"')], $bazTarget->commands);
+        self::assertSame('baz', $bazTarget->name);
+        self::assertTrue($bazTarget->isPhony);
+        self::assertEmpty($bazTarget->dependencies);
+        self::assertEquals([new Command('echo "baz"')], $bazTarget->commands);
 
         $quxTarget = $makefile->targets[3];
-        $this->assertSame('qux', $quxTarget->name);
-        $this->assertFalse($quxTarget->isPhony);
-        $this->assertEmpty($quxTarget->dependencies);
-        $this->assertEquals([new Command('echo "qux"')], $quxTarget->commands);
+        self::assertSame('qux', $quxTarget->name);
+        self::assertFalse($quxTarget->isPhony);
+        self::assertEmpty($quxTarget->dependencies);
+        self::assertEquals([new Command('echo "qux"')], $quxTarget->commands);
 
-        $this->assertEquals([new Variable('GREETING', 'hello')], $makefile->variables);
+        self::assertEquals([new Variable('GREETING', 'hello')], $makefile->variables);
     }
 }

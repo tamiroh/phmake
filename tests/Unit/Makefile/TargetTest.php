@@ -46,9 +46,9 @@ final class TargetTest extends TestCase
 
         $rebuilt = $foo->run($shell, $filesystem, $output);
 
-        $this->assertTrue($rebuilt);
-        $this->assertSame(['echo bar', 'echo foo'], $shell->commands);
-        $this->assertSame(['echo bar', 'echo foo'], $output->lines);
+        self::assertTrue($rebuilt);
+        self::assertSame(['echo bar', 'echo foo'], $shell->commands);
+        self::assertSame(['echo bar', 'echo foo'], $output->lines);
     }
 
     /**
@@ -83,9 +83,9 @@ final class TargetTest extends TestCase
 
         $rebuilt = $foo->run($shell, $filesystem, $output);
 
-        $this->assertFalse($rebuilt);
-        $this->assertSame([], $shell->commands);
-        $this->assertSame([], $output->lines);
+        self::assertFalse($rebuilt);
+        self::assertSame([], $shell->commands);
+        self::assertSame([], $output->lines);
     }
 
     /**
@@ -120,9 +120,9 @@ final class TargetTest extends TestCase
 
         $rebuilt = $foo->run($shell, $filesystem, $output);
 
-        $this->assertTrue($rebuilt);
-        $this->assertSame(['echo foo'], $shell->commands);
-        $this->assertSame(['echo foo'], $output->lines);
+        self::assertTrue($rebuilt);
+        self::assertSame(['echo foo'], $shell->commands);
+        self::assertSame(['echo foo'], $output->lines);
     }
 
     /**
@@ -149,7 +149,7 @@ final class TargetTest extends TestCase
         try {
             $foo->run($shell, new FakeFilesystem(files: []), new FakeOutput());
         } finally {
-            $this->assertSame(['false'], $shell->commands);
+            self::assertSame(['false'], $shell->commands);
         }
     }
 
@@ -176,9 +176,9 @@ final class TargetTest extends TestCase
 
         $rebuilt = $foo->run($shell, $filesystem, $output);
 
-        $this->assertTrue($rebuilt);
-        $this->assertSame(['echo foo'], $shell->commands);
-        $this->assertSame(['echo foo'], $output->lines);
+        self::assertTrue($rebuilt);
+        self::assertSame(['echo foo'], $shell->commands);
+        self::assertSame(['echo foo'], $output->lines);
     }
 
     /**
@@ -201,8 +201,8 @@ final class TargetTest extends TestCase
 
         $rebuilt = $foo->run($shell, new FakeFilesystem(files: []), $output, [new Variable('GREETING', 'hello')]);
 
-        $this->assertTrue($rebuilt);
-        $this->assertSame(['echo hello'], $shell->commands);
-        $this->assertSame(['echo hello'], $output->lines);
+        self::assertTrue($rebuilt);
+        self::assertSame(['echo hello'], $shell->commands);
+        self::assertSame(['echo hello'], $output->lines);
     }
 }

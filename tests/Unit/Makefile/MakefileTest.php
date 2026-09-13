@@ -52,8 +52,8 @@ final class MakefileTest extends TestCase
 
         $makefile->run([], $shell, $filesystem, $output);
 
-        $this->assertSame(['echo foo'], $shell->commands);
-        $this->assertSame(['echo foo'], $output->lines);
+        self::assertSame(['echo foo'], $shell->commands);
+        self::assertSame(['echo foo'], $output->lines);
     }
 
     /**
@@ -110,7 +110,7 @@ final class MakefileTest extends TestCase
             );
             self::fail('Expected MakefileUpToDateException to be thrown.');
         } catch (MakefileUpToDateException $e) {
-            $this->assertSame('foo', $e->target);
+            self::assertSame('foo', $e->target);
         }
     }
 
@@ -150,7 +150,7 @@ final class MakefileTest extends TestCase
         try {
             $makefile->run(['foo', 'bar'], $shell, new FakeFilesystem(files: []), new FakeOutput());
         } finally {
-            $this->assertSame(['false'], $shell->commands);
+            self::assertSame(['false'], $shell->commands);
         }
     }
 
@@ -181,7 +181,7 @@ final class MakefileTest extends TestCase
 
         $makefile->run(['foo'], $shell, $filesystem, $output);
 
-        $this->assertSame(['echo foo'], $shell->commands);
-        $this->assertSame(['echo foo'], $output->lines);
+        self::assertSame(['echo foo'], $shell->commands);
+        self::assertSame(['echo foo'], $output->lines);
     }
 }

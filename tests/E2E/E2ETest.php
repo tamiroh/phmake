@@ -26,7 +26,7 @@ final class E2ETest extends TestCase
         $sandbox = Sandbox::create()->placeMakefile($makefile)->placeFiles($files);
         $result = $sandbox->runPhMake($arguments);
 
-        $this->assertSame($expectedOutput, $result);
+        self::assertSame($expectedOutput, $result);
     }
 
     /**

@@ -103,8 +103,9 @@ final readonly class MakefileParser
         }
 
         $commands = [];
+        $line = $lineIndex + 1;
         for (
-            $line = $lineIndex + 1;
+            ;
             isset($this->makefileLines[$line])
             && !$this->isTargetName($this->makefileLines[$line])
             && !$this->isVariableDefinition($this->makefileLines[$line]);
