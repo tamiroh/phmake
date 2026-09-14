@@ -1,0 +1,10 @@
+$ ./phmake
+printf 'hello\n' > foo.txt
+$ ls
+Makefile
+foo.txt
+phmake
+$ cat foo.txt
+hello
+$ ./phmake
+phmake: `foo.txt' is up to date.

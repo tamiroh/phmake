@@ -1,0 +1,3 @@
+$ ./phmake foo
+echo 'hello'
+hello

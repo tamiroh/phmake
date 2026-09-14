@@ -1,0 +1,5 @@
+$ ./phmake check
+echo 'lint'
+lint
+echo 'test'
+test

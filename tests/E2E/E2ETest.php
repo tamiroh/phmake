@@ -7,158 +7,43 @@ namespace Tamiroh\Phmake\Tests\E2E;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Tamiroh\Phmake\Tests\Testing\Sandbox;
 
 final class E2ETest extends TestCase
 {
-    /**
-     * @param string $makefile
-     * @param string $arguments
-     * @param list<array{name: string, content: string}> $files
-     * @param string $expectedOutput
-     *
-     * @return void
-     */
     #[Test]
-    #[DataProvider('provideMakefiles')]
-    public function runAsExpected(string $makefile, string $arguments, array $files, string $expectedOutput): void
+    #[DataProvider('provideSessions')]
+    public function matchesCommandSnapshot(string $fixtureDirectory): void
     {
-        $sandbox = Sandbox::create()->placeMakefile($makefile)->placeFiles($files);
-        $result = $sandbox->runPhMake($arguments);
+        $expected = file_get_contents($fixtureDirectory . '/session.txt');
+        self::assertIsString($expected);
+        self::assertStringStartsWith('$ ', $expected);
+        preg_match_all('/^\$ (.+)$/m', $expected, $commands);
+        $sandbox = Sandbox::create($fixtureDirectory);
 
-        self::assertSame($expectedOutput, $result);
+        try {
+            $actual = '';
+            foreach ($commands[1] as $command) {
+                $actual .= '$ ' . $command . "\n" . $sandbox->runCommand($command);
+            }
+            self::assertSame($expected, $actual);
+        } finally {
+            $sandbox->remove();
+        }
     }
 
     /**
-     * @return iterable<array{string, string, list<array{name: string, content: string}>, string}>
+     * @return iterable<string, array{string}>
      */
-    public static function provideMakefiles(): iterable
+    public static function provideSessions(): iterable
     {
-        yield 'default target' => [
-            <<<'MAKEFILE'
-                foo:
-                    echo 'foo'
-                bar:
-                    echo 'bar'
-                MAKEFILE,
-            '',
-            [],
-            "echo 'foo'\nfoo\n",
-        ];
-
-        yield 'foo target' => [
-            <<<'MAKEFILE'
-                foo:
-                    echo 'foo'
-                bar:
-                    echo 'bar'
-                MAKEFILE,
-            'foo',
-            [],
-            "echo 'foo'\nfoo\n",
-        ];
-
-        yield 'foo target with bar dependency' => [
-            <<<'MAKEFILE'
-                foo: bar
-                    echo 'foo'
-                bar:
-                    echo 'bar'
-                MAKEFILE,
-            'foo',
-            [],
-            "echo 'bar'\nbar\necho 'foo'\nfoo\n",
-        ];
-
-        yield 'foo target with existing foo file' => [
-            <<<'MAKEFILE'
-                foo:
-                    echo 'foo'
-                bar:
-                    echo 'bar'
-                MAKEFILE,
-            'foo',
-            [
-                ['name' => 'foo', 'content' => 'foo'],
-            ],
-            "phmake: `foo' is up to date.\n",
-        ];
-
-        yield 'two targets' => [
-            <<<'MAKEFILE'
-                foo:
-                    echo 'foo'
-                bar:
-                    echo 'bar'
-                MAKEFILE,
-            'bar foo',
-            [],
-            "echo 'bar'\nbar\necho 'foo'\nfoo\n",
-        ];
-
-        yield 'invalid target' => [
-            <<<'MAKEFILE'
-                foo:
-                    echo 'foo'
-                bar:
-                    echo 'bar'
-                MAKEFILE,
-            'baz',
-            [],
-            "phmake: *** No rule to make target `baz'.  Stop.\n",
-        ];
-
-        yield 'failed command stops target execution' => [
-            <<<'MAKEFILE'
-                foo:
-                    false
-                    echo 'foo'
-                MAKEFILE,
-            'foo',
-            [],
-            "false\nphmake: *** [foo] Error 1\n",
-        ];
-
-        yield 'phony target runs even when file exists' => [
-            <<<'MAKEFILE'
-                .PHONY: check
-                check:
-                    echo 'check'
-                MAKEFILE,
-            'check',
-            [
-                ['name' => 'check', 'content' => 'existing file'],
-            ],
-            "echo 'check'\ncheck\n",
-        ];
-
-        yield 'supports phony declarations between targets' => [
-            <<<'MAKEFILE'
-                .PHONY: test
-                test:
-                    echo 'test'
-
-                .PHONY: lint
-                lint:
-                    echo 'lint'
-
-                .PHONY: check
-                check: lint test
-                MAKEFILE,
-            'check',
-            [],
-            "echo 'lint'\nlint\necho 'test'\ntest\n",
-        ];
-
-        yield 'variables are expanded in commands' => [
-            <<<'MAKEFILE'
-                GREETING = hello
-                foo:
-                    echo '$(GREETING)'
-                MAKEFILE,
-            'foo',
-            [],
-            "echo 'hello'\nhello\n",
-        ];
+        $snapshots = glob(__DIR__ . '/fixtures/*/session.txt');
+        if ($snapshots === false || $snapshots === []) {
+            throw new RuntimeException('No E2E snapshots found');
+        }
+        foreach ($snapshots as $snapshot) {
+            yield basename(dirname($snapshot)) => [dirname($snapshot)];
+        }
     }
 }

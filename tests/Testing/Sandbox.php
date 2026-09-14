@@ -4,64 +4,81 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Tests\Testing;
 
+use FilesystemIterator;
 use RuntimeException;
+use SplFileInfo;
+use Symfony\Component\Process\Process;
+use Throwable;
 
-final class Sandbox
+final readonly class Sandbox
 {
-    public string $uniqueId;
+    private function __construct(
+        private string $path,
+    ) {}
 
-    public string $path;
-
-    private function __construct()
+    public static function create(string $fixtureDirectory): self
     {
-        $this->uniqueId = uniqid(more_entropy: true);
-        $this->path = sys_get_temp_dir() . '/phmake-testing/' . $this->uniqueId;
-    }
-
-    public static function create(): self
-    {
-        $instance = new self();
-
-        $mkdirResult = mkdir($instance->path, recursive: true);
-        if (!$mkdirResult) {
+        $sandbox = new self(sys_get_temp_dir() . '/phmake-testing/' . uniqid(more_entropy: true));
+        if (!mkdir($sandbox->path, recursive: true)) {
             throw new RuntimeException('Failed to create sandbox directory');
         }
 
-        return $instance;
+        try {
+            /** @var SplFileInfo $file */
+            foreach (new FilesystemIterator($fixtureDirectory) as $file) {
+                if ($file->getFilename() === 'session.txt') {
+                    continue;
+                }
+                if (!copy($file->getPathname(), $sandbox->path . '/' . $file->getFilename())) {
+                    throw new RuntimeException('Failed to copy fixture');
+                }
+            }
+            if (!symlink(__DIR__ . '/../../phmake', $sandbox->path . '/phmake')) {
+                throw new RuntimeException('Failed to link phmake');
+            }
+
+            return $sandbox;
+        } catch (Throwable $error) {
+            $sandbox->remove();
+            throw $error;
+        }
     }
 
-    public function placeMakefile(string $content): self
+    public function runCommand(string $command): string
     {
-        file_put_contents($this->path . '/Makefile', $content);
+        $process = new Process(['sh', '-c', "exec 2>&1\n" . $command], $this->path, [
+            'PATH' => dirname(PHP_BINARY) . PATH_SEPARATOR . (string) getenv('PATH'),
+            'LC_ALL' => 'C',
+            'TERM' => 'dumb',
+            'NO_COLOR' => '1',
+        ]);
+        $exitCode = $process->run();
+        $output = $process->getOutput();
+        if ($output !== '' && !str_ends_with($output, "\n")) {
+            $output .= "\n[no newline]\n";
+        }
+        if ($exitCode !== 0) {
+            $output .= "[exit $exitCode]\n";
+        }
 
-        return $this;
+        return $output;
     }
 
-    /**
-     * @param list<array{name: string, content: string}> $files
-     */
-    public function placeFiles(array $files): self
+    public function remove(): void
     {
-        foreach ($files as $file) {
-            file_put_contents($this->path . '/' . $file['name'], $file['content']);
-        }
-
-        return $this;
+        self::removeDirectory($this->path);
     }
 
-    public function runPhMake(string $arguments = ''): string
+    private static function removeDirectory(string $path): void
     {
-        $phMakePath = realpath(__DIR__ . '/../../phmake');
-
-        if (PHP_OS === 'Darwin') {
-            putenv('PATH=/usr/local/bin:' . getenv('PATH'));
+        /** @var SplFileInfo $file */
+        foreach (new FilesystemIterator($path) as $file) {
+            if ($file->isDir() && !$file->isLink()) {
+                self::removeDirectory($file->getPathname());
+            } else {
+                unlink($file->getPathname());
+            }
         }
-
-        $output = shell_exec("cd $this->path && php $phMakePath $arguments");
-        if ($output === false) {
-            throw new RuntimeException('Failed to run phmake');
-        }
-
-        return $output === null ? '' : $output;
+        rmdir($path);
     }
 }
