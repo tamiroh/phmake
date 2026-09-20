@@ -1,0 +1,7 @@
+$ ./phmake
+cp input.txt output
+$ touch -t 200001010000 output
+$ ./phmake
+cp input.txt output
+$ cat output
+source
