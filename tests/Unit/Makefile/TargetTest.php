@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tamiroh\Phmake\Makefile\Command;
 use Tamiroh\Phmake\Makefile\CommandFailedException;
+use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Tests\Testing\FakeFilesystem;
@@ -19,6 +20,7 @@ final class TargetTest extends TestCase
 {
     /**
      * @throws CommandFailedException
+     * @throws MakefileErrorException
      */
     #[Test]
     public function runsDependencyBeforeOwnCommands(): void
@@ -53,6 +55,7 @@ final class TargetTest extends TestCase
 
     /**
      * @throws CommandFailedException
+     * @throws MakefileErrorException
      */
     #[Test]
     public function doesNotRunCommandsWhenTargetIsUpToDate(): void
@@ -90,6 +93,7 @@ final class TargetTest extends TestCase
 
     /**
      * @throws CommandFailedException
+     * @throws MakefileErrorException
      */
     #[Test]
     public function runsCommandsWhenDependencyIsNewerThanTarget(): void
@@ -127,6 +131,7 @@ final class TargetTest extends TestCase
 
     /**
      * @throws CommandFailedException
+     * @throws MakefileErrorException
      */
     #[Test]
     public function stopsWhenACommandFails(): void
@@ -155,6 +160,7 @@ final class TargetTest extends TestCase
 
     /**
      * @throws CommandFailedException
+     * @throws MakefileErrorException
      */
     #[Test]
     public function runsCommandsForPhonyTargetsEvenWhenTheFileExists(): void
@@ -183,6 +189,7 @@ final class TargetTest extends TestCase
 
     /**
      * @throws CommandFailedException
+     * @throws MakefileErrorException
      */
     #[Test]
     public function expandsVariablesInCommandsBeforeExecution(): void
@@ -204,5 +211,59 @@ final class TargetTest extends TestCase
         self::assertTrue($rebuilt);
         self::assertSame(['echo hello'], $shell->commands);
         self::assertSame(['echo hello'], $output->lines);
+    }
+
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     */
+    #[Test]
+    public function throwsWhenDependencyFileIsMissingAndHasNoRule(): void
+    {
+        $input = new Target('input.txt', [], -1, -1, [], false, false);
+        $output = new Target('output', [$input], 0, 1, [new Command('cp input.txt output')], false);
+        $shell = new FakeShell();
+
+        $this->expectException(MakefileErrorException::class);
+        $this->expectExceptionMessage("No rule to make target `input.txt', needed by `output'");
+
+        try {
+            $output->run($shell, new FakeFilesystem(files: []), new FakeOutput());
+        } finally {
+            self::assertSame([], $shell->commands);
+        }
+    }
+
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     */
+    #[Test]
+    public function usesDependencyFileWithoutRuleForTimestampComparison(): void
+    {
+        $input = new Target('input.txt', [], -1, -1, [], false, false);
+        $output = new Target('output', [$input], 0, 1, [new Command('cp input.txt output')], false);
+        $shell = new FakeShell();
+
+        $upToDate = $output->run(
+            $shell,
+            new FakeFilesystem(files: [
+                'input.txt' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
+                'output' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:01:00')],
+            ]),
+            new FakeOutput(),
+        );
+        $stale = $output->run(
+            $shell,
+            new FakeFilesystem(files: [
+                'input.txt' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:02:00')],
+                'output' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:01:00')],
+            ]),
+            new FakeOutput(),
+        );
+
+        self::assertFalse($upToDate);
+        self::assertTrue($stale);
+        self::assertSame(['cp input.txt output'], $shell->commands);
     }
 }

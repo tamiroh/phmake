@@ -93,6 +93,7 @@ final readonly class MakefileParser
         foreach ($dependencyNames as $dependencyName) {
             $dependencyLineIndex = $this->getLineIndexOfTarget($dependencyName);
             if ($dependencyLineIndex === null) {
+                $dependencies[] = new Target($dependencyName, [], -1, -1, [], false, false);
                 continue;
             }
             $dependencyTarget = $this->getTarget($dependencyLineIndex);

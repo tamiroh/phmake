@@ -17,18 +17,27 @@ final readonly class Target
         public int $endLineIndex,
         public array $commands,
         public bool $isPhony,
+        public bool $hasRule = true,
     ) {}
 
     /**
      * @param list<Variable> $variables
      *
      * @throws CommandFailedException
+     * @throws MakefileErrorException
      */
     public function run(Shell $shell, Filesystem $filesystem, Output $output, array $variables = []): bool
     {
+        if (!$this->hasRule) {
+            return false;
+        }
+
         $rebuilt = false;
 
         foreach ($this->dependencies as $dependency) {
+            if (!$dependency->hasRule && !$filesystem->exists($dependency->name)) {
+                throw new MakefileErrorException("No rule to make target `$dependency->name', needed by `$this->name'");
+            }
             $dependencyRunResult = $dependency->run($shell, $filesystem, $output, $variables);
             $rebuilt = $rebuilt || $dependencyRunResult;
         }

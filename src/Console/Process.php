@@ -15,7 +15,7 @@ final class Process
 
         echo self::MESSAGE_PREMIX . "*** $formattedMessage  Stop." . PHP_EOL;
 
-        exit(1);
+        exit(2);
     }
 
     public static function stopWithInfo(string $message): never
