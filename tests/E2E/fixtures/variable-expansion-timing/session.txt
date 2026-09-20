@@ -1,0 +1,3 @@
+$ ./phmake before
+echo after before after
+after before after

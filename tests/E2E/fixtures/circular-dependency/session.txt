@@ -1,0 +1,3 @@
+$ ./phmake
+phmake: *** Circular dependency involving `first'.  Stop.
+[exit 2]

@@ -12,33 +12,21 @@ final readonly class Command
 
     /**
      * @param list<Variable> $variables
+     * @throws MakefileErrorException
      */
-    public function expand(array $variables): string
+    public function run(Shell $shell, Output $output, array $variables = []): int
     {
-        return (
-            preg_replace_callback(
-                '/\$\(([A-Za-z_][A-Za-z0-9_]*)\)/',
-                fn(array $matches): string => ((
-                    $this->findVariable($matches[1], $variables) ?? new Variable('', '')
-                ))->expression,
-                $this->expression,
-            ) ?? $this->expression
-        );
+        $expanded = $this->expand($variables);
+        $output->writeLine($expanded);
+        return $shell->exec($expanded);
     }
 
     /**
      * @param list<Variable> $variables
+     * @throws MakefileErrorException
      */
-    private function findVariable(string $name, array $variables): ?Variable
+    private function expand(array $variables): string
     {
-        foreach ($variables as $variable) {
-            if ($variable->name !== $name) {
-                continue;
-            }
-
-            return $variable;
-        }
-
-        return null;
+        return new VariableExpander($variables)->expand($this->expression);
     }
 }

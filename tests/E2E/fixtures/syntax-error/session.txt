@@ -1,0 +1,3 @@
+$ ./phmake
+phmake: *** Makefile:2: Expected a variable assignment or rule.  Stop.
+[exit 2]

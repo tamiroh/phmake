@@ -9,5 +9,6 @@ final readonly class Variable
     public function __construct(
         public string $name,
         public string $expression,
+        public bool $recursive = true,
     ) {}
 }

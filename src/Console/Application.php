@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
 use Tamiroh\Phmake\Parser\MakefileParser;
+use Tamiroh\Phmake\Parser\ParseException;
 
 final readonly class Application
 {
@@ -21,13 +22,14 @@ final readonly class Application
             $this->createMakefile()->run(array_slice($argv, 1), new Shell(), new Filesystem(), new Output());
         } catch (CommandFailedException $e) {
             Process::stopWithCommandFailure($e->target, $e->exitCode);
-        } catch (MakefileErrorException $e) {
+        } catch (MakefileErrorException|ParseException $e) {
             Process::stopWithError($e->getMessage());
         } catch (MakefileUpToDateException $e) {
             Process::stopWithInfo("`$e->target' is up to date");
         }
     }
 
+    /** @throws MakefileErrorException */
     private function createMakefile(): Makefile
     {
         $makefileRaw = @file_get_contents('Makefile');
