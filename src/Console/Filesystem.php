@@ -8,11 +8,13 @@ use Tamiroh\Phmake\Makefile\Filesystem as FilesystemInterface;
 
 final class Filesystem implements FilesystemInterface
 {
+    #[\Override]
     public function exists(string $path): bool
     {
         return file_exists($path);
     }
 
+    #[\Override]
     public function lastModified(string $path): ?int
     {
         $result = @filemtime($path);

@@ -10,6 +10,7 @@ use Tamiroh\Phmake\Makefile\Shell as ShellInterface;
 
 final class Shell implements ShellInterface
 {
+    #[\Override]
     public function exec(string $command): int
     {
         $process = SymfonyProcess::fromShellCommandline($command);

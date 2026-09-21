@@ -16,11 +16,13 @@ final class FakeFilesystem implements Filesystem
         private readonly array $files,
     ) {}
 
+    #[\Override]
     public function exists(string $path): bool
     {
         return array_key_exists($path, $this->files);
     }
 
+    #[\Override]
     public function lastModified(string $path): ?int
     {
         if (!array_key_exists($path, $this->files)) {

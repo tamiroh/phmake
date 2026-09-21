@@ -14,6 +14,7 @@ final class FakeShell implements Shell
     /** @var array<string, int> */
     public array $exitCodes = [];
 
+    #[\Override]
     public function exec(string $command): int
     {
         $this->commands[] = $command;

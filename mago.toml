@@ -29,6 +29,7 @@ analyze-dead-code = true
 memoize-properties = true
 allow-possibly-undefined-array-keys = false
 check-throws = true
+unchecked-exceptions = ["LogicException", "RuntimeException"]
 check-missing-override = true
 find-unused-parameters = true
 strict-list-index-checks = true

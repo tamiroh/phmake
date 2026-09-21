@@ -20,6 +20,9 @@ jobs:
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse src tests --memory-limit=2G
 
+      - name: Run Mago analyze
+        run: vendor/bin/mago analyze
+
       - name: Run Mago format check
         run: vendor/bin/mago fmt --dry-run
 

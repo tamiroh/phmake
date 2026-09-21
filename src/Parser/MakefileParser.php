@@ -107,6 +107,8 @@ final readonly class MakefileParser
                 }
                 $count = $index - $start;
                 if (($line[$index] ?? '') === '#') {
+                    // Dividing by 2 cannot cause division by zero or integer overflow.
+                    // @mago-expect analysis:unhandled-thrown-type,unhandled-thrown-type
                     $result .= str_repeat('\\', intdiv($count, 2));
                     if (($count % 2) === 0) {
                         break;

@@ -9,6 +9,7 @@ final class LineReader
     /** @var list<string> */
     private readonly array $lines;
 
+    /** @var non-negative-int */
     private int $offset = 0;
 
     public private(set) int $lineNumber = 0;
