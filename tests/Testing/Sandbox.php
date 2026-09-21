@@ -16,7 +16,7 @@ final readonly class Sandbox
         private string $path,
     ) {}
 
-    public static function create(string $fixtureDirectory): self
+    public static function create(string $fixtureDirectory, ?string $executable = null): self
     {
         $sandbox = new self(sys_get_temp_dir() . '/phmake-testing/' . uniqid(more_entropy: true));
         if (!mkdir($sandbox->path, recursive: true)) {
@@ -33,8 +33,20 @@ final readonly class Sandbox
                     throw new RuntimeException('Failed to copy fixture');
                 }
             }
-            if (!symlink(__DIR__ . '/../../phmake', $sandbox->path . '/phmake')) {
-                throw new RuntimeException('Failed to link phmake');
+            if ($executable === null) {
+                if (!symlink(__DIR__ . '/../../phmake', $sandbox->path . '/phmake')) {
+                    throw new RuntimeException('Failed to link phmake');
+                }
+            } else {
+                if (
+                    file_put_contents(
+                        $sandbox->path . '/phmake',
+                        "#!/bin/sh\nexec " . escapeshellarg($executable) . ' "$@"' . "\n",
+                    ) === false
+                    || !chmod($sandbox->path . '/phmake', 0755)
+                ) {
+                    throw new RuntimeException('Failed to create GNU make launcher');
+                }
             }
 
             return $sandbox;
@@ -51,6 +63,11 @@ final readonly class Sandbox
             'LC_ALL' => 'C',
             'TERM' => 'dumb',
             'NO_COLOR' => '1',
+            'MAKEFLAGS' => false,
+            'GNUMAKEFLAGS' => false,
+            'MFLAGS' => false,
+            'MAKELEVEL' => false,
+            'MAKEFILES' => false,
         ]);
         $exitCode = $process->run();
         $output = $process->getOutput();
