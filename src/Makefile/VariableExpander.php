@@ -27,6 +27,7 @@ final readonly class VariableExpander
     {
         return preg_replace_callback(
             '/\$\$|\$\(([A-Za-z_][A-Za-z0-9_]*)\)|\$\{([A-Za-z_][A-Za-z0-9_]*)\}/',
+            /** @throws MakefileErrorException */
             function (array $matches) use ($expanding): string {
                 if ($matches[0] === '$$') {
                     return '$';

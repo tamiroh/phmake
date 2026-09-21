@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use LogicException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Variable;
@@ -106,9 +107,13 @@ final readonly class MakefileParser
                     $index++;
                 }
                 $count = $index - $start;
+                if ($count < 0) {
+                    throw new LogicException('Backslash count must be non-negative');
+                }
                 if (($line[$index] ?? '') === '#') {
+                    // Dividing a non-negative count by 2 yields a non-negative result.
                     // Dividing by 2 cannot cause division by zero or integer overflow.
-                    // @mago-expect analysis:unhandled-thrown-type,unhandled-thrown-type
+                    // @mago-expect analysis:unhandled-thrown-type,unhandled-thrown-type,possibly-invalid-argument
                     $result .= str_repeat('\\', intdiv($count, 2));
                     if (($count % 2) === 0) {
                         break;
