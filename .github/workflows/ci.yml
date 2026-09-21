@@ -21,10 +21,10 @@ jobs:
         run: vendor/bin/phpstan analyse src tests --memory-limit=2G
 
       - name: Run Mago analyze
-        run: vendor/bin/mago analyze
+        run: vendor/bin/mago --colors always analyze
 
       - name: Run Mago format check
-        run: vendor/bin/mago fmt --dry-run
+        run: vendor/bin/mago --colors always fmt --dry-run
 
   test:
     runs-on: ubuntu-latest
