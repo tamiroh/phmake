@@ -17,14 +17,11 @@ jobs:
       - name: Install dependencies
         run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
 
-      - name: Run PHPStan
-        run: vendor/bin/phpstan analyse src tests --memory-limit=2G
-
-      - name: Run Mago analyze
-        run: vendor/bin/mago --colors always analyze
+      - name: Run lint
+        run: make lint
 
       - name: Run Mago format check
-        run: vendor/bin/mago --colors always fmt --dry-run
+        run: make format-check
 
   test:
     runs-on: ubuntu-latest
@@ -40,5 +37,5 @@ jobs:
       - name: Install dependencies
         run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
 
-      - name: Run E2E test
-        run: vendor/bin/phpunit tests/E2E
+      - name: Run tests
+        run: make test

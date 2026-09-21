@@ -9,14 +9,15 @@ test:
 .PHONY: lint
 lint:
 	$(PHPSTAN) analyse src tests --memory-limit=2G
+	$(MAGO) --colors always analyze
 
 .PHONY: format
 format:
-	$(MAGO) fmt
+	$(MAGO) --colors always fmt
 
 .PHONY: format-check
 format-check:
-	$(MAGO) fmt --dry-run
+	$(MAGO) --colors always fmt --dry-run
 
 .PHONY: check
 check: lint format-check test
