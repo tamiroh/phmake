@@ -1,0 +1,5 @@
+$ ./phmake > stdout.txt 2> stderr.txt
+[exit 2]
+$ cat stdout.txt
+$ cat stderr.txt
+Makefile:2: *** missing separator.  Stop.

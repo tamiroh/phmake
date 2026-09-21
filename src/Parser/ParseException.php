@@ -10,8 +10,8 @@ final class ParseException extends RuntimeException
 {
     public function __construct(
         public readonly int $lineNumber,
-        string $message,
+        public readonly string $reason,
     ) {
-        parent::__construct("Makefile:$lineNumber: $message");
+        parent::__construct("Makefile:$lineNumber: $reason");
     }
 }

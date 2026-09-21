@@ -1,0 +1,8 @@
+$ ./phmake > stdout.txt 2> stderr.txt
+$ cat stdout.txt
+echo second
+second
+echo first
+first
+$ cat stderr.txt
+phmake: Circular second <- first dependency dropped.

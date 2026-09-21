@@ -7,7 +7,6 @@ namespace Tamiroh\Phmake\Console;
 use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
 
@@ -22,10 +21,10 @@ final readonly class Application
             $this->createMakefile()->run(array_slice($argv, 1), new Shell(), new Filesystem(), new Output());
         } catch (CommandFailedException $e) {
             Process::stopWithCommandFailure($e->target, $e->exitCode);
-        } catch (MakefileErrorException|ParseException $e) {
+        } catch (ParseException $e) {
+            Process::stopWithError($e->reason, "Makefile:$e->lineNumber");
+        } catch (MakefileErrorException $e) {
             Process::stopWithError($e->getMessage());
-        } catch (MakefileUpToDateException $e) {
-            Process::stopWithInfo("`$e->target' is up to date");
         }
     }
 

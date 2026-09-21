@@ -1,0 +1,16 @@
+$ ./phmake empty first shared next
+phmake: Nothing to be done for `empty'.
+echo shared
+shared
+phmake: `shared' is up to date.
+echo next
+next
+$ touch current
+$ ./phmake current next
+phmake: `current' is up to date.
+echo next
+next
+$ ./phmake empty absent
+phmake: Nothing to be done for `empty'.
+phmake: *** No rule to make target `absent'.  Stop.
+[exit 2]

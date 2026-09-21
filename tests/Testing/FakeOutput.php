@@ -14,6 +14,22 @@ final class FakeOutput implements Output
     /** @var list<string> */
     public array $lines = [];
 
+    /** @var list<string> */
+    public array $infos = [];
+
+    /** @var list<string> */
+    public array $warnings = [];
+
+    public function writeInfo(string $message): void
+    {
+        $this->infos[] = $message;
+    }
+
+    public function writeWarning(string $message): void
+    {
+        $this->warnings[] = $message;
+    }
+
     public function write(string $text): void
     {
         $this->writes[] = $text;

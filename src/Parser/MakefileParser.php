@@ -57,7 +57,7 @@ final readonly class MakefileParser
             $expanded = new VariableExpander(array_values($variables))->expand($header);
             $colon = strpos($expanded, ':');
             if ($colon === false) {
-                throw new ParseException($lineNumber, 'Expected a variable assignment or rule');
+                throw new ParseException($lineNumber, 'missing separator');
             }
 
             $dependencies = substr($expanded, $colon + 1);

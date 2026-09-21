@@ -13,6 +13,16 @@ final class Output implements OutputInterface
         echo $text;
     }
 
+    public function writeInfo(string $message): void
+    {
+        $this->writeLine("phmake: $message");
+    }
+
+    public function writeWarning(string $message): void
+    {
+        fwrite(STDERR, "phmake: $message" . PHP_EOL);
+    }
+
     public function writeLine(string $line): void
     {
         echo $line . PHP_EOL;

@@ -11,7 +11,6 @@ use Tamiroh\Phmake\Makefile\Command;
 use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\MakefileUpToDateException;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Tests\Testing\FakeFilesystem;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
@@ -22,7 +21,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function runsTheDefaultTargetWhenNoArgumentsAreGiven(): void
@@ -45,7 +43,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function throwsWhenTargetDoesNotExist(): void
@@ -65,31 +62,28 @@ final class MakefileTest extends TestCase
      * @throws MakefileErrorException
      */
     #[Test]
-    public function throwsWhenRequestedTargetIsUpToDate(): void
+    public function reportsWhenRequestedTargetIsUpToDate(): void
     {
         $makefile = new Makefile([
             new Target(name: 'foo', dependencies: [], commands: [new Command('echo foo')], isPhony: false),
         ], defaultGoal: 'foo');
 
-        try {
-            $makefile->run(
-                ['foo'],
-                new FakeShell(),
-                new FakeFilesystem(files: [
-                    'foo' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
-                ]),
-                new FakeOutput(),
-            );
-            self::fail('Expected MakefileUpToDateException to be thrown.');
-        } catch (MakefileUpToDateException $e) {
-            self::assertSame('foo', $e->target);
-        }
+        $output = new FakeOutput();
+        $makefile->run(
+            ['foo'],
+            new FakeShell(),
+            new FakeFilesystem(files: [
+                'foo' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
+            ]),
+            $output,
+        );
+
+        self::assertSame(["`foo' is up to date."], $output->infos);
     }
 
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function stopsRunningLaterTargetsWhenAnEarlierTargetFails(): void
@@ -115,7 +109,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function runsPhonyTargetsEvenWhenTheCorrespondingFileExists(): void
@@ -139,7 +132,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function startsAFreshExecutionForEachRun(): void
@@ -156,7 +148,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function reportsMissingDefaultGoalAtExecutionTime(): void
@@ -170,7 +161,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function runsDependencyBeforeOwnCommands(): void
@@ -190,7 +180,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function throwsWhenDependencyFileIsMissingAndHasNoRule(): void
@@ -211,7 +200,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function usesDependencyFileWithoutRuleForTimestampComparison(): void
@@ -220,21 +208,18 @@ final class MakefileTest extends TestCase
         $shell = new FakeShell();
 
         $makefile = new Makefile([$output]);
-        try {
-            $makefile->run(
-                ['output'],
-                $shell,
-                new FakeFilesystem(files: [
-                    'input.txt' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
-                    'output' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:01:00')],
-                ]),
-                new FakeOutput(),
-            );
-            self::fail('Expected MakefileUpToDateException to be thrown.');
-        } catch (MakefileUpToDateException $e) {
-            self::assertSame('output', $e->target);
-            self::assertSame([], $shell->commands);
-        }
+        $messages = new FakeOutput();
+        $makefile->run(
+            ['output'],
+            $shell,
+            new FakeFilesystem(files: [
+                'input.txt' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
+                'output' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:01:00')],
+            ]),
+            $messages,
+        );
+        self::assertSame(["`output' is up to date."], $messages->infos);
+        self::assertSame([], $shell->commands);
         $makefile->run(
             ['output'],
             $shell,
@@ -251,7 +236,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function buildsSharedDependenciesOnceAcrossGoals(): void
@@ -271,26 +255,25 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
-    public function reportsCyclesInsteadOfRecursingIndefinitely(): void
+    public function dropsCircularDependenciesAndReportsWhenThereIsNoRecipe(): void
     {
         $makefile = new Makefile([
             new Target('first', ['second'], [], false),
             new Target('second', ['first'], [], false),
         ]);
 
-        $this->expectException(MakefileErrorException::class);
-        $this->expectExceptionMessage("Circular dependency involving `first'");
+        $output = new FakeOutput();
+        $makefile->run(['first'], new FakeShell(), new FakeFilesystem(files: []), $output);
 
-        $makefile->run(['first'], new FakeShell(), new FakeFilesystem(files: []), new FakeOutput());
+        self::assertSame(['Circular second <- first dependency dropped.'], $output->warnings);
+        self::assertSame(["Nothing to be done for `first'."], $output->infos);
     }
 
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function stopsBeforeLaterDependenciesAndParentWhenADependencyFails(): void
@@ -316,7 +299,6 @@ final class MakefileTest extends TestCase
     /**
      * @throws CommandFailedException
      * @throws MakefileErrorException
-     * @throws MakefileUpToDateException
      */
     #[Test]
     public function discardsExecutionStateAfterFailure(): void
@@ -340,5 +322,34 @@ final class MakefileTest extends TestCase
         $makefile->run([], $shell, new FakeFilesystem(files: []), new FakeOutput());
 
         self::assertSame(['echo first', 'echo second', 'echo first', 'echo second', 'echo all'], $shell->commands);
+    }
+
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     */
+    #[Test]
+    public function ignoresDroppedDependenciesWhenComparingTimestamps(): void
+    {
+        $makefile = new Makefile([
+            new Target('first', ['second'], [new Command('echo first')], false),
+            new Target('second', ['first'], [new Command('echo second')], false),
+        ]);
+        $shell = new FakeShell();
+        $output = new FakeOutput();
+
+        $makefile->run(
+            ['first'],
+            $shell,
+            new FakeFilesystem(files: [
+                'first' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:01:00')],
+                'second' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
+            ]),
+            $output,
+        );
+
+        self::assertSame([], $shell->commands);
+        self::assertSame(['Circular second <- first dependency dropped.'], $output->warnings);
+        self::assertSame(["`first' is up to date."], $output->infos);
     }
 }

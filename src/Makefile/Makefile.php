@@ -29,7 +29,6 @@ final readonly class Makefile
      * @param list<string> $targets
      * @throws MakefileErrorException
      * @throws CommandFailedException
-     * @throws MakefileUpToDateException
      */
     public function run(array $targets, Shell $shell, Filesystem $filesystem, Output $output): void
     {
@@ -43,8 +42,14 @@ final readonly class Makefile
         $results = [];
         $visiting = [];
         foreach ($targets as $target) {
-            if (!$this->runTarget($target, $shell, $filesystem, $output, $results, $visiting)) {
-                throw new MakefileUpToDateException($target);
+            $commandsExecuted = false;
+            $this->runTarget($target, $shell, $filesystem, $output, $results, $visiting, $commandsExecuted);
+            if (!$commandsExecuted) {
+                $output->writeInfo(
+                    ($this->targetsByName[$target]->commands ?? []) === []
+                        ? "Nothing to be done for `$target'."
+                        : "`$target' is up to date.",
+                );
             }
         }
     }
@@ -62,13 +67,11 @@ final readonly class Makefile
         Output $output,
         array &$results,
         array &$visiting,
+        bool &$commandsExecuted,
         ?string $neededBy = null,
     ): bool {
         if (array_key_exists($name, $results)) {
             return $results[$name];
-        }
-        if (isset($visiting[$name])) {
-            throw new MakefileErrorException("Circular dependency involving `$name'");
         }
         $target = $this->targetsByName[$name] ?? null;
         if ($target === null) {
@@ -84,10 +87,34 @@ final readonly class Makefile
         try {
             $dependenciesRebuilt = false;
             foreach ($target->dependencies as $dependency) {
-                $rebuilt = $this->runTarget($dependency, $shell, $filesystem, $output, $results, $visiting, $name);
+                if (isset($visiting[$dependency])) {
+                    $output->writeWarning("Circular $name <- $dependency dependency dropped.");
+                    $target = new Target(
+                        $target->name,
+                        array_values(array_filter(
+                            $target->dependencies,
+                            static fn(string $candidate): bool => $candidate !== $dependency,
+                        )),
+                        $target->commands,
+                        $target->isPhony,
+                    );
+                    continue;
+                }
+                $rebuilt = $this->runTarget(
+                    $dependency,
+                    $shell,
+                    $filesystem,
+                    $output,
+                    $results,
+                    $visiting,
+                    $commandsExecuted,
+                    $name,
+                );
                 $dependenciesRebuilt = $dependenciesRebuilt || $rebuilt;
             }
-            return $results[$name] = $target->run($shell, $filesystem, $output, $this->variables, $dependenciesRebuilt);
+            $rebuilt = $target->run($shell, $filesystem, $output, $this->variables, $dependenciesRebuilt);
+            $commandsExecuted = $commandsExecuted || $rebuilt && $target->commands !== [];
+            return $results[$name] = $rebuilt;
         } finally {
             unset($visiting[$name]);
         }
