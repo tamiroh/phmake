@@ -23,6 +23,8 @@ final class Shell implements ShellInterface
         }
 
         return $process->run(function (string $type, string $buffer): void {
+            // Symfony only passes 'out' or 'err', but Mago does not narrow the explicit string type.
+            // @mago-expect analysis:match-not-exhaustive
             match ($type) {
                 SymfonyProcess::OUT => print $buffer,
                 SymfonyProcess::ERR => fwrite(STDERR, $buffer),

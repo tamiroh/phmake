@@ -52,7 +52,7 @@ final readonly class Sandbox
             return $sandbox;
         } catch (Throwable $error) {
             $sandbox->remove();
-            throw $error;
+            throw new RuntimeException('Failed to initialize sandbox', previous: $error);
         }
     }
 
