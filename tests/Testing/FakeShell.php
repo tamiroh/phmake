@@ -9,7 +9,7 @@ use Tamiroh\Phmake\Makefile\Shell;
 final class FakeShell implements Shell
 {
     /** @var list<string> */
-    public array $commands = [];
+    public private(set) array $commands = [];
 
     /** @var array<string, int> */
     public array $exitCodes = [];

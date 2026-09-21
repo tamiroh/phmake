@@ -9,16 +9,16 @@ use Tamiroh\Phmake\Makefile\Output;
 final class FakeOutput implements Output
 {
     /** @var list<string> */
-    public array $writes = [];
+    public private(set) array $writes = [];
 
     /** @var list<string> */
-    public array $lines = [];
+    public private(set) array $lines = [];
 
     /** @var list<string> */
-    public array $infos = [];
+    public private(set) array $infos = [];
 
     /** @var list<string> */
-    public array $warnings = [];
+    public private(set) array $warnings = [];
 
     public function writeInfo(string $message): void
     {

@@ -9,9 +9,9 @@ use Tamiroh\Phmake\Makefile\Command;
 final class Rule
 {
     /** @var list<Command> */
-    public array $commands = [];
+    public private(set) array $commands = [];
 
-    public bool $hasRecipe = false;
+    public private(set) bool $hasRecipe = false;
 
     /**
      * @param list<string> $targetNames
