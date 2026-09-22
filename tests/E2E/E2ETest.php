@@ -91,12 +91,16 @@ final class E2ETest extends TestCase
         // GNU make versions differ in diagnostic quotes and recipe source locations.
         // Keep command output and exit-status markers unchanged.
         return preg_replace_callback(
-            '/^(?:' . preg_quote($programName, '/') . '|phmake): ([^\n]*)$/m',
+            '/^(?:' . preg_quote($programName, delimiter: '/') . '|phmake): ([^\n]*)$/m',
             static function (array $matches): string {
                 /** @var array{string, string} $matches */
-                $message = str_replace('`', "'", $matches[1]);
+                $message = str_replace('`', replace: "'", subject: $matches[1]);
                 $message =
-                    preg_replace('/^(\*\*\* \[)Makefile:[0-9]+: (.*\] Error [0-9]+)$/', '$1$2', $message) ?? $message;
+                    preg_replace(
+                        '/^(\*\*\* \[)Makefile:[0-9]+: (.*\] Error [0-9]+)$/',
+                        replacement: '$1$2',
+                        subject: $message,
+                    ) ?? $message;
                 return 'phmake: ' . $message;
             },
             $output,

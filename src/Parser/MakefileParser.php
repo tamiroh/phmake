@@ -42,7 +42,7 @@ final readonly class MakefileParser
                 if ($rule === null) {
                     throw new ParseException($lineNumber, 'Recipe without a rule');
                 }
-                $rule->addRecipe(substr($line, 1));
+                $rule->addRecipe(substr($line, offset: 1));
                 continue;
             }
 
@@ -70,14 +70,17 @@ final readonly class MakefileParser
 
             [$header, $recipe] = self::splitRecipe($line);
             $expanded = new VariableExpander(array_values($variables))->expand($header);
-            $colon = strpos($expanded, ':');
+            $colon = strpos($expanded, needle: ':');
             if ($colon === false) {
                 throw new ParseException($lineNumber, 'missing separator');
             }
 
             $dependencies = substr($expanded, $colon + 1);
-            $names = self::words(substr($expanded, 0, $colon));
-            if ($names === [] || preg_match('/[:=%|&]/', substr($expanded, 0, $colon) . $dependencies) === 1) {
+            $names = self::words(substr($expanded, offset: 0, length: $colon));
+            if (
+                $names === []
+                || preg_match('/[:=%|&]/', substr($expanded, offset: 0, length: $colon) . $dependencies) === 1
+            ) {
                 throw new ParseException($lineNumber, 'Unsupported rule syntax');
             }
             $rule = new Rule($names, self::words($dependencies), $lineNumber);
@@ -105,7 +108,7 @@ final readonly class MakefileParser
                 return [self::removeComment($line), null];
             }
             if ($line[$index] === ';') {
-                return [self::removeComment(substr($line, 0, $index)), substr($line, $index + 1)];
+                return [self::removeComment(substr($line, offset: 0, length: $index)), substr($line, $index + 1)];
             }
         }
         return [self::removeComment($line), null];
@@ -128,7 +131,7 @@ final readonly class MakefileParser
                     // Dividing a non-negative count by 2 yields a non-negative result.
                     // Dividing by 2 cannot cause division by zero or integer overflow.
                     // @mago-expect analysis:unhandled-thrown-type,unhandled-thrown-type,possibly-invalid-argument
-                    $result .= str_repeat('\\', intdiv($count, 2));
+                    $result .= str_repeat('\\', intdiv($count, num2: 2));
                     if (($count % 2) === 0) {
                         break;
                     }

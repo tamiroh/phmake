@@ -25,7 +25,7 @@ final class LineReader
 
     public function __construct(string $source)
     {
-        $this->lines = explode("\n", str_replace("\r\n", "\n", $source));
+        $this->lines = explode("\n", str_replace("\r\n", replace: "\n", subject: $source));
     }
 
     private function isRecipe(string $line): bool
@@ -60,12 +60,15 @@ final class LineReader
         $this->lineNumber = $this->offset + 1;
         $line = $this->lines[$this->offset++];
         $recipe = $this->isRecipe($line);
-        while (((strlen($line) - strlen(rtrim($line, '\\'))) % 2) === 1 && isset($this->lines[$this->offset])) {
+        while (
+            ((strlen($line) - strlen(rtrim($line, characters: '\\'))) % 2) === 1
+            && isset($this->lines[$this->offset])
+        ) {
             $next = $this->lines[$this->offset++];
             if ($recipe) {
-                $line .= "\n" . (str_starts_with($next, "\t") ? substr($next, 1) : $next);
+                $line .= "\n" . (str_starts_with($next, "\t") ? substr($next, offset: 1) : $next);
             } else {
-                $line = rtrim(substr($line, 0, -1)) . ' ' . ltrim($next);
+                $line = rtrim(substr($line, offset: 0, length: -1)) . ' ' . ltrim($next);
                 $recipe = $this->isRecipe($line);
             }
         }

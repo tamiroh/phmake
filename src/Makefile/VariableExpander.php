@@ -44,7 +44,7 @@ final readonly class VariableExpander
                 if (!$variable->recursive) {
                     return $variable->expression;
                 }
-                if (in_array($name, $expanding, true)) {
+                if (in_array($name, $expanding, strict: true)) {
                     throw new MakefileErrorException("Recursive variable `$name'");
                 }
                 return $this->expand($variable->expression, [...$expanding, $name]);
