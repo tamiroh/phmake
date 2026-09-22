@@ -34,7 +34,7 @@ final class VariableExpanderTest extends TestCase
     {
         $expander = new VariableExpander([new Variable('A', '$(B)'), new Variable('B', '$(A)')]);
         $this->expectException(MakefileErrorException::class);
-        $this->expectExceptionMessage("Recursive variable `A'");
+        $this->expectExceptionMessageIsOrContains("Recursive variable `A'");
 
         $expander->expand('$(A)');
     }

@@ -81,7 +81,7 @@ final class TargetTest extends TestCase
         $shell->exitCodes['false'] = 1;
 
         $this->expectException(CommandFailedException::class);
-        $this->expectExceptionMessage('[foo] Error 1');
+        $this->expectExceptionMessageIsOrContains('[foo] Error 1');
 
         try {
             $foo->run($shell, new FakeFilesystem(files: []), new FakeOutput());

@@ -201,7 +201,7 @@ class MakefileParserTest extends TestCase
     public function reportsTheSourceLineForInvalidSyntax(string $source, int $line): void
     {
         $this->expectException(ParseException::class);
-        $this->expectExceptionMessage("Makefile:$line:");
+        $this->expectExceptionMessageIsOrContains("Makefile:$line:");
 
         new MakefileParser($source)->parse();
     }

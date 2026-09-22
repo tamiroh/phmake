@@ -52,7 +52,7 @@ final class MakefileTest extends TestCase
         ], defaultGoal: 'foo');
 
         $this->expectException(MakefileErrorException::class);
-        $this->expectExceptionMessage("No rule to make target `bar'");
+        $this->expectExceptionMessageIsOrContains("No rule to make target `bar'");
 
         $makefile->run(['bar'], new FakeShell(), new FakeFilesystem(files: []), new FakeOutput());
     }
@@ -97,7 +97,7 @@ final class MakefileTest extends TestCase
         $shell->exitCodes['false'] = 1;
 
         $this->expectException(CommandFailedException::class);
-        $this->expectExceptionMessage('[foo] Error 1');
+        $this->expectExceptionMessageIsOrContains('[foo] Error 1');
 
         try {
             $makefile->run(['foo', 'bar'], $shell, new FakeFilesystem(files: []), new FakeOutput());
@@ -153,7 +153,7 @@ final class MakefileTest extends TestCase
     public function reportsMissingDefaultGoalAtExecutionTime(): void
     {
         $this->expectException(MakefileErrorException::class);
-        $this->expectExceptionMessage('No targets');
+        $this->expectExceptionMessageIsOrContains('No targets');
 
         new Makefile()->run([], new FakeShell(), new FakeFilesystem(files: []), new FakeOutput());
     }
@@ -188,7 +188,7 @@ final class MakefileTest extends TestCase
         $shell = new FakeShell();
 
         $this->expectException(MakefileErrorException::class);
-        $this->expectExceptionMessage("No rule to make target `input.txt', needed by `output'");
+        $this->expectExceptionMessageIsOrContains("No rule to make target `input.txt', needed by `output'");
 
         try {
             new Makefile([$output])->run(['output'], $shell, new FakeFilesystem(files: []), new FakeOutput());
@@ -287,7 +287,7 @@ final class MakefileTest extends TestCase
         ]);
 
         $this->expectException(CommandFailedException::class);
-        $this->expectExceptionMessage('[first] Error 1');
+        $this->expectExceptionMessageIsOrContains('[first] Error 1');
 
         try {
             $makefile->run(['all'], $shell, new FakeFilesystem(files: []), new FakeOutput());
