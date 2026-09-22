@@ -29,10 +29,11 @@ final readonly class VariableExpander
             '/\$\$|\$\(([A-Za-z_][A-Za-z0-9_]*)\)|\$\{([A-Za-z_][A-Za-z0-9_]*)\}/',
             /** @throws MakefileErrorException */
             function (array $matches) use ($expanding): string {
+                /** @var array{0: string, 1?: string, 2?: string} $matches */
                 if ($matches[0] === '$$') {
                     return '$';
                 }
-                $name = ($matches[1] ?? '') !== '' ? $matches[1] : $matches[2] ?? '';
+                $name = isset($matches[1]) && $matches[1] !== '' ? $matches[1] : $matches[2] ?? '';
                 $variable = $this->variables[$name] ?? null;
                 if ($variable === null) {
                     return '';

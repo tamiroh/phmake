@@ -44,7 +44,9 @@ final readonly class MakefileParser
                 $rule = null;
             }
 
+            $matches = [];
             if (preg_match('/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(:=|=)(.*)$/s', $uncommented, $matches) === 1) {
+                /** @var array{string, non-empty-string, ':='|'=', string} $matches */
                 $value = ltrim($matches[3]);
                 $variables[$matches[1]] = new Variable(
                     $matches[1],

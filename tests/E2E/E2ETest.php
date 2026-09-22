@@ -61,6 +61,7 @@ final class E2ETest extends TestCase
 
     private function runSession(string $fixtureDirectory, string $session, ?string $executable = null): string
     {
+        $commands = [];
         preg_match_all('/^\$ (.+)$/m', $session, $commands);
         $sandbox = Sandbox::create($fixtureDirectory, $executable);
 
@@ -82,6 +83,7 @@ final class E2ETest extends TestCase
         return preg_replace_callback(
             '/^(?:' . preg_quote($programName, '/') . '|phmake): ([^\n]*)$/m',
             static function (array $matches): string {
+                /** @var array{string, string} $matches */
                 $message = str_replace('`', "'", $matches[1]);
                 $message =
                     preg_replace('/^(\*\*\* \[)Makefile:[0-9]+: (.*\] Error [0-9]+)$/', '$1$2', $message) ?? $message;
