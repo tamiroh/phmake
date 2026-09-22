@@ -10,6 +10,8 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
 
+use function file_get_contents;
+
 final readonly class Application
 {
     /** @param list<string> $arguments */

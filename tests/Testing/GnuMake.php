@@ -8,6 +8,9 @@ use RuntimeException;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
+use function getenv;
+use function str_starts_with;
+
 final class GnuMake
 {
     private static ?string $executable = null;

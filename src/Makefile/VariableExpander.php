@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use function in_array;
+use function preg_replace_callback;
+
 final readonly class VariableExpander
 {
     /** @var array<string, Variable> */

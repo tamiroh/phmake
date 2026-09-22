@@ -7,6 +7,8 @@ namespace Tamiroh\Phmake\Tests\Testing;
 use DateTimeImmutable;
 use Tamiroh\Phmake\Makefile\Filesystem;
 
+use function array_key_exists;
+
 final class FakeFilesystem implements Filesystem
 {
     /**

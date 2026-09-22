@@ -8,6 +8,11 @@ use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 
+use function array_unique;
+use function array_values;
+use function str_contains;
+use function str_starts_with;
+
 final class MakefileBuilder
 {
     /** @var array<string, Target> */

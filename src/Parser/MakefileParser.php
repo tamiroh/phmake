@@ -10,6 +10,18 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
 
+use function array_values;
+use function intdiv;
+use function ltrim;
+use function preg_match;
+use function preg_split;
+use function str_repeat;
+use function str_starts_with;
+use function strlen;
+use function strpos;
+use function substr;
+use function trim;
+
 final readonly class MakefileParser
 {
     public function __construct(

@@ -6,6 +6,9 @@ namespace Tamiroh\Phmake\Console;
 
 use Tamiroh\Phmake\Makefile\Filesystem as FilesystemInterface;
 
+use function file_exists;
+use function filemtime;
+
 final class Filesystem implements FilesystemInterface
 {
     #[\Override]

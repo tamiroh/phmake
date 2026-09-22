@@ -10,6 +10,20 @@ use SplFileInfo;
 use Symfony\Component\Process\Process;
 use Throwable;
 
+use function chmod;
+use function copy;
+use function dirname;
+use function escapeshellarg;
+use function file_put_contents;
+use function getenv;
+use function mkdir;
+use function rmdir;
+use function str_ends_with;
+use function symlink;
+use function sys_get_temp_dir;
+use function uniqid;
+use function unlink;
+
 final readonly class Sandbox
 {
     private function __construct(

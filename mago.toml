@@ -15,12 +15,12 @@ use-tabs = false
 integrations = ["phpunit"]
 
 [linter.rules]
+ambiguous-function-call = { enabled = true }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }
 too-many-methods = { exclude = ["tests/**"] }
 excessive-parameter-list = { enabled = false }
 no-error-control-operator = { enabled = false }
-ambiguous-function-call = { enabled = false }
 literal-named-argument = { enabled = false }
 halstead = { effort-threshold = 7000 }
 

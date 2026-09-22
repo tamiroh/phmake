@@ -6,6 +6,8 @@ namespace Tamiroh\Phmake\Parser;
 
 use Tamiroh\Phmake\Makefile\Command;
 
+use function trim;
+
 final class Rule
 {
     /** @var list<Command> */

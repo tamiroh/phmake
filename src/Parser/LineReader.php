@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use function explode;
+use function ltrim;
+use function preg_match;
+use function rtrim;
+use function str_replace;
+use function str_starts_with;
+use function strlen;
+use function substr;
+
 final class LineReader
 {
     /** @var list<string> */

@@ -11,6 +11,16 @@ use RuntimeException;
 use Tamiroh\Phmake\Tests\Testing\GnuMake;
 use Tamiroh\Phmake\Tests\Testing\Sandbox;
 
+use function basename;
+use function dirname;
+use function file_get_contents;
+use function glob;
+use function preg_match_all;
+use function preg_quote;
+use function preg_replace;
+use function preg_replace_callback;
+use function str_replace;
+
 final class E2ETest extends TestCase
 {
     #[Test]

@@ -6,6 +6,8 @@ namespace Tamiroh\Phmake\Console;
 
 use Tamiroh\Phmake\Makefile\Output as OutputInterface;
 
+use function fwrite;
+
 final class Output implements OutputInterface
 {
     #[\Override]

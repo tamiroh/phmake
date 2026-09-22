@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
+use function fwrite;
+use function str_ends_with;
+use function trim;
+
 final class Process
 {
     private const string MESSAGE_PREMIX = 'phmake: ';

@@ -8,6 +8,10 @@ use Symfony\Component\Process\Exception\RuntimeException;
 use Symfony\Component\Process\Process as SymfonyProcess;
 use Tamiroh\Phmake\Makefile\Shell as ShellInterface;
 
+use function defined;
+use function fwrite;
+use function stream_isatty;
+
 final class Shell implements ShellInterface
 {
     #[\Override]
