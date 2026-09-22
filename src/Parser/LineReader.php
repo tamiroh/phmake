@@ -28,29 +28,6 @@ final class LineReader
         $this->lines = explode("\n", str_replace("\r\n", replace: "\n", subject: $source));
     }
 
-    private function isRecipe(string $line): bool
-    {
-        if (str_starts_with($line, "\t")) {
-            return true;
-        }
-        if (preg_match('/^\s*[A-Za-z_][A-Za-z0-9_]*\s*(:=|=)/', $line) === 1) {
-            return false;
-        }
-        $hasColon = false;
-        for ($index = 0; $index < strlen($line); $index++) {
-            if ($line[$index] === '\\') {
-                $index++;
-            } elseif ($line[$index] === '#') {
-                return false;
-            } elseif ($line[$index] === ':') {
-                $hasColon = true;
-            } elseif ($line[$index] === ';') {
-                return $hasColon;
-            }
-        }
-        return false;
-    }
-
     public function next(): ?string
     {
         if (!isset($this->lines[$this->offset])) {
@@ -74,5 +51,28 @@ final class LineReader
         }
 
         return $line;
+    }
+
+    private function isRecipe(string $line): bool
+    {
+        if (str_starts_with($line, "\t")) {
+            return true;
+        }
+        if (preg_match('/^\s*[A-Za-z_][A-Za-z0-9_]*\s*(:=|=)/', $line) === 1) {
+            return false;
+        }
+        $hasColon = false;
+        for ($index = 0; $index < strlen($line); $index++) {
+            if ($line[$index] === '\\') {
+                $index++;
+            } elseif ($line[$index] === '#') {
+                return false;
+            } elseif ($line[$index] === ':') {
+                $hasColon = true;
+            } elseif ($line[$index] === ';') {
+                return $hasColon;
+            }
+        }
+        return false;
     }
 }

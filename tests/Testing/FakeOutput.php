@@ -21,26 +21,26 @@ final class FakeOutput implements Output
     public private(set) array $warnings = [];
 
     #[\Override]
-    public function writeInfo(string $message): void
-    {
-        $this->infos[] = $message;
-    }
-
-    #[\Override]
-    public function writeWarning(string $message): void
-    {
-        $this->warnings[] = $message;
-    }
-
-    #[\Override]
     public function write(string $text): void
     {
         $this->writes[] = $text;
     }
 
     #[\Override]
+    public function writeInfo(string $message): void
+    {
+        $this->infos[] = $message;
+    }
+
+    #[\Override]
     public function writeLine(string $line): void
     {
         $this->lines[] = $line;
+    }
+
+    #[\Override]
+    public function writeWarning(string $message): void
+    {
+        $this->warnings[] = $message;
     }
 }

@@ -70,6 +70,24 @@ final readonly class Sandbox
         }
     }
 
+    private static function removeDirectory(string $path): void
+    {
+        /** @var SplFileInfo $file */
+        foreach (new FilesystemIterator($path) as $file) {
+            if ($file->isDir() && !$file->isLink()) {
+                self::removeDirectory($file->getPathname());
+            } else {
+                unlink($file->getPathname());
+            }
+        }
+        rmdir($path);
+    }
+
+    public function remove(): void
+    {
+        self::removeDirectory($this->path);
+    }
+
     public function runCommand(string $command): string
     {
         $process = new Process(['sh', '-c', "exec 2>&1\n" . $command], $this->path, [
@@ -93,23 +111,5 @@ final readonly class Sandbox
         }
 
         return $output;
-    }
-
-    public function remove(): void
-    {
-        self::removeDirectory($this->path);
-    }
-
-    private static function removeDirectory(string $path): void
-    {
-        /** @var SplFileInfo $file */
-        foreach (new FilesystemIterator($path) as $file) {
-            if ($file->isDir() && !$file->isLink()) {
-                self::removeDirectory($file->getPathname());
-            } else {
-                unlink($file->getPathname());
-            }
-        }
-        rmdir($path);
     }
 }

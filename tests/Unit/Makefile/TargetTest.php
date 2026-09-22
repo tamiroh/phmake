@@ -45,56 +45,6 @@ final class TargetTest extends TestCase
      * @throws MakefileErrorException
      */
     #[Test]
-    public function runsCommandsWhenDependencyIsNewerThanTarget(): void
-    {
-        $foo = new Target(name: 'foo', dependencies: ['bar'], commands: [new Command('echo foo')], isPhony: false);
-
-        $shell = new FakeShell();
-        $output = new FakeOutput();
-        $filesystem = new FakeFilesystem(files: [
-            'bar' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:01:00')],
-            'foo' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
-        ]);
-
-        $rebuilt = $foo->run($shell, $filesystem, $output);
-
-        self::assertTrue($rebuilt);
-        self::assertSame(['echo foo'], $shell->commands);
-        self::assertSame(['echo foo'], $output->lines);
-    }
-
-    /**
-     * @throws CommandFailedException
-     * @throws MakefileErrorException
-     */
-    #[Test]
-    public function stopsWhenACommandFails(): void
-    {
-        $foo = new Target(
-            name: 'foo',
-            dependencies: [],
-            commands: [new Command('false'), new Command('echo foo')],
-            isPhony: false,
-        );
-
-        $shell = new FakeShell();
-        $shell->exitCodes['false'] = 1;
-
-        $this->expectException(CommandFailedException::class);
-        $this->expectExceptionMessageIsOrContains('[foo] Error 1');
-
-        try {
-            $foo->run($shell, new FakeFilesystem(files: []), new FakeOutput());
-        } finally {
-            self::assertSame(['false'], $shell->commands);
-        }
-    }
-
-    /**
-     * @throws CommandFailedException
-     * @throws MakefileErrorException
-     */
-    #[Test]
     public function runsCommandsForPhonyTargetsEvenWhenTheFileExists(): void
     {
         $foo = new Target(name: 'foo', dependencies: [], commands: [new Command('echo foo')], isPhony: true);
@@ -135,6 +85,29 @@ final class TargetTest extends TestCase
      * @throws MakefileErrorException
      */
     #[Test]
+    public function runsCommandsWhenDependencyIsNewerThanTarget(): void
+    {
+        $foo = new Target(name: 'foo', dependencies: ['bar'], commands: [new Command('echo foo')], isPhony: false);
+
+        $shell = new FakeShell();
+        $output = new FakeOutput();
+        $filesystem = new FakeFilesystem(files: [
+            'bar' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:01:00')],
+            'foo' => ['modifiedAt' => new DateTimeImmutable('2026-04-05 10:00:00')],
+        ]);
+
+        $rebuilt = $foo->run($shell, $filesystem, $output);
+
+        self::assertTrue($rebuilt);
+        self::assertSame(['echo foo'], $shell->commands);
+        self::assertSame(['echo foo'], $output->lines);
+    }
+
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     */
+    #[Test]
     public function runsCommandsWhenTheTargetFileDoesNotExist(): void
     {
         $shell = new FakeShell();
@@ -142,5 +115,32 @@ final class TargetTest extends TestCase
 
         self::assertTrue($target->run($shell, new FakeFilesystem(files: []), new FakeOutput()));
         self::assertSame(['echo build'], $shell->commands);
+    }
+
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     */
+    #[Test]
+    public function stopsWhenACommandFails(): void
+    {
+        $foo = new Target(
+            name: 'foo',
+            dependencies: [],
+            commands: [new Command('false'), new Command('echo foo')],
+            isPhony: false,
+        );
+
+        $shell = new FakeShell();
+        $shell->exitCodes['false'] = 1;
+
+        $this->expectException(CommandFailedException::class);
+        $this->expectExceptionMessageIsOrContains('[foo] Error 1');
+
+        try {
+            $foo->run($shell, new FakeFilesystem(files: []), new FakeOutput());
+        } finally {
+            self::assertSame(['false'], $shell->commands);
+        }
     }
 }
