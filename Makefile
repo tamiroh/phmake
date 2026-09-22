@@ -10,6 +10,7 @@ test:
 lint:
 	$(PHPSTAN) analyse src tests --memory-limit=2G
 	$(MAGO) --colors always analyze
+	$(MAGO) --colors always guard
 
 .PHONY: format
 format:
