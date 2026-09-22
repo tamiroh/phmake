@@ -12,13 +12,11 @@ use Tamiroh\Phmake\Parser\ParseException;
 
 final readonly class Application
 {
-    public function run(): void
+    /** @param list<string> $arguments */
+    public function run(array $arguments): void
     {
-        /** @var list<string> $argv */
-        global $argv;
-
         try {
-            $this->createMakefile()->run(array_slice($argv, 1), new Shell(), new Filesystem(), new Output());
+            $this->createMakefile()->run($arguments, new Shell(), new Filesystem(), new Output());
         } catch (CommandFailedException $e) {
             Process::stopWithCommandFailure($e->target, $e->exitCode);
         } catch (ParseException $e) {
@@ -28,7 +26,10 @@ final readonly class Application
         }
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     * @throws ParseException
+     */
     private function createMakefile(): Makefile
     {
         $makefileRaw = @file_get_contents('Makefile');
