@@ -23,7 +23,9 @@
         "phpstan/phpstan": "^2.2.14",
         "phpunit/phpunit": "^13.3.4",
         "carthage-software/mago": "^1.49.0",
-        "phpstan/phpstan-strict-rules": "^2.0.12"
+        "phpstan/phpstan-strict-rules": "^2.0.12",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0"
     },
     "config": {
         "allow-plugins": {
