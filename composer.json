@@ -21,7 +21,7 @@
     ],
     "require-dev": {
         "phpstan/phpstan": "^2.2.14",
-        "phpunit/phpunit": "^12.5.35",
+        "phpunit/phpunit": "^13.3.4",
         "carthage-software/mago": "^1.49.0",
         "phpstan/phpstan-strict-rules": "^2.0.12"
     },
