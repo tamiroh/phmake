@@ -2,7 +2,7 @@ php-version = "8.5.0"
 
 [source]
 workspace = "."
-paths = ["src/", "tests/"]
+paths = ["phmake", "src/", "tests/"]
 includes = ["vendor"]
 excludes = []
 
@@ -44,6 +44,10 @@ register-super-globals = true
 # Dependency boundaries: Console -> Parser -> Makefile.
 [guard]
 mode = "perimeter"
+
+[[guard.perimeter.rules]]
+namespace = "@global"
+permit = ["@native", 'Tamiroh\Phmake\Console\Application']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Makefile\'
