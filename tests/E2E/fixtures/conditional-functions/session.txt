@@ -1,0 +1,25 @@
+$ ./phmake conditional
+<safe>
+<chosen>
+<>
+<yes>
+<true>
+<false>
+< >
+<b>
+<no,more>
+<nested>
+$ ./phmake call
+first-argument
+second-argument
+<pair:one::>
+<pair:$(literal):,:>
+<b,b>
+<a b c >
+<chosen>
+$ ./phmake order
+expanded
+first
+second
+$ touch cached && ./phmake cached
+phmake: `cached' is up to date.

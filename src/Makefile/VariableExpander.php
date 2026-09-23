@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use function array_filter;
+use function array_slice;
+use function array_values;
 use function count;
 use function explode;
 use function implode;
 use function in_array;
 use function ltrim;
+use function max;
 use function preg_match;
 use function preg_split;
 use function str_contains;
@@ -27,6 +31,7 @@ final readonly class VariableExpander
     public function __construct(
         array $variables,
         private ?Output $output = null,
+        private int $callParameters = 0,
     ) {
         $indexed = [];
         foreach ($variables as $variable) {
@@ -80,6 +85,51 @@ final readonly class VariableExpander
         return $arguments;
     }
 
+    /**
+     * @param list<string> $arguments
+     * @param list<string> $expanding
+     * @throws MakefileErrorException
+     */
+    private function call(array $arguments, array $expanding): string
+    {
+        $name = trim($arguments[0] ?? '');
+        $arguments[0] = $name;
+        $argumentCount = Functions::argumentCount($name);
+        if ($argumentCount !== null) {
+            return Functions::expand($name, array_slice($arguments, 1, $argumentCount));
+        }
+        if (in_array($name, ['if', 'and', 'or'], strict: true)) {
+            return ConditionalFunctions::expand(
+                $name,
+                array_slice($arguments, 1, $name === 'if' ? 3 : null),
+                static fn(string $argument): string => $argument,
+            );
+        }
+        if ($name === 'info') {
+            $this->output?->write(($arguments[1] ?? '') . "\n");
+            return '';
+        }
+        if ($name === 'call') {
+            return $this->call(array_slice($arguments, 1), $expanding);
+        }
+        $variable = $this->variables[$name] ?? null;
+        if ($variable === null) {
+            return '';
+        }
+        if (!$variable->recursive) {
+            return $variable->expression;
+        }
+        $variables = $this->variables;
+        $parameters = max($this->callParameters, count($arguments) - 1);
+        for ($index = 0; $index <= $parameters; $index++) {
+            $variables[(string) $index] = new Variable((string) $index, $arguments[$index] ?? '', false);
+        }
+        return new self(array_values($variables), $this->output, $parameters)->expand(
+            $variable->expression,
+            array_values(array_filter($expanding, static fn(string $variable): bool => $variable !== $name)),
+        );
+    }
+
     /** @throws MakefileErrorException */
     private function readReference(string $expression, int &$index): string
     {
@@ -107,13 +157,28 @@ final readonly class VariableExpander
         $matches = [];
         if (preg_match('/^([a-z-]+)[ \t\n]+/', $reference, $matches) === 1) {
             /** @var array{non-empty-string, non-empty-string} $matches */
-            $argumentCount = Functions::argumentCount($matches[1]);
+            $argumentCount = match ($matches[1]) {
+                'if' => 3,
+                'and', 'or', 'call' => PHP_INT_MAX,
+                default => Functions::argumentCount($matches[1]),
+            };
             if ($argumentCount !== null) {
                 $arguments = $this->arguments(substr($reference, strlen($matches[0])), $argumentCount, $opening);
+                if (in_array($matches[1], ['if', 'and', 'or'], strict: true)) {
+                    return ConditionalFunctions::expand(
+                        $matches[1],
+                        $arguments,
+                        /** @throws MakefileErrorException */
+                        fn(string $argument): string => $this->expand($argument, $expanding),
+                    );
+                }
                 foreach ($arguments as &$argument) {
                     $argument = $this->expand($argument, $expanding);
                 }
                 unset($argument);
+                if ($matches[1] === 'call') {
+                    return $this->call($arguments, $expanding);
+                }
                 return Functions::expand($matches[1], $arguments);
             }
         }

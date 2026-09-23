@@ -46,8 +46,12 @@ final readonly class Target
             new Variable('+', implode(' ', $this->dependencies), false),
             new Variable('*', $this->stem, false),
         ];
+        $commands = [];
         foreach ($this->commands as $command) {
-            $exitCode = $command->run($shell, $output, $variables);
+            $commands[] = $command->expand($variables, $output);
+        }
+        foreach ($commands as $command) {
+            $exitCode = $command->run($shell, $output);
             if ($exitCode !== 0) {
                 throw new CommandFailedException($this->name, $exitCode);
             }

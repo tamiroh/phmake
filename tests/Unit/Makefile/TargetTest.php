@@ -11,6 +11,7 @@ use Tamiroh\Phmake\Makefile\Command;
 use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Target;
+use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Tests\Testing\FakeFilesystem;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
 use Tamiroh\Phmake\Tests\Testing\FakeShell;
@@ -38,6 +39,24 @@ final class TargetTest extends TestCase
         self::assertFalse($rebuilt);
         self::assertSame([], $shell->commands);
         self::assertSame([], $output->lines);
+    }
+
+    /**
+     * @throws CommandFailedException
+     * @throws MakefileErrorException
+     */
+    #[Test]
+    public function expandsEveryCommandBeforeRunningTheRecipe(): void
+    {
+        $shell = new FakeShell();
+        $target = new Target('output', [], [new Command('touch output'), new Command('echo $(CYCLE)')], false);
+        $this->expectException(MakefileErrorException::class);
+
+        try {
+            $target->run($shell, new FakeFilesystem([]), new FakeOutput(), [new Variable('CYCLE', '$(CYCLE)')]);
+        } finally {
+            self::assertSame([], $shell->commands);
+        }
     }
 
     /**
