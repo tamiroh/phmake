@@ -1,0 +1,3 @@
+$ ./phmake VALUE=first all 'VALUE=$(OTHER)' EMPTY= GOAL=named
+selected
+late||named

@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 
 use function array_values;
+use function in_array;
 use function str_contains;
 use function str_starts_with;
 
@@ -28,9 +29,16 @@ final class MakefileBuilder
 
     private ?string $defaultGoal = null;
 
+    /** @var list<string> */
+    private array $suffixes = ['.c', '.o'];
+
     public function addRule(Rule $rule): void
     {
         foreach ($rule->targetNames as $name) {
+            if ($name === '.SUFFIXES') {
+                $this->suffixes = $rule->dependencyNames === [] ? [] : [...$this->suffixes, ...$rule->dependencyNames];
+                continue;
+            }
             if (str_contains($name, '%')) {
                 $this->patterns[] = new Target($name, $rule->dependencyNames, $rule->commands, false);
                 continue;
@@ -68,14 +76,28 @@ final class MakefileBuilder
         }
     }
 
-    /** @param list<Variable> $variables */
-    public function build(array $variables): Makefile
+    /**
+     * @param list<Variable> $variables
+     * @param list<Target> $builtinRules
+     */
+    public function build(array $variables, array $builtinRules = []): Makefile
     {
         foreach ($this->phonyNames as $name) {
             $previous = $this->targets[$name] ?? null;
             $this->targets[$name] = new Target($name, $previous->dependencies ?? [], $previous->commands ?? [], true);
         }
 
-        return new Makefile(array_values($this->targets), $variables, $this->defaultGoal, $this->patterns);
+        $patterns = $this->patterns;
+        if (in_array('.c', $this->suffixes, strict: true) && in_array('.o', $this->suffixes, strict: true)) {
+            foreach ($builtinRules as $builtin) {
+                foreach ($this->patterns as $pattern) {
+                    if ($pattern->name === $builtin->name && $pattern->dependencies === $builtin->dependencies) {
+                        continue 2;
+                    }
+                }
+                $patterns[] = $builtin;
+            }
+        }
+        return new Makefile(array_values($this->targets), $variables, $this->defaultGoal, $patterns);
     }
 }

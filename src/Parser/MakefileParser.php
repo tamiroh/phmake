@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Parser;
 use LogicException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
 
@@ -25,9 +26,17 @@ use function trim;
 
 final readonly class MakefileParser
 {
+    /**
+     * @param list<Variable> $defaults
+     * @param array<string, Variable> $overrides
+     * @param list<Target> $builtinRules
+     */
     public function __construct(
         private string $source,
         private ?SourceFiles $files = null,
+        private array $defaults = [],
+        private array $overrides = [],
+        private array $builtinRules = [],
     ) {}
 
     private static function removeComment(string $line): string
@@ -96,8 +105,12 @@ final readonly class MakefileParser
     {
         $builder = new MakefileBuilder();
         $variables = [];
+        foreach ($this->defaults as $variable) {
+            $variables[$variable->name] = $variable;
+        }
+        $variables = [...$variables, ...$this->overrides];
         $this->readRules($this->source, $builder, $variables, []);
-        return $builder->build(array_values($variables));
+        return $builder->build(array_values($variables), $this->builtinRules);
     }
 
     /** @return list<string> */
@@ -138,8 +151,11 @@ final readonly class MakefileParser
             }
 
             $matches = [];
-            if (preg_match('/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(:=|=)(.*)$/s', $uncommented, $matches) === 1) {
+            if (preg_match('/^\s*([A-Za-z_][A-Za-z0-9_.-]*)\s*(:=|=)(.*)$/s', $uncommented, $matches) === 1) {
                 /** @var array{string, non-empty-string, ':='|'=', string} $matches */
+                if (isset($this->overrides[$matches[1]])) {
+                    continue;
+                }
                 $value = ltrim($matches[3]);
                 $variables[$matches[1]] = new Variable(
                     $matches[1],

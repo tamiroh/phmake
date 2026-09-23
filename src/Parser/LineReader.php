@@ -58,7 +58,7 @@ final class LineReader
         if (str_starts_with($line, "\t")) {
             return true;
         }
-        if (preg_match('/^\s*[A-Za-z_][A-Za-z0-9_]*\s*(:=|=)/', $line) === 1) {
+        if (preg_match('/^\s*[A-Za-z_][A-Za-z0-9_.-]*\s*(:=|=)/', $line) === 1) {
             return false;
         }
         $hasColon = false;

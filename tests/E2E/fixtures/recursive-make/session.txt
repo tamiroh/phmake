@@ -1,0 +1,5 @@
+$ mkdir child && cp child.mk child/Makefile
+$ ./phmake 'VALUE=two words' > log && grep '^result=' log
+result=two words|linux|two words
+$ ./phmake 'VALUE=path\part $$literal $(PLATFORM)' > log && grep '^result=' log
+result=path\part $literal linux|linux|path\part $literal linux
