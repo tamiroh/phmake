@@ -29,6 +29,19 @@ jobs:
       - name: Build and verify Lua with phmake
         run: docker run --rm --platform linux/amd64 phmake-lua-build
 
+  make-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare GNU make build environment
+        run: docker build --platform linux/amd64 -f e2e/make/Dockerfile -t phmake-make-build .
+
+      - name: Build and verify GNU make with phmake
+        run: docker run --rm --platform linux/amd64 phmake-make-build
+
   lint:
     runs-on: ubuntu-latest
     steps:
