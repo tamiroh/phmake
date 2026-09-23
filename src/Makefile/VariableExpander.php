@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use function count;
 use function explode;
 use function implode;
 use function in_array;
@@ -50,12 +51,33 @@ final readonly class VariableExpander
             if ($next === '$') {
                 $result .= '$';
             } elseif ($next === '(' || $next === '{') {
-                $result .= $this->reference($this->readReference($expression, $index), $expanding);
+                $result .= $this->reference($this->readReference($expression, $index), $expanding, $next);
             } elseif ($next !== '') {
                 $result .= $this->value($next, $expanding);
             }
         }
         return $result;
+    }
+
+    /** @return list<string> */
+    private function arguments(string $text, int $limit, string $opening): array
+    {
+        $arguments = [];
+        $start = 0;
+        $depth = 0;
+        $closing = $opening === '(' ? ')' : '}';
+        for ($index = 0; $index < strlen($text) && count($arguments) < ($limit - 1); $index++) {
+            if ($text[$index] === $opening) {
+                $depth++;
+            } elseif ($text[$index] === $closing) {
+                $depth--;
+            } elseif ($text[$index] === ',' && $depth === 0) {
+                $arguments[] = substr($text, $start, $index - $start);
+                $start = $index + 1;
+            }
+        }
+        $arguments[] = substr($text, $start);
+        return $arguments;
     }
 
     /** @throws MakefileErrorException */
@@ -80,8 +102,21 @@ final readonly class VariableExpander
      * @param list<string> $expanding
      * @throws MakefileErrorException
      */
-    private function reference(string $reference, array $expanding): string
+    private function reference(string $reference, array $expanding, string $opening): string
     {
+        $matches = [];
+        if (preg_match('/^([a-z-]+)[ \t\n]+/', $reference, $matches) === 1) {
+            /** @var array{non-empty-string, non-empty-string} $matches */
+            $argumentCount = Functions::argumentCount($matches[1]);
+            if ($argumentCount !== null) {
+                $arguments = $this->arguments(substr($reference, strlen($matches[0])), $argumentCount, $opening);
+                foreach ($arguments as &$argument) {
+                    $argument = $this->expand($argument, $expanding);
+                }
+                unset($argument);
+                return Functions::expand($matches[1], $arguments);
+            }
+        }
         if (preg_match('/^info[ \t\n]/', $reference) === 1) {
             $message = $this->expand(ltrim(substr($reference, 5)), $expanding);
             $this->output?->write($message . "\n");

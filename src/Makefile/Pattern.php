@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile;
 
 use function str_ends_with;
+use function str_replace;
 use function str_starts_with;
 use function strlen;
 use function strpos;
@@ -12,33 +13,61 @@ use function substr;
 
 final readonly class Pattern
 {
-    public function __construct(
-        private string $expression,
-    ) {}
+    private string $prefix;
+
+    private ?string $suffix;
+
+    public function __construct(string $expression)
+    {
+        [$this->prefix, $this->suffix] = self::parts($expression);
+    }
+
+    /** @return array{string, ?string} */
+    private static function parts(string $expression): array
+    {
+        $prefix = '';
+        $offset = 0;
+        while (($percent = strpos($expression, '%', $offset)) !== false) {
+            $slashStart = $percent;
+            while ($slashStart > $offset && $expression[$slashStart - 1] === '\\') {
+                $slashStart--;
+            }
+            $slashes = substr($expression, $slashStart, $percent - $slashStart);
+            $escaped = (strlen($slashes) % 2) !== 0;
+            $prefix .=
+                substr($expression, $offset, $slashStart - $offset)
+                . str_replace('\\\\', '\\', $escaped ? substr($slashes, 0, -1) : $slashes);
+            if (!$escaped) {
+                return [$prefix, substr($expression, $percent + 1)];
+            }
+            $prefix .= '%';
+            $offset = $percent + 1;
+        }
+        return [$prefix . substr($expression, $offset), null];
+    }
+
+    public function hasWildcard(): bool
+    {
+        return $this->suffix !== null;
+    }
 
     public function match(string $name): ?string
     {
-        $percent = strpos($this->expression, '%');
-        if ($percent === false) {
-            return $name === $this->expression ? '' : null;
+        if ($this->suffix === null) {
+            return $name === $this->prefix ? '' : null;
         }
-        $prefix = substr($this->expression, 0, $percent);
-        $suffix = substr($this->expression, $percent + 1);
         if (
-            !str_starts_with($name, $prefix)
-            || !str_ends_with($name, $suffix)
-            || strlen($name) < (strlen($prefix) + strlen($suffix))
+            !str_starts_with($name, $this->prefix)
+            || !str_ends_with($name, $this->suffix)
+            || strlen($name) < (strlen($this->prefix) + strlen($this->suffix))
         ) {
             return null;
         }
-        return substr($name, strlen($prefix), strlen($name) - strlen($prefix) - strlen($suffix));
+        return substr($name, strlen($this->prefix), strlen($name) - strlen($this->prefix) - strlen($this->suffix));
     }
 
     public function substitute(string $stem): string
     {
-        $percent = strpos($this->expression, '%');
-        return $percent === false
-            ? $this->expression
-            : substr($this->expression, 0, $percent) . $stem . substr($this->expression, $percent + 1);
+        return $this->suffix === null ? $this->prefix : $this->prefix . $stem . $this->suffix;
     }
 }

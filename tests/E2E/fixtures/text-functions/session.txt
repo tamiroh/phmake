@@ -1,0 +1,30 @@
+$ ./phmake
+<b,b>
+<text!>
+< b,b>
+<b.o a.h b.o dir/note>
+<new exactish>
+<b.c b.c>
+<a.h dir/note>
+<a.h b.c dir/note>
+<a b>
+<ir>
+<4>
+<a.h>
+<a.h b.c>
+<b.c>
+<dir/note>
+<out/a.o out/b.o>
+<a1 b2 c>
+<a1 2>
+<./ path/ path/>
+<a b >
+<path.ext/file noext >
+<.c .hidden>
+<b>
+<(b,b)>
+<b>
+<>
+< %   b >
+<>
+< b >
