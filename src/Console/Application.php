@@ -40,6 +40,6 @@ final readonly class Application
             Process::stopWithError('No targets specified and no makefile found');
         }
 
-        return new MakefileParser($makefileRaw)->parse();
+        return new MakefileParser($makefileRaw, new SourceFiles())->parse();
     }
 }

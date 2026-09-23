@@ -30,6 +30,29 @@ final class CommandTest extends TestCase
 
     /** @throws MakefileErrorException */
     #[Test]
+    public function doesNotExecuteEmptyExpandedRecipes(): void
+    {
+        $shell = new FakeShell();
+        self::assertSame(0, new Command('@$(UNDEFINED)')->run($shell, new FakeOutput()));
+        self::assertSame([], $shell->commands);
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function ignoresFailureOnlyForRecipesWithMinusPrefix(): void
+    {
+        $shell = new FakeShell();
+        $shell->exitCodes['false'] = 7;
+        $output = new FakeOutput();
+
+        self::assertSame(0, new Command(' -@false')->run($shell, $output));
+        self::assertSame(['false'], $shell->commands);
+        self::assertSame([], $output->lines);
+        self::assertSame(7, new Command('@false')->run($shell, $output));
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
     public function returnsTheShellExitCode(): void
     {
         $shell = new FakeShell();

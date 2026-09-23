@@ -1,0 +1,4 @@
+$ ./phmake 2>/dev/null
+quiet
+recursive
+continued

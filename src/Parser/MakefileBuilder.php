@@ -8,7 +8,6 @@ use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 
-use function array_unique;
 use function array_values;
 use function str_contains;
 use function str_starts_with;
@@ -24,11 +23,18 @@ final class MakefileBuilder
     /** @var array<string, true> */
     private array $recipes = [];
 
+    /** @var list<Target> */
+    private array $patterns = [];
+
     private ?string $defaultGoal = null;
 
     public function addRule(Rule $rule): void
     {
         foreach ($rule->targetNames as $name) {
+            if (str_contains($name, '%')) {
+                $this->patterns[] = new Target($name, $rule->dependencyNames, $rule->commands, false);
+                continue;
+            }
             if ($name === '.PHONY') {
                 foreach ($rule->dependencyNames as $dependency) {
                     $this->phonyNames[$dependency] = $dependency;
@@ -52,9 +58,12 @@ final class MakefileBuilder
             $previous = $this->targets[$name] ?? null;
             $this->targets[$name] = new Target(
                 $name,
-                array_values(array_unique([...($previous->dependencies ?? []), ...$rule->dependencyNames])),
+                $rule->hasRecipe
+                    ? [...$rule->dependencyNames, ...($previous->dependencies ?? [])]
+                    : [...($previous->dependencies ?? []), ...$rule->dependencyNames],
                 $rule->hasRecipe ? $rule->commands : $previous->commands ?? [],
                 false,
+                hasRecipe: $rule->hasRecipe || ($previous->hasRecipe ?? false),
             );
         }
     }
@@ -67,6 +76,6 @@ final class MakefileBuilder
             $this->targets[$name] = new Target($name, $previous->dependencies ?? [], $previous->commands ?? [], true);
         }
 
-        return new Makefile(array_values($this->targets), $variables, $this->defaultGoal);
+        return new Makefile(array_values($this->targets), $variables, $this->defaultGoal, $this->patterns);
     }
 }

@@ -7,6 +7,11 @@ namespace Tamiroh\Phmake\Makefile;
 use function array_filter;
 use function array_key_exists;
 use function array_values;
+use function basename;
+use function str_contains;
+use function strlen;
+use function substr;
+use function usort;
 
 final readonly class Makefile
 {
@@ -16,11 +21,13 @@ final readonly class Makefile
     /**
      * @param list<Target> $targets
      * @param list<Variable> $variables
+     * @param list<Target> $patterns
      */
     public function __construct(
         public array $targets = [],
         public array $variables = [],
         public ?string $defaultGoal = null,
+        private array $patterns = [],
     ) {
         $indexed = [];
         foreach ($targets as $target) {
@@ -50,12 +57,64 @@ final readonly class Makefile
             $this->runTarget($target, $shell, $filesystem, $output, $results, $visiting, $commandsExecuted);
             if (!$commandsExecuted) {
                 $output->writeInfo(
-                    ($this->targetsByName[$target]->commands ?? []) === []
+                    ($this->resolveTarget($target, $filesystem)->commands ?? []) === []
                         ? "Nothing to be done for `$target'."
                         : "`$target' is up to date.",
                 );
             }
         }
+    }
+
+    /** @param array<int, true> $usedPatterns */
+    private function resolveTarget(string $name, Filesystem $filesystem, array $usedPatterns = []): ?Target
+    {
+        $explicit = $this->targetsByName[$name] ?? null;
+        if ($explicit !== null && ($explicit->hasRecipe || $explicit->commands !== [] || $explicit->isPhony)) {
+            return $explicit;
+        }
+        $candidates = [];
+        foreach ($this->patterns as $index => $pattern) {
+            if ($pattern->commands === [] || isset($usedPatterns[$index])) {
+                continue;
+            }
+            $hasDirectory = str_contains($pattern->name, '/');
+            $stem = new Pattern($pattern->name)->match($hasDirectory ? $name : basename($name));
+            if ($stem === null || $stem === '') {
+                continue;
+            }
+            $directory = $hasDirectory ? '' : substr($name, 0, strlen($name) - strlen(basename($name)));
+            $dependencies = [];
+            foreach ($pattern->dependencies as $dependency) {
+                $dependencies[] =
+                    (str_contains($dependency, '%') ? $directory : '') . new Pattern($dependency)->substitute($stem);
+            }
+            $candidates[] = [new Target($name, $dependencies, $pattern->commands, false, $directory . $stem), $index];
+        }
+        usort($candidates, static fn(array $a, array $b): int => strlen($a[0]->stem) <=> strlen($b[0]->stem));
+        foreach ([false, true] as $allowChaining) {
+            foreach ($candidates as [$candidate, $index]) {
+                foreach ($candidate->dependencies as $dependency) {
+                    if (
+                        !$filesystem->exists($dependency)
+                        && !isset($this->targetsByName[$dependency])
+                        && (
+                            !$allowChaining
+                            || $this->resolveTarget($dependency, $filesystem, $usedPatterns + [$index => true]) === null
+                        )
+                    ) {
+                        continue 2;
+                    }
+                }
+                return new Target(
+                    $name,
+                    [...$candidate->dependencies, ...($explicit->dependencies ?? [])],
+                    $candidate->commands,
+                    false,
+                    $candidate->stem,
+                );
+            }
+        }
+        return $explicit;
     }
 
     /**
@@ -77,7 +136,7 @@ final readonly class Makefile
         if (array_key_exists($name, $results)) {
             return $results[$name];
         }
-        $target = $this->targetsByName[$name] ?? null;
+        $target = $this->resolveTarget($name, $filesystem);
         if ($target === null) {
             if ($filesystem->exists($name)) {
                 return $results[$name] = false;
@@ -101,6 +160,8 @@ final readonly class Makefile
                         )),
                         $target->commands,
                         $target->isPhony,
+                        $target->stem,
+                        $target->hasRecipe,
                     );
                     continue;
                 }

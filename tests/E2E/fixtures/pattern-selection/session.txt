@@ -1,0 +1,5 @@
+$ ./phmake
+specific special-item.out special-item.in
+$ ./phmake missing.loop
+phmake: *** No rule to make target `missing.loop'.  Stop.
+[exit 2]

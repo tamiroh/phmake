@@ -21,10 +21,10 @@ class MakefileParserTest extends TestCase
     {
         yield 'orphan recipe' => ["\techo orphan", 1];
         yield 'space indented recipe' => ["all:\n    echo all", 2];
-        yield 'unknown directive' => ['include other.mk', 1];
+        yield 'missing include' => ['include missing.mk', 1];
         yield 'after continuation' => ["all: one \\\n two\ninvalid", 3];
         yield 'double colon' => ['all::', 1];
-        yield 'pattern rule' => ['%.o: %.c', 1];
+        yield 'static pattern rule' => ['file.o: %.o: %.c', 1];
         yield 'order only prerequisites' => ['all: | directory', 1];
         yield 'duplicate recipes' => ["all: ; echo first\nall: ; echo second", 2];
     }

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use function array_unique;
+use function implode;
+
 final readonly class Target
 {
     /**
@@ -15,6 +18,8 @@ final readonly class Target
         public array $dependencies,
         public array $commands,
         public bool $isPhony,
+        public string $stem = '',
+        public bool $hasRecipe = false,
     ) {}
 
     /**
@@ -33,6 +38,14 @@ final readonly class Target
             return false;
         }
 
+        $variables = [
+            ...$variables,
+            new Variable('@', $this->name, false),
+            new Variable('<', $this->dependencies[0] ?? '', false),
+            new Variable('^', implode(' ', array_unique($this->dependencies)), false),
+            new Variable('+', implode(' ', $this->dependencies), false),
+            new Variable('*', $this->stem, false),
+        ];
         foreach ($this->commands as $command) {
             $exitCode = $command->run($shell, $output, $variables);
             if ($exitCode !== 0) {

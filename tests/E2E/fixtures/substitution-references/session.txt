@@ -1,0 +1,4 @@
+$ ./phmake
+a.o b.o unchanged
+build/a.o build/b.o unchanged
+a.o b.o unchanged

@@ -1,0 +1,2 @@
+$ ./phmake
+target=all first=input unique=input extra all=input input extra

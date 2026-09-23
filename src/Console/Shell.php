@@ -18,6 +18,7 @@ final class Shell implements ShellInterface
     public function exec(string $command): int
     {
         $process = SymfonyProcess::fromShellCommandline($command);
+        $process->setTimeout(null);
 
         if ($this->isStdoutTty() && SymfonyProcess::isTtySupported()) {
             try {

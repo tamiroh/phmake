@@ -11,6 +11,7 @@ use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
 
 use function array_values;
+use function in_array;
 use function intdiv;
 use function ltrim;
 use function preg_match;
@@ -26,6 +27,7 @@ final readonly class MakefileParser
 {
     public function __construct(
         private string $source,
+        private ?SourceFiles $files = null,
     ) {}
 
     private static function removeComment(string $line): string
@@ -93,9 +95,27 @@ final readonly class MakefileParser
     public function parse(): Makefile
     {
         $builder = new MakefileBuilder();
-        $reader = new LineReader($this->source);
-        $rule = null;
         $variables = [];
+        $this->readRules($this->source, $builder, $variables, []);
+        return $builder->build(array_values($variables));
+    }
+
+    /** @return list<string> */
+    private function matchingPaths(string $pattern): array
+    {
+        $paths = $this->files?->matching($pattern) ?? [];
+        return $paths === [] ? [$pattern] : $paths;
+    }
+
+    /**
+     * @param array<string, Variable> $variables
+     * @param list<string> $included
+     * @throws MakefileErrorException
+     */
+    private function readRules(string $source, MakefileBuilder $builder, array &$variables, array $included): void
+    {
+        $reader = new LineReader($source);
+        $rule = null;
 
         while (($line = $reader->next()) !== null) {
             $lineNumber = $reader->lineNumber;
@@ -129,6 +149,27 @@ final readonly class MakefileParser
                 continue;
             }
 
+            if (preg_match('/^\s*(-?include|sinclude)\s+(.+)$/', $uncommented, $matches) === 1) {
+                /** @var array{non-falsy-string, '-include'|'include'|'sinclude', non-empty-string} $matches */
+                $patterns = self::words(new VariableExpander(array_values($variables))->expand($matches[2]));
+                foreach ($patterns as $pattern) {
+                    foreach ($this->matchingPaths($pattern) as $path) {
+                        $contents = $this->files?->read($path);
+                        if ($contents === null) {
+                            if ($matches[1] === 'include') {
+                                throw new ParseException($lineNumber, "Included makefile `$path' not found");
+                            }
+                            continue;
+                        }
+                        if (in_array($path, $included, strict: true)) {
+                            throw new ParseException($lineNumber, "Recursive include `$path'");
+                        }
+                        $this->readRules($contents, $builder, $variables, [...$included, $path]);
+                    }
+                }
+                continue;
+            }
+
             [$header, $recipe] = self::splitRecipe($line);
             $expanded = new VariableExpander(array_values($variables))->expand($header);
             $colon = strpos($expanded, needle: ':');
@@ -140,11 +181,17 @@ final readonly class MakefileParser
             $names = self::words(substr($expanded, offset: 0, length: $colon));
             if (
                 $names === []
-                || preg_match('/[:=%|&]/', substr($expanded, offset: 0, length: $colon) . $dependencies) === 1
+                || preg_match('/[:=|&]/', substr($expanded, offset: 0, length: $colon) . $dependencies) === 1
             ) {
                 throw new ParseException($lineNumber, 'Unsupported rule syntax');
             }
-            $rule = new Rule($names, self::words($dependencies), $lineNumber);
+            $prerequisites = [];
+            foreach (self::words($dependencies) as $dependency) {
+                foreach ($this->matchingPaths($dependency) as $path) {
+                    $prerequisites[] = $path;
+                }
+            }
+            $rule = new Rule($names, $prerequisites, $lineNumber);
             if ($recipe !== null) {
                 $rule->addRecipe(ltrim($recipe));
             }
@@ -153,7 +200,5 @@ final readonly class MakefileParser
         if ($rule !== null) {
             $builder->addRule($rule);
         }
-
-        return $builder->build(array_values($variables));
     }
 }

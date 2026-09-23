@@ -1,0 +1,8 @@
+$ ./phmake
+$ cat output
+nested: input.txt
+$ printf 'output: extra\nextra:\n\t@echo dependency\n' > generated.dep
+$ ./phmake
+dependency
+$ cat output
+nested: input.txt extra
