@@ -1,0 +1,14 @@
+$ ./phmake
+visit a
+visit b
+<[a] [b]>
+<a:1 2:a b:1 2:b|outer>
+<>
+<  >
+<$(literal)>
+<outer outer>
+<a b>
+<inner:>
+<[a] [b]>
+<constant constant>
+<a b>
