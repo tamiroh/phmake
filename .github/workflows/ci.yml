@@ -3,7 +3,7 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  php-build:
+  build-php:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -16,7 +16,7 @@ jobs:
       - name: Build and verify PHP with phmake
         run: docker run --rm --platform linux/amd64 phmake-php-build
 
-  lua-build:
+  build-lua:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -29,7 +29,7 @@ jobs:
       - name: Build and verify Lua with phmake
         run: docker run --rm --platform linux/amd64 phmake-lua-build
 
-  make-build:
+  build-make:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
