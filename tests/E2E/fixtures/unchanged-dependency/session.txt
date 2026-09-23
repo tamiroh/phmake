@@ -1,0 +1,7 @@
+$ touch -t 202001010000 version && touch -t 202001010001 stamp && touch -t 202001010002 output forced missing-output
+$ ./phmake output
+phmake: `output' is up to date.
+$ ./phmake forced
+rebuilding forced
+$ ./phmake missing-output
+rebuilding missing-output

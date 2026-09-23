@@ -179,7 +179,8 @@ final readonly class Makefile
             }
             $rebuilt = $target->run($shell, $filesystem, $output, $this->variables, $dependenciesRebuilt);
             $commandsExecuted = $commandsExecuted || $rebuilt && $target->commands !== [];
-            return $results[$name] = $rebuilt;
+            return $results[$name] =
+                $rebuilt && ($target->commands !== [] || $target->isPhony || !$filesystem->exists($name));
         } finally {
             unset($visiting[$name]);
         }

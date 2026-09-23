@@ -12,6 +12,8 @@ use function array_values;
 use function in_array;
 use function str_contains;
 use function str_starts_with;
+use function strlen;
+use function substr;
 
 final class MakefileBuilder
 {
@@ -88,9 +90,15 @@ final class MakefileBuilder
         }
 
         $patterns = $this->patterns;
+        foreach ($this->targets as $target) {
+            $pattern = $this->suffixPattern($target);
+            if ($pattern !== null) {
+                $patterns[] = $pattern;
+            }
+        }
         if (in_array('.c', $this->suffixes, strict: true) && in_array('.o', $this->suffixes, strict: true)) {
             foreach ($builtinRules as $builtin) {
-                foreach ($this->patterns as $pattern) {
+                foreach ($patterns as $pattern) {
                     if ($pattern->name === $builtin->name && $pattern->dependencies === $builtin->dependencies) {
                         continue 2;
                     }
@@ -99,5 +107,22 @@ final class MakefileBuilder
             }
         }
         return new Makefile(array_values($this->targets), $variables, $this->defaultGoal, $patterns);
+    }
+
+    private function suffixPattern(Target $target): ?Target
+    {
+        if ($target->dependencies !== [] || $target->isPhony) {
+            return null;
+        }
+        foreach ($this->suffixes as $source) {
+            if (!str_starts_with($target->name, $source)) {
+                continue;
+            }
+            $destination = substr($target->name, strlen($source));
+            if ($destination === '' || in_array($destination, $this->suffixes, strict: true)) {
+                return new Target('%' . $destination, ['%' . $source], $target->commands, false);
+            }
+        }
+        return null;
     }
 }
