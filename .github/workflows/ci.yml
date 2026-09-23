@@ -42,6 +42,37 @@ jobs:
       - name: Build and verify GNU make with phmake
         run: docker run --rm --platform linux/amd64 phmake-make-build
 
+  test-gnu-make:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare GNU make test environment
+        run: docker build --platform linux/amd64 -f e2e/make/Dockerfile -t phmake-make-build .
+
+      - name: Run GNU make test suite against phmake
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/gnu-make-tests"
+          docker run --rm --platform linux/amd64 --network none --user nobody \
+            phmake-make-build sh /usr/local/bin/run-gnu-make-tests \
+            2>&1 | tee "$RUNNER_TEMP/gnu-make-tests/run.log"
+
+      - name: Summarize GNU make test results
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### GNU make compatibility tests'
+            echo '```text'
+            if ! grep -E '^(Summary:|Categories:)' "$RUNNER_TEMP/gnu-make-tests/run.log"; then
+              echo 'The suite did not reach its summary. Check the job log.'
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   lint:
     runs-on: ubuntu-latest
     steps:

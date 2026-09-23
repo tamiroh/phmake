@@ -4,7 +4,7 @@ FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential ca-certificates curl git unzip \
+        build-essential ca-certificates curl diffutils git patch perl unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # GNU make 4.4.1, pinned by the release archive's SHA-256.
@@ -30,5 +30,10 @@ RUN ln -s /opt/phmake/phmake /usr/local/bin/make
 
 WORKDIR /opt/make
 COPY e2e/make/verify.sh /usr/local/bin/verify-make-build
+COPY e2e/make/run-tests.sh /usr/local/bin/run-gnu-make-tests
+COPY e2e/make/test-runner.patch /tmp/test-runner.patch
+RUN patch -d /opt/make -p1 < /tmp/test-runner.patch \
+    && rm /tmp/test-runner.patch \
+    && chmod -R a+rwX /opt/make/tests
 
 CMD ["sh", "/usr/local/bin/verify-make-build"]

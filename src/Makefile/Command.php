@@ -21,7 +21,7 @@ final readonly class Command
      */
     public function run(Shell $shell, Output $output, array $variables = []): int
     {
-        $expanded = ltrim($this->expand($variables));
+        $expanded = ltrim(new VariableExpander($variables, $output)->expand($this->expression));
         $prefixLength = strspn($expanded, '@-+');
         $prefix = substr($expanded, 0, $prefixLength);
         $expanded = ltrim(substr($expanded, $prefixLength));
@@ -37,14 +37,5 @@ final readonly class Command
             return 0;
         }
         return $exitCode;
-    }
-
-    /**
-     * @param list<Variable> $variables
-     * @throws MakefileErrorException
-     */
-    private function expand(array $variables): string
-    {
-        return new VariableExpander($variables)->expand($this->expression);
     }
 }

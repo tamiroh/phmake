@@ -17,6 +17,8 @@ final class Builtins
     {
         return [
             new Variable('CC', 'cc'),
+            new Variable('AR', 'ar'),
+            new Variable('SHELL', '/bin/sh'),
             new Variable('COMPILE.c', '$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c'),
             new Variable('OUTPUT_OPTION', '-o $@'),
         ];

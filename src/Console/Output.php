@@ -10,6 +10,10 @@ use function fwrite;
 
 final class Output implements OutputInterface
 {
+    public function __construct(
+        private readonly bool $silent = false,
+    ) {}
+
     #[\Override]
     public function write(string $text): void
     {
@@ -25,7 +29,9 @@ final class Output implements OutputInterface
     #[\Override]
     public function writeLine(string $line): void
     {
-        echo $line . PHP_EOL;
+        if (!$this->silent) {
+            echo $line . PHP_EOL;
+        }
     }
 
     #[\Override]

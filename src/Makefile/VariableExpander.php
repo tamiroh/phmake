@@ -7,6 +7,8 @@ namespace Tamiroh\Phmake\Makefile;
 use function explode;
 use function implode;
 use function in_array;
+use function ltrim;
+use function preg_match;
 use function preg_split;
 use function str_contains;
 use function str_ends_with;
@@ -21,8 +23,10 @@ final readonly class VariableExpander
     private array $variables;
 
     /** @param list<Variable> $variables */
-    public function __construct(array $variables)
-    {
+    public function __construct(
+        array $variables,
+        private ?Output $output = null,
+    ) {
         $indexed = [];
         foreach ($variables as $variable) {
             $indexed[$variable->name] = $variable;
@@ -78,6 +82,11 @@ final readonly class VariableExpander
      */
     private function reference(string $reference, array $expanding): string
     {
+        if (preg_match('/^info[ \t\n]/', $reference) === 1) {
+            $message = $this->expand(ltrim(substr($reference, 5)), $expanding);
+            $this->output?->write($message . "\n");
+            return '';
+        }
         $reference = $this->expand($reference, $expanding);
         $colon = strpos($reference, ':');
         if ($colon === false || !str_contains(substr($reference, $colon + 1), '=')) {

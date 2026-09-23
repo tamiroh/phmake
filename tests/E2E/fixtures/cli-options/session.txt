@@ -1,0 +1,15 @@
+$ ./phmake -sf alternate.mk
+parsed
+immediate
+deferred
+recipe: hello world
+visible
+$ ./phmake --quiet --makefile=alternate.mk recurse
+parsed
+immediate
+child
+$ printf 'all:;$(info stdin)\n' | ./phmake -sf -
+stdin
+$ printf 'VALUE = first\n' > first.mk && printf 'all:;@echo $(VALUE)\nVALUE = second\n' > second.mk
+$ ./phmake -ffirst.mk --file second.mk
+second

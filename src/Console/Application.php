@@ -25,17 +25,22 @@ final readonly class Application
     {
         try {
             $commandLine = new CommandLine($arguments, (string) getenv('MAKEFLAGS'));
-            $makefile = $this->createMakefile($commandLine);
+            if ($commandLine->version) {
+                echo "phmake (development)\n";
+                return;
+            }
+            $output = new Output($commandLine->silent);
+            $makefile = $this->createMakefile($commandLine, $output);
             $environment = ['MAKEFLAGS' => $commandLine->makeflags()];
-            $expander = new VariableExpander($makefile->variables);
+            $expander = new VariableExpander($makefile->variables, $output);
             foreach ($commandLine->variables as $variable) {
                 $environment[$variable->name] = $expander->expand('$(' . $variable->name . ')');
             }
-            $makefile->run($commandLine->targets, new Shell($environment), new Filesystem(), new Output());
+            $makefile->run($commandLine->targets, new Shell($environment), new Filesystem(), $output);
         } catch (CommandFailedException $e) {
             Process::stopWithCommandFailure($e->target, $e->exitCode);
         } catch (ParseException $e) {
-            Process::stopWithError($e->reason, "Makefile:$e->lineNumber");
+            Process::stopWithError($e->reason, ($commandLine->makefiles[0] ?? 'Makefile') . ":$e->lineNumber");
         } catch (MakefileErrorException $e) {
             Process::stopWithError($e->getMessage());
         }
@@ -45,12 +50,19 @@ final readonly class Application
      * @throws MakefileErrorException
      * @throws ParseException
      */
-    private function createMakefile(CommandLine $commandLine): Makefile
+    private function createMakefile(CommandLine $commandLine, Output $output): Makefile
     {
-        $makefileRaw = @file_get_contents('Makefile');
-
-        if ($makefileRaw === false) {
-            Process::stopWithError('No targets specified and no makefile found');
+        $makefileRaw = '';
+        foreach ($commandLine->makefiles === [] ? ['Makefile'] : $commandLine->makefiles as $path) {
+            $source = @file_get_contents($path === '-' ? 'php://stdin' : $path);
+            if ($source === false) {
+                Process::stopWithError(
+                    $commandLine->makefiles === []
+                        ? 'No targets specified and no makefile found'
+                        : "Makefile `$path' not found",
+                );
+            }
+            $makefileRaw .= $source . "\n";
         }
 
         return new MakefileParser(
@@ -66,6 +78,7 @@ final readonly class Application
             ],
             $commandLine->variables,
             Builtins::rules(),
+            $output,
         )->parse();
     }
 }

@@ -1,0 +1,82 @@
+--- a/tests/run_make_tests.pl
++++ b/tests/run_make_tests.pl
+@@ -67,6 +67,7 @@
+ $bldvol = undef;
+ 
+ $make_path = undef;
++$phmake = 0;
+ @make_command = ();
+ 
+ $command_string = '';
+@@ -116,6 +117,11 @@
+ sub valid_option
+ {
+    local($option) = @_;
++
++   if ($option eq "-phmake") {
++       $phmake = 1;
++       return 1;
++   }
+ 
+    if ($option =~ /^-make([-_]?path)?$/i) {
+        $make_path = shift @argv;
+@@ -378,6 +384,8 @@
+ sub print_help
+ {
+    &print_standard_help (
++        "-phmake",
++        "\tAccept phmake identity and preserve its executable path.",
+         "-make",
+         "\tYou may specify the pathname of the copy of make to run.",
+         "-srcdir",
+@@ -587,7 +595,9 @@
+     unlink('make.mk');
+     $mk =~ s/\r?\n$//;
+     $mk or die "FATAL ERROR: Cannot determine the value of \$(MAKE)\n";
+-    $make_path = $mk;
++    # phmake uses a shell command (PHP plus script) for recursive MAKE.
++    # Keep the executable path supplied to this runner.
++    $make_path = $mk unless $phmake;
+   }
+   ($mpv, $mpd, $mpf) = File::Spec->splitpath($make_path);
+ 
+@@ -605,7 +615,8 @@
+   }
+ 
+   $string = `$make_path -v`;
+-  $string =~ /^(GNU Make [^,\n]*)/ or die "$make_path is not GNU Make.  Version:\n$string";
++  my $version_pattern = $phmake ? qr/^(phmake[^\n]*)/ : qr/^(GNU Make [^,\n]*)/;
++  $string =~ $version_pattern or die "Unexpected make version: $string";
+   $testee_version = "$1\n";
+ 
+   create_file('null.mk', '');
+--- a/tests/test_driver.pl
++++ b/tests/test_driver.pl
+@@ -39,6 +39,7 @@
+ $categories_run = 0;
+ # The number of test categroies that have passed
+ $categories_passed = 0;
++$categories_skipped = 0;
+ # The total number of individual tests that have been run
+ $total_tests_run = 0;
+ # The total number of individual tests that have passed
+@@ -363,6 +364,11 @@
+   $categories_failed = $categories_run - $categories_passed;
+   $total_tests_failed = $total_tests_run - $total_tests_passed;
+ 
++  print "\nSummary: $total_tests_passed/$total_tests_run tests passed; "
++      . "$total_tests_failed failed.\n";
++  print "Categories: $categories_passed passed; $categories_failed failed; "
++      . "$categories_skipped skipped.\n";
++
+   if ($total_tests_failed) {
+     print "\n$total_tests_failed Test";
+     print "s" unless $total_tests_failed == 1;
+@@ -659,6 +665,7 @@
+ 
+     } elsif ($code == -1) {
+       # Skipped... not supported
++      ++$categories_skipped;
+       $status = "N/A";
+       --$categories_run;
+ 

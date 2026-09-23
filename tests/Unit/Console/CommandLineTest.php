@@ -7,9 +7,32 @@ namespace Tamiroh\Phmake\Tests\Unit\Console;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tamiroh\Phmake\Console\CommandLine;
+use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 final class CommandLineTest extends TestCase
 {
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function acceptsAttachedAndLongOptionsAndAnOptionTerminator(): void
+    {
+        $arguments = new CommandLine([
+            '-ffirst.mk',
+            '--makefile=second.mk',
+            '--file',
+            'third.mk',
+            '--quiet',
+            '--',
+            '-target',
+        ]);
+
+        self::assertSame(['first.mk', 'second.mk', 'third.mk'], $arguments->makefiles);
+        self::assertSame(['-target'], $arguments->targets);
+        self::assertTrue($arguments->silent);
+        self::assertTrue(new CommandLine(['--version'])->version);
+        self::assertTrue(new CommandLine(['-v'])->version);
+    }
+
+    /** @throws MakefileErrorException */
     #[Test]
     public function explicitArgumentsOverrideInheritedAssignments(): void
     {
@@ -20,6 +43,21 @@ final class CommandLineTest extends TestCase
         self::assertSame([], $arguments->targets);
     }
 
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function passesSilentModeButNotMakefileSelectionToChildren(): void
+    {
+        $arguments = new CommandLine(['-sf', 'alternate.mk', 'VALUE=two words', 'all']);
+        $child = new CommandLine([], $arguments->makeflags());
+
+        self::assertSame(['alternate.mk'], $arguments->makefiles);
+        self::assertSame(['all'], $arguments->targets);
+        self::assertTrue($child->silent);
+        self::assertSame([], $child->makefiles);
+        self::assertSame('two words', $child->variables['VALUE']->expression ?? null);
+    }
+
+    /** @throws MakefileErrorException */
     #[Test]
     public function preservesSpacesBackslashesAndDollarsAcrossRecursiveInvocations(): void
     {
@@ -31,6 +69,23 @@ final class CommandLineTest extends TestCase
         self::assertEquals($arguments->variables, $grandchild->variables);
     }
 
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function rejectsAMissingMakefileArgument(): void
+    {
+        $this->expectException(MakefileErrorException::class);
+        new CommandLine(['-sf']);
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function rejectsUnsupportedOptions(): void
+    {
+        $this->expectException(MakefileErrorException::class);
+        new CommandLine(['--jobs=2']);
+    }
+
+    /** @throws MakefileErrorException */
     #[Test]
     public function separatesGoalsFromAssignmentsAndKeepsTheLastValue(): void
     {

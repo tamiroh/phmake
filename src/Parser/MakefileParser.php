@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Parser;
 use LogicException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Output;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
@@ -37,6 +38,7 @@ final readonly class MakefileParser
         private array $defaults = [],
         private array $overrides = [],
         private array $builtinRules = [],
+        private ?Output $output = null,
     ) {}
 
     private static function removeComment(string $line): string
@@ -159,7 +161,9 @@ final readonly class MakefileParser
                 $value = ltrim($matches[3]);
                 $variables[$matches[1]] = new Variable(
                     $matches[1],
-                    $matches[2] === ':=' ? new VariableExpander(array_values($variables))->expand($value) : $value,
+                    $matches[2] === ':='
+                        ? new VariableExpander(array_values($variables), $this->output)->expand($value)
+                        : $value,
                     $matches[2] === '=',
                 );
                 continue;
@@ -167,7 +171,9 @@ final readonly class MakefileParser
 
             if (preg_match('/^\s*(-?include|sinclude)\s+(.+)$/', $uncommented, $matches) === 1) {
                 /** @var array{non-falsy-string, '-include'|'include'|'sinclude', non-empty-string} $matches */
-                $patterns = self::words(new VariableExpander(array_values($variables))->expand($matches[2]));
+                $patterns = self::words(new VariableExpander(array_values($variables), $this->output)->expand(
+                    $matches[2],
+                ));
                 foreach ($patterns as $pattern) {
                     foreach ($this->matchingPaths($pattern) as $path) {
                         $contents = $this->files?->read($path);
@@ -187,7 +193,10 @@ final readonly class MakefileParser
             }
 
             [$header, $recipe] = self::splitRecipe($line);
-            $expanded = new VariableExpander(array_values($variables))->expand($header);
+            $expanded = new VariableExpander(array_values($variables), $this->output)->expand($header);
+            if (trim($expanded) === '' && $recipe === null) {
+                continue;
+            }
             $colon = strpos($expanded, needle: ':');
             if ($colon === false) {
                 throw new ParseException($lineNumber, 'missing separator');
