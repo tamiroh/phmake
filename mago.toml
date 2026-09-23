@@ -19,7 +19,7 @@ integrations = ["phpunit"]
 ambiguous-function-call = { enabled = true }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }
-too-many-methods = { exclude = ["tests/**"] }
+too-many-methods = { exclude = ["tests/**", "src/Makefile/Functions.php"] }
 excessive-parameter-list = { enabled = false }
 no-error-control-operator = { enabled = false }
 halstead = { effort-threshold = 7000 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use Closure;
 use LogicException;
 
 use function array_filter;
@@ -13,6 +14,7 @@ use function array_unique;
 use function array_values;
 use function count;
 use function implode;
+use function in_array;
 use function ltrim;
 use function max;
 use function preg_match;
@@ -31,6 +33,12 @@ final class Functions
 {
     /** @var array<string, positive-int> */
     private const array ARGUMENT_COUNTS = [
+        'call' => PHP_INT_MAX,
+        'foreach' => 3,
+        'if' => 3,
+        'and' => PHP_INT_MAX,
+        'or' => PHP_INT_MAX,
+        'info' => 1,
         'subst' => 3,
         'patsubst' => 3,
         'strip' => 1,
@@ -56,6 +64,83 @@ final class Functions
     public static function argumentCount(string $name): ?int
     {
         return self::ARGUMENT_COUNTS[$name] ?? null;
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @param list<string> $expanding
+     * @throws MakefileErrorException
+     */
+    public static function call(
+        array $arguments,
+        VariableExpander $expander,
+        array $expanding,
+        ?Output $output = null,
+    ): string {
+        $name = trim($arguments[0] ?? '');
+        $arguments[0] = $name;
+        if (in_array($name, ['if', 'and', 'or'], strict: true)) {
+            return self::conditional(
+                $name,
+                array_slice($arguments, 1, $name === 'if' ? 3 : null),
+                static fn(string $argument): string => $argument,
+            );
+        }
+        if ($name === 'info') {
+            return self::info($arguments[1] ?? '', $output);
+        }
+        if ($name === 'call') {
+            return self::call(array_slice($arguments, 1), $expander, $expanding, $output);
+        }
+        if ($name === 'foreach') {
+            return self::foreach(array_slice($arguments, 1, 3), $expander, $expanding);
+        }
+        $argumentCount = self::argumentCount($name);
+        if ($argumentCount !== null) {
+            return self::expand($name, array_slice($arguments, 1, $argumentCount));
+        }
+        $variable = $expander->variable($name);
+        if ($variable === null) {
+            return '';
+        }
+        if (!$variable->recursive) {
+            return $variable->expression;
+        }
+        $variables = [];
+        $parameters = max($expander->callParameters, count($arguments) - 1);
+        for ($index = 0; $index <= $parameters; $index++) {
+            $variables[] = new Variable((string) $index, $arguments[$index] ?? '', false);
+        }
+        return $expander->withVariables($variables, $parameters)->expand(
+            $variable->expression,
+            array_values(array_filter($expanding, static fn(string $variable): bool => $variable !== $name)),
+        );
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @param Closure(string): string $expand
+     * @throws MakefileErrorException
+     */
+    public static function conditional(string $name, array $arguments, Closure $expand): string
+    {
+        if ($name === 'if') {
+            if (count($arguments) < 2) {
+                throw new MakefileErrorException("insufficient number of arguments to function 'if'");
+            }
+            return $expand($arguments[$expand(trim($arguments[0])) !== '' ? 1 : 2] ?? '');
+        }
+        if ($name !== 'and' && $name !== 'or') {
+            throw new LogicException("Unknown conditional function: $name");
+        }
+        $value = '';
+        foreach ($arguments as $argument) {
+            $value = $expand(trim($argument));
+            if ($name === 'and' && $value === '' || $name === 'or' && $value !== '') {
+                return $value;
+            }
+        }
+        return $value;
     }
 
     /**
@@ -94,6 +179,34 @@ final class Functions
             'dir', 'notdir', 'basename', 'suffix' => self::filenames($name, $first),
             default => throw new LogicException("Unknown function: $name"),
         };
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @param list<string> $expanding
+     * @throws MakefileErrorException
+     */
+    public static function foreach(array $arguments, VariableExpander $expander, array $expanding): string
+    {
+        if (count($arguments) < 3) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'foreach'");
+        }
+        $name = self::words($expander->expand($arguments[0], $expanding))[0] ?? '';
+        $words = self::words($expander->expand($arguments[1], $expanding));
+        $result = [];
+        foreach ($words as $word) {
+            $result[] = $expander->withVariables($name === '' ? [] : [new Variable($name, $word, false)])->expand(
+                $arguments[2],
+                $expanding,
+            );
+        }
+        return implode(' ', $result);
+    }
+
+    public static function info(string $message, ?Output $output): string
+    {
+        $output?->write($message . "\n");
+        return '';
     }
 
     private static function filenames(string $function, string $text): string

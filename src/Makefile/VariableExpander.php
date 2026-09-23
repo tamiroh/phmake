@@ -124,18 +124,17 @@ final readonly class VariableExpander
         $matches = [];
         if (preg_match('/^([a-z-]+)[ \t\n]+/', $reference, $matches) === 1) {
             /** @var array{non-empty-string, non-empty-string} $matches */
-            $argumentCount = match ($matches[1]) {
-                'if', 'foreach' => 3,
-                'and', 'or', 'call' => PHP_INT_MAX,
-                default => Functions::argumentCount($matches[1]),
-            };
+            $argumentCount = Functions::argumentCount($matches[1]);
             if ($argumentCount !== null) {
                 $arguments = $this->arguments(substr($reference, strlen($matches[0])), $argumentCount, $opening);
+                if ($matches[1] === 'info') {
+                    return Functions::info($this->expand(ltrim($arguments[0]), $expanding), $this->output);
+                }
                 if ($matches[1] === 'foreach') {
-                    return ForeachFunction::expand($arguments, $this, $expanding);
+                    return Functions::foreach($arguments, $this, $expanding);
                 }
                 if (in_array($matches[1], ['if', 'and', 'or'], strict: true)) {
-                    return ConditionalFunctions::expand(
+                    return Functions::conditional(
                         $matches[1],
                         $arguments,
                         /** @throws MakefileErrorException */
@@ -147,15 +146,10 @@ final readonly class VariableExpander
                 }
                 unset($argument);
                 if ($matches[1] === 'call') {
-                    return CallFunction::expand($arguments, $this, $expanding, $this->output);
+                    return Functions::call($arguments, $this, $expanding, $this->output);
                 }
                 return Functions::expand($matches[1], $arguments);
             }
-        }
-        if (preg_match('/^info[ \t\n]/', $reference) === 1) {
-            $message = $this->expand(ltrim(substr($reference, 5)), $expanding);
-            $this->output?->write($message . "\n");
-            return '';
         }
         $reference = $this->expand($reference, $expanding);
         $colon = strpos($reference, ':');
