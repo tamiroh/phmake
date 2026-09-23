@@ -67,6 +67,20 @@ final class Functions
     }
 
     /**
+     * Invoke a user-defined or built-in function using expanded arguments and temporary positional parameters.
+     *
+     * Makefile:
+     * ```makefile
+     * greet = hello $(1)
+     * all: ; @printf '<%s>\n' '$(call greet,world)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <hello world>
+     * ```
+     *
      * @param list<string> $arguments
      * @param list<string> $expanding
      * @throws MakefileErrorException
@@ -118,6 +132,47 @@ final class Functions
     }
 
     /**
+     * Implement lazy conditional functions using the supplied expansion callback.
+     *
+     * if: Expand only the true branch for a nonempty condition, or the false branch for an empty condition.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(if yes,ok,$(info skipped))'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <ok>
+     * ```
+     *
+     * and: Expand arguments from left to right, stopping at an empty value or returning the last value.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(and yes,ready)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <ready>
+     * ```
+     *
+     * or: Return the first nonempty expanded argument without evaluating the remaining arguments.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(or ,fallback,$(info skipped))'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <fallback>
+     * ```
+     *
      * @param list<string> $arguments
      * @param Closure(string): string $expand
      * @throws MakefileErrorException
@@ -144,6 +199,125 @@ final class Functions
     }
 
     /**
+     * Evaluate text functions with already-expanded arguments and dispatch to specialized helpers.
+     *
+     * subst: Replace every occurrence of a substring.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(subst cat,dog,cat-cat)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <dog-dog>
+     * ```
+     *
+     * strip: Remove surrounding whitespace and collapse whitespace between words to a single space.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(strip   a   b   )'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <a b>
+     * ```
+     *
+     * findstring: Return the search string if it occurs in the text, or an empty string otherwise.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(findstring make,phmake)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <make>
+     * ```
+     *
+     * words: Return the number of whitespace-separated words.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(words red green blue)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <3>
+     * ```
+     *
+     * word: Return the word at the given one-based position.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(word 2,red green blue)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <green>
+     * ```
+     *
+     * firstword: Return the first word.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(firstword red green blue)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <red>
+     * ```
+     *
+     * lastword: Return the last word.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(lastword red green blue)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <blue>
+     * ```
+     *
+     * addprefix: Prepend a shared prefix to each word.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(addprefix src/,main.c util.c)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <src/main.c src/util.c>
+     * ```
+     *
+     * addsuffix: Append a shared suffix to each word.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(addsuffix .o,main util)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <main.o util.o>
+     * ```
+     *
      * @param list<string> $arguments
      * @throws MakefileErrorException
      */
@@ -182,6 +356,19 @@ final class Functions
     }
 
     /**
+     * Expand the body once per list word in a temporary variable scope and join the results with spaces.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(foreach file,main util,$(file).o)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <main.o util.o>
+     * ```
+     *
      * @param list<string> $arguments
      * @param list<string> $expanding
      * @throws MakefileErrorException
@@ -203,12 +390,82 @@ final class Functions
         return implode(' ', $result);
     }
 
+    /**
+     * Print a message to standard output and return an empty string.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(info hello)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * hello
+     * <>
+     * ```
+     */
     public static function info(string $message, ?Output $output): string
     {
         $output?->write($message . "\n");
         return '';
     }
 
+    /**
+     * Extract or remove filename components for each whitespace-separated path.
+     *
+     * dir: Return each path's directory, or ./ when the path contains no slash.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(dir src/main.c README)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <src/ ./>
+     * ```
+     *
+     * notdir: Remove the directory portion from each path.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(notdir src/main.c lib/util.c)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <main.c util.c>
+     * ```
+     *
+     * basename: Remove the final extension from each path's filename.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(basename src/main.c archive.tar.gz README)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <src/main archive.tar README>
+     * ```
+     *
+     * suffix: Return each path's final extension including its dot, omitting paths without extensions.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(suffix src/main.c archive.tar.gz README)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <.c .gz>
+     * ```
+     */
     private static function filenames(string $function, string $text): string
     {
         $result = [];
@@ -230,6 +487,35 @@ final class Functions
         return implode(' ', $result);
     }
 
+    /**
+     * Keep or exclude words according to percent patterns.
+     *
+     * filter: Keep only words matching at least one of the given patterns.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(filter %.c %.h,main.c api.h README)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <main.c api.h>
+     * ```
+     *
+     * filter-out: Remove words matching any of the given patterns.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(filter-out %.o,main.o main.c README)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <main.c README>
+     * ```
+     */
     private static function filter(string $patterns, string $text, bool $exclude): string
     {
         $patterns = array_map(static fn(string $word): Pattern => new Pattern($word), self::words($patterns));
@@ -267,6 +553,20 @@ final class Functions
         return (int) $digits;
     }
 
+    /**
+     * Concatenate corresponding words from two lists, preserving unmatched trailing words.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(join a b c,.o .h)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <a.o b.h c>
+     * ```
+     */
     private static function join(string $left, string $right): string
     {
         $left = self::words($left);
@@ -278,6 +578,20 @@ final class Functions
         return implode(' ', $result);
     }
 
+    /**
+     * Replace words matching a percent pattern, preserving unmatched words.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(patsubst %.c,%.o,main.c util.c README)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <main.o util.o README>
+     * ```
+     */
     private static function replacePattern(string $from, string $to, string $text): string
     {
         $pattern = new Pattern($from);
@@ -303,6 +617,20 @@ final class Functions
         return implode(' ', $result);
     }
 
+    /**
+     * Sort words lexicographically and remove duplicates.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(sort b a b c)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <a b c>
+     * ```
+     */
     private static function sortWords(string $text): string
     {
         $words = array_values(array_unique(self::words($text)));
@@ -310,7 +638,22 @@ final class Functions
         return implode(' ', $words);
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * Return words between the given one-based positions, including both endpoints.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @printf '<%s>\n' '$(wordlist 2,3,red green blue white)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <green blue>
+     * ```
+     *
+     * @throws MakefileErrorException
+     */
     private static function wordlist(string $start, string $end, string $text): string
     {
         $first = self::index($start, 'wordlist', 'first', 1);
