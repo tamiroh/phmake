@@ -3,6 +3,19 @@ name: CI
 on: [push, pull_request]
 
 jobs:
+  php-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare PHP build environment
+        run: docker build --platform linux/amd64 -t phmake-php-build e2e
+
+      - name: Build and verify PHP with GNU make
+        run: docker run --rm --platform linux/amd64 phmake-php-build
+
   lint:
     runs-on: ubuntu-latest
     steps:
