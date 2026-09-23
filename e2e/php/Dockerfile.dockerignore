@@ -1,0 +1,9 @@
+**
+!composer.json
+!composer.lock
+!phmake
+!src/
+!src/**
+!e2e/
+!e2e/php/
+!e2e/php/verify.sh

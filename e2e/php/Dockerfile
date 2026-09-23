@@ -29,6 +29,6 @@ COPY --chmod=755 phmake ./phmake
 RUN ln -s /opt/phmake/phmake /usr/local/bin/make
 
 WORKDIR /opt/php-src
-COPY e2e/verify.sh /usr/local/bin/verify-php-build
+COPY e2e/php/verify.sh /usr/local/bin/verify-php-build
 
 CMD ["sh", "/usr/local/bin/verify-php-build"]

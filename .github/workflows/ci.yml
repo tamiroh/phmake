@@ -11,10 +11,23 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Prepare PHP build environment
-        run: docker build --platform linux/amd64 -f e2e/Dockerfile -t phmake-php-build .
+        run: docker build --platform linux/amd64 -f e2e/php/Dockerfile -t phmake-php-build .
 
       - name: Build and verify PHP with phmake
         run: docker run --rm --platform linux/amd64 phmake-php-build
+
+  lua-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare Lua build environment
+        run: docker build --platform linux/amd64 -f e2e/lua/Dockerfile -t phmake-lua-build .
+
+      - name: Build and verify Lua with phmake
+        run: docker run --rm --platform linux/amd64 phmake-lua-build
 
   lint:
     runs-on: ubuntu-latest

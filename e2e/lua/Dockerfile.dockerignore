@@ -5,4 +5,5 @@
 !src/
 !src/**
 !e2e/
-!e2e/verify.sh
+!e2e/lua/
+!e2e/lua/verify.sh
