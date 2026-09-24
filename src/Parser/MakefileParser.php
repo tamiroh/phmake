@@ -144,10 +144,14 @@ final readonly class MakefileParser
     ): void {
         $reader = new LineReader($source);
         $rule = null;
+        $conditionals = new Conditionals();
 
-        while (($line = $reader->next()) !== null) {
+        while (($line = $reader->next($variables['.RECIPEPREFIX']->expression[0] ?? "\t")) !== null) {
             $lineNumber = $reader->lineNumber;
-            if (str_starts_with($line, "\t")) {
+            if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
+                if (!$conditionals->active()) {
+                    continue;
+                }
                 if ($rule === null) {
                     throw new ParseException($lineNumber, 'Recipe without a rule');
                 }
@@ -157,6 +161,17 @@ final readonly class MakefileParser
 
             $uncommented = self::removeComment($line);
             if (trim($uncommented) === '') {
+                continue;
+            }
+
+            if (
+                $conditionals->read(
+                    $uncommented,
+                    new VariableExpander(array_values($variables), $this->output),
+                    $lineNumber,
+                )
+                || !$conditionals->active()
+            ) {
                 continue;
             }
 
@@ -172,7 +187,7 @@ final readonly class MakefileParser
                 if (preg_match('/^(?::=|\\+=|\\?=|=)/', ltrim($matches[2])) !== 1) {
                     $export = $matches[1] === 'export';
                     $uncommented = ltrim($matches[2]);
-                    if (preg_match('/^[A-Za-z_][A-Za-z0-9_.-]*\\s*(?::=|\\+=|\\?=|=)/', $uncommented) !== 1) {
+                    if (preg_match('/^[A-Za-z_.][A-Za-z0-9_.-]*\\s*(?::=|\\+=|\\?=|=)/', $uncommented) !== 1) {
                         $names = self::words(new VariableExpander(array_values($variables), $this->output)->expand(
                             $uncommented,
                         ));
@@ -189,7 +204,7 @@ final readonly class MakefileParser
             }
 
             $matches = [];
-            if (preg_match('/^\s*([A-Za-z_][A-Za-z0-9_.-]*)\s*(:=|\+=|\?=|=)(.*)$/s', $uncommented, $matches) === 1) {
+            if (preg_match('/^\s*([A-Za-z_.][A-Za-z0-9_.-]*)\s*(:=|\+=|\?=|=)(.*)$/s', $uncommented, $matches) === 1) {
                 /** @var array{string, non-empty-string, ':='|'+='|'?='|'=', string} $matches */
                 if ($export !== null) {
                     $exports->set([$matches[1]], $export);
@@ -266,6 +281,7 @@ final readonly class MakefileParser
             }
         }
 
+        $conditionals->finish($reader->lineNumber);
         if ($rule !== null) {
             $builder->addRule($rule);
         }

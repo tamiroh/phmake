@@ -28,7 +28,7 @@ final class LineReader
         $this->lines = explode("\n", str_replace("\r\n", replace: "\n", subject: $source));
     }
 
-    public function next(): ?string
+    public function next(string $recipePrefix = "\t"): ?string
     {
         if (!isset($this->lines[$this->offset])) {
             return null;
@@ -36,29 +36,29 @@ final class LineReader
 
         $this->lineNumber = $this->offset + 1;
         $line = $this->lines[$this->offset++];
-        $recipe = $this->isRecipe($line);
+        $recipe = $this->isRecipe($line, $recipePrefix);
         while (
             ((strlen($line) - strlen(rtrim($line, characters: '\\'))) % 2) === 1
             && isset($this->lines[$this->offset])
         ) {
             $next = $this->lines[$this->offset++];
             if ($recipe) {
-                $line .= "\n" . (str_starts_with($next, "\t") ? substr($next, offset: 1) : $next);
+                $line .= "\n" . (str_starts_with($next, $recipePrefix) ? substr($next, offset: 1) : $next);
             } else {
                 $line = rtrim(substr($line, offset: 0, length: -1)) . ' ' . ltrim($next);
-                $recipe = $this->isRecipe($line);
+                $recipe = $this->isRecipe($line, $recipePrefix);
             }
         }
 
         return $line;
     }
 
-    private function isRecipe(string $line): bool
+    private function isRecipe(string $line, string $recipePrefix): bool
     {
-        if (str_starts_with($line, "\t")) {
+        if (str_starts_with($line, $recipePrefix)) {
             return true;
         }
-        if (preg_match('/^\s*[A-Za-z_][A-Za-z0-9_.-]*\s*(:=|=)/', $line) === 1) {
+        if (preg_match('/^\s*[A-Za-z_.][A-Za-z0-9_.-]*\s*(:=|\+=|\?=|=)/', $line) === 1) {
             return false;
         }
         $hasColon = false;

@@ -1,0 +1,6 @@
+$ ./phmake
+defined
+equal
+selected
+$ ./phmake after
+included
