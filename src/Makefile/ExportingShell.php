@@ -6,11 +6,11 @@ namespace Tamiroh\Phmake\Makefile;
 
 final readonly class ExportingShell implements Shell
 {
-    /** @param list<Variable> $variables */
+    /** @param list<Variable>|VariableExpander $variables */
     public function __construct(
         private Shell $shell,
         private Exports $exports,
-        private array $variables,
+        private array|VariableExpander $variables,
         private Output $output,
     ) {}
 

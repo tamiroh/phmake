@@ -22,6 +22,7 @@ use function sort;
 use function str_contains;
 use function str_replace;
 use function strcmp;
+use function strcspn;
 use function strlen;
 use function strrpos;
 use function substr;
@@ -38,6 +39,8 @@ final class Functions
     public const array ARGUMENT_COUNTS = [
         'call' => PHP_INT_MAX,
         'foreach' => 3,
+        'let' => 3,
+        'eval' => 1,
         'if' => 3,
         'and' => PHP_INT_MAX,
         'or' => PHP_INT_MAX,
@@ -269,6 +272,33 @@ final class Functions
     }
 
     /**
+     * Parse expanded text as Makefile syntax and return an empty string.
+     *
+     * Makefile:
+     * ```makefile
+     * $(eval NAME := world)
+     * all: ; @echo hello $(NAME)
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * hello world
+     * ```
+     *
+     * @param null|Closure(string, VariableExpander): void $evaluate
+     * @throws MakefileErrorException
+     */
+    public static function eval(string $text, ?Closure $evaluate, VariableExpander $expander): string
+    {
+        if ($evaluate === null) {
+            throw new MakefileErrorException('eval requires a Makefile evaluation context', $expander->source);
+        }
+        $evaluate($text, $expander);
+        return '';
+    }
+
+    /**
      * Keep only words matching at least one of the given patterns.
      *
      * Makefile:
@@ -415,7 +445,12 @@ final class Functions
         ?string $body = null,
     ): string {
         if ($name === null || $list === null || $body === null) {
-            throw new MakefileErrorException("insufficient number of arguments to function 'foreach'");
+            throw new MakefileErrorException(
+                'insufficient number of arguments ('
+                . ($name === null ? 0 : ($list === null ? 1 : 2))
+                . ") to function 'foreach'",
+                $expander->definitionSource ?? $expander->source,
+            );
         }
         $name = self::splitWords($expander->expand($name, $expanding))[0] ?? '';
         $words = self::splitWords($expander->expand($list, $expanding));
@@ -530,6 +565,55 @@ final class Functions
             throw new MakefileErrorException("insufficient number of arguments to function 'lastword'");
         }
         return array_slice(self::splitWords($text), -1)[0] ?? '';
+    }
+
+    /**
+     * Bind list words to local names, assigning the remaining text to the last name.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @echo $(let first rest,one two three,$(rest) $(first))
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * two three one
+     * ```
+     *
+     * @param list<string> $expanding
+     * @throws MakefileErrorException
+     */
+    public static function let(
+        VariableExpander $expander,
+        array $expanding,
+        ?string $names = null,
+        ?string $list = null,
+        ?string $body = null,
+    ): string {
+        if ($names === null || $list === null || $body === null) {
+            throw new MakefileErrorException(
+                'insufficient number of arguments ('
+                . ($names === null ? 0 : ($list === null ? 1 : 2))
+                . ") to function 'let'",
+                $expander->definitionSource ?? $expander->source,
+            );
+        }
+        $names = self::splitWords($expander->expand($names, $expanding));
+        $list = $expander->expand($list, $expanding);
+        $variables = [];
+        foreach ($names as $index => $name) {
+            $list = ltrim($list);
+            if ($index === (count($names) - 1)) {
+                $value = $list;
+            } else {
+                $length = strcspn($list, " \t\r\n\v\f");
+                $value = substr($list, 0, $length);
+                $list = substr($list, $length);
+            }
+            $variables[] = new Variable($name, $value, false, 'automatic');
+        }
+        return $expander->withVariables($variables)->expand($body, $expanding);
     }
 
     /**

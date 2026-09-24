@@ -70,7 +70,7 @@ final class FunctionsTest extends TestCase
     {
         self::assertSame('', Functions::foreach(new VariableExpander([]), [], 'x', '', ''));
         $this->expectException(MakefileErrorException::class);
-        $this->expectExceptionMessageMatches("/^insufficient number of arguments to function 'foreach'$/");
+        $this->expectExceptionMessageMatches("/^insufficient number of arguments \(2\) to function 'foreach'$/");
         Functions::foreach(new VariableExpander([]), [], 'x', '');
     }
 

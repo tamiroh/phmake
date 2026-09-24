@@ -32,6 +32,16 @@ final class AssignmentTest extends TestCase
         );
     }
 
+    #[Test]
+    public function literalWhitespaceSeparatesNamesOnlyInOrdinaryAssignments(): void
+    {
+        self::assertNull(Assignment::parse('x y ='));
+        self::assertNull(Assignment::parse('x y='));
+        self::assertNull(Assignment::parse('x $X='));
+        self::assertSame('x y', Assignment::parse('x y =', allowWhitespace: true)?->name);
+        self::assertSame('$(subst a,a,x y)', Assignment::parse('$(subst a,a,x y) =')?->name);
+    }
+
     /** @throws MakefileErrorException */
     #[Test]
     public function strongerDefinitionsPreventExpansionOfIgnoredAssignments(): void

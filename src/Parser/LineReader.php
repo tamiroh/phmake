@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use Tamiroh\Phmake\Makefile\Assignment;
+
 use function explode;
 use function ltrim;
-use function preg_match;
 use function rtrim;
 use function str_replace;
 use function str_starts_with;
@@ -28,7 +29,7 @@ final class LineReader
         $this->lines = explode("\n", str_replace("\r\n", replace: "\n", subject: $source));
     }
 
-    public function next(string $recipePrefix = "\t"): ?string
+    public function next(string $recipePrefix = "\t", bool $definition = false): ?string
     {
         if (!isset($this->lines[$this->offset])) {
             return null;
@@ -36,7 +37,7 @@ final class LineReader
 
         $this->lineNumber = $this->offset + 1;
         $line = $this->lines[$this->offset++];
-        $recipe = $this->isRecipe($line, $recipePrefix);
+        $recipe = !$definition && $this->isRecipe($line, $recipePrefix);
         while (
             ((strlen($line) - strlen(rtrim($line, characters: '\\'))) % 2) === 1
             && isset($this->lines[$this->offset])
@@ -46,7 +47,7 @@ final class LineReader
                 $line .= "\n" . (str_starts_with($next, $recipePrefix) ? substr($next, offset: 1) : $next);
             } else {
                 $line = rtrim(substr($line, offset: 0, length: -1)) . ' ' . ltrim($next);
-                $recipe = $this->isRecipe($line, $recipePrefix);
+                $recipe = !$definition && $this->isRecipe($line, $recipePrefix);
             }
         }
 
@@ -58,7 +59,7 @@ final class LineReader
         if (str_starts_with($line, $recipePrefix)) {
             return true;
         }
-        if (preg_match('/^\s*[A-Za-z_.][A-Za-z0-9_.-]*\s*(:=|\+=|\?=|=)/', $line) === 1) {
+        if (Assignment::parse($line) !== null) {
             return false;
         }
         $hasColon = false;

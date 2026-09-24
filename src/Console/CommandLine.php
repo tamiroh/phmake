@@ -111,9 +111,12 @@ final class CommandLine implements Configuration
      * @throws MakefileErrorException
      */
     #[\Override]
-    public function updateMakeflags(array &$variables): void
+    public function updateMakeflags(array &$variables, ?VariableExpander $expander = null): void
     {
-        $this->readFlags(new VariableExpander(array_values($variables))->expand('$(MAKEFLAGS)'), $variables);
+        $this->readFlags(
+            ($expander ?? new VariableExpander(array_values($variables)))->expand('$(MAKEFLAGS)'),
+            $variables,
+        );
         foreach ($this->variables as $name => $variable) {
             if (($variables[$name]->origin ?? '') !== 'override') {
                 $variables[$name] = $variable;
@@ -151,11 +154,12 @@ final class CommandLine implements Configuration
      */
     private function assign(string $argument, array $defaults): bool
     {
-        $assignment = Assignment::parse($argument);
+        $assignment = Assignment::parse($argument, allowWhitespace: true);
         if ($assignment === null) {
             return false;
         }
         $variables = [...$defaults, ...$this->variables];
+        $assignment = $assignment->resolveName(new VariableExpander(array_values($variables)));
         $assignment->apply($variables, 'command line');
         if ($variables[$assignment->name]->origin === 'command line') {
             $this->variables[$assignment->name] = $variables[$assignment->name];

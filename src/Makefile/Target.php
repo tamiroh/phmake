@@ -23,7 +23,7 @@ final readonly class Target
     ) {}
 
     /**
-     * @param list<Variable> $variables
+     * @param list<Variable>|EvaluationContext $variables
      * @throws MakefileErrorException
      * @throws CommandFailedException
      */
@@ -31,7 +31,7 @@ final readonly class Target
         Shell $shell,
         Filesystem $filesystem,
         Output $output,
-        array $variables = [],
+        array|EvaluationContext $variables = [],
         bool $dependenciesRebuilt = false,
         Exports $exports = new Exports(),
     ): bool {
@@ -39,19 +39,18 @@ final readonly class Target
             return false;
         }
 
-        $variables = [
-            ...$variables,
+        $expander = new VariableExpander($variables, $output)->withVariables([
             new Variable('@', $this->name, false, 'automatic'),
             new Variable('<', $this->dependencies[0] ?? '', false, 'automatic'),
             new Variable('^', implode(' ', array_unique($this->dependencies)), false, 'automatic'),
             new Variable('+', implode(' ', $this->dependencies), false, 'automatic'),
             new Variable('*', $this->stem, false, 'automatic'),
-        ];
+        ]);
         $commands = [];
         foreach ($this->commands as $command) {
-            $commands[] = $command->expand($variables, $output);
+            $commands[] = $command->expand($expander, $output);
         }
-        $shell = new ExportingShell($shell, $exports, $variables, $output);
+        $shell = new ExportingShell($shell, $exports, $expander, $output);
         foreach ($commands as $command) {
             $exitCode = $command->run($shell, $output);
             if ($exitCode !== 0) {

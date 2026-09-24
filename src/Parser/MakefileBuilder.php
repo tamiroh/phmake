@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use Tamiroh\Phmake\Makefile\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Exports;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\Target;
@@ -95,6 +96,7 @@ final class MakefileBuilder
         array $builtinRules = [],
         Exports $exports = new Exports(),
         bool $builtinSuffixes = true,
+        ?EvaluationContext $context = null,
     ): Makefile {
         if ($builtinSuffixes && $this->builtinSuffixes) {
             $this->suffixes = ['.c', '.o', ...$this->suffixes];
@@ -121,7 +123,14 @@ final class MakefileBuilder
                 $patterns[] = $builtin;
             }
         }
-        return new Makefile(array_values($this->targets), $variables, $this->defaultGoal, $patterns, $exports);
+        return new Makefile(
+            array_values($this->targets),
+            $variables,
+            $this->defaultGoal,
+            $patterns,
+            $exports,
+            $context,
+        );
     }
 
     private function suffixPattern(Target $target): ?Target

@@ -53,6 +53,34 @@ final class CommandTest extends TestCase
 
     /** @throws MakefileErrorException */
     #[Test]
+    public function literalPrefixesApplyToEveryLineOfAMultilineRecipe(): void
+    {
+        $shell = new FakeShell();
+        $shell->exitCodes['false'] = 7;
+        $output = new FakeOutput();
+        self::assertSame(0, new Command('-@$(BODY)')->run($shell, $output, [new Variable(
+            'BODY',
+            "false\necho continued\nfalse",
+        )]));
+        self::assertSame(['false', 'echo continued', 'false'], $shell->commands);
+        self::assertSame([], $output->lines);
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function multilineRecipesStopAtTheFirstUnignoredFailure(): void
+    {
+        $shell = new FakeShell();
+        $shell->exitCodes['false'] = 7;
+        self::assertSame(7, new Command('$(BODY)')->run($shell, new FakeOutput(), [new Variable(
+            'BODY',
+            "-false\nfalse\necho unreachable",
+        )]));
+        self::assertSame(['false', 'false'], $shell->commands);
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
     public function returnsTheShellExitCode(): void
     {
         $shell = new FakeShell();

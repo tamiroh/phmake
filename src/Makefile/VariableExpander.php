@@ -8,7 +8,6 @@ use LogicException;
 
 use function array_slice;
 use function array_values;
-use function count;
 use function explode;
 use function implode;
 use function in_array;
@@ -24,29 +23,45 @@ use function trim;
 
 final readonly class VariableExpander
 {
-    /** @var array<string, Variable> */
-    private array $variables;
+    public EvaluationContext $context;
 
-    /** @param list<Variable> $variables */
+    /**
+     * @param list<Variable>|EvaluationContext $variables
+     * @param array<string, Variable> $locals
+     * @param list<string> $expanding
+     */
     public function __construct(
-        array $variables,
+        array|EvaluationContext $variables,
         private ?Output $output = null,
         public int $callParameters = 0,
-        private ?string $source = null,
+        public ?string $source = null,
+        private array $locals = [],
+        public ?string $definitionSource = null,
+        private array $expanding = [],
     ) {
-        $indexed = [];
-        foreach ($variables as $variable) {
-            $indexed[$variable->name] = $variable;
-        }
-        $this->variables = $indexed;
+        $this->context = $variables instanceof EvaluationContext ? $variables : new EvaluationContext($variables);
+    }
+
+    public function atSource(?string $source): self
+    {
+        return new self(
+            $this->context,
+            $this->output,
+            $this->callParameters,
+            $source,
+            $this->locals,
+            $this->definitionSource,
+            $this->expanding,
+        );
     }
 
     /**
-     * @param list<string> $expanding
+     * @param list<string>|null $expanding
      * @throws MakefileErrorException
      */
-    public function expand(string $expression, array $expanding = []): string
+    public function expand(string $expression, ?array $expanding = null): string
     {
+        $expanding ??= $this->expanding;
         $result = '';
         for ($index = 0; $index < strlen($expression); $index++) {
             if ($expression[$index] !== '$') {
@@ -57,7 +72,7 @@ final readonly class VariableExpander
             if ($next === '$') {
                 $result .= '$';
             } elseif ($next === '(' || $next === '{') {
-                $result .= $this->reference($this->readReference($expression, $index), $expanding, $next);
+                $result .= $this->reference(ExpansionSyntax::readReference($expression, $index), $expanding, $next);
             } elseif ($next !== '') {
                 $result .= $this->value($next, $expanding);
             }
@@ -92,14 +107,11 @@ final readonly class VariableExpander
                 'or' => Functions::or($arguments, $expand),
             };
         }
-        if ($name === 'foreach') {
-            return Functions::foreach(
-                $this,
-                $expanding,
-                $arguments[0] ?? null,
-                $arguments[1] ?? null,
-                $arguments[2] ?? null,
-            );
+        if ($name === 'foreach' || $name === 'let') {
+            return match ($name) {
+                'foreach' => Functions::foreach($this, $expanding, ...$arguments),
+                'let' => Functions::let($this, $expanding, ...$arguments),
+            };
         }
         if (!$argumentsExpanded) {
             if (in_array($name, ['info', 'warning', 'error'], true)) {
@@ -115,6 +127,7 @@ final readonly class VariableExpander
         $third = $arguments[2] ?? null;
         return match ($name) {
             'call' => Functions::call($arguments, $this, $expanding),
+            'eval' => Functions::eval($first ?? '', $this->context->evaluate, $this->inExpansion($expanding)),
             'info' => Functions::info($first ?? '', $this->output),
             'warning' => Functions::warning($first ?? '', $this->output, $this->source),
             'error' => Functions::error($first ?? '', $this->source),
@@ -146,57 +159,45 @@ final readonly class VariableExpander
 
     public function variable(string $name): ?Variable
     {
-        return $this->variables[$name] ?? null;
+        return $this->locals[$name] ?? $this->context->variables[$name] ?? null;
+    }
+
+    /** @return list<Variable> */
+    public function variables(): array
+    {
+        return array_values([...$this->context->variables, ...$this->locals]);
     }
 
     /** @param list<Variable> $variables */
     public function withVariables(array $variables, ?int $callParameters = null): self
     {
+        $locals = $this->locals;
+        foreach ($variables as $variable) {
+            $locals[$variable->name] = $variable;
+        }
         return new self(
-            [...array_values($this->variables), ...$variables],
+            $this->context,
             $this->output,
             $callParameters ?? $this->callParameters,
             $this->source,
+            $locals,
+            $this->definitionSource,
+            $this->expanding,
         );
     }
 
-    /** @return list<string> */
-    private function arguments(string $text, int $limit, string $opening): array
+    /** @param list<string> $expanding */
+    private function inExpansion(array $expanding): self
     {
-        $arguments = [];
-        $start = 0;
-        $depth = 0;
-        $closing = $opening === '(' ? ')' : '}';
-        for ($index = 0; $index < strlen($text) && count($arguments) < ($limit - 1); $index++) {
-            if ($text[$index] === $opening) {
-                $depth++;
-            } elseif ($text[$index] === $closing) {
-                $depth--;
-            } elseif ($text[$index] === ',' && $depth === 0) {
-                $arguments[] = substr($text, $start, $index - $start);
-                $start = $index + 1;
-            }
-        }
-        $arguments[] = substr($text, $start);
-        return $arguments;
-    }
-
-    /** @throws MakefileErrorException */
-    private function readReference(string $expression, int &$index): string
-    {
-        $opening = $expression[$index];
-        $closing = $opening === '(' ? ')' : '}';
-        $start = ++$index;
-        $depth = 1;
-        while ($index < strlen($expression)) {
-            if ($expression[$index] === $opening) {
-                $depth++;
-            } elseif ($expression[$index] === $closing && --$depth === 0) {
-                return substr($expression, $start, $index - $start);
-            }
-            $index++;
-        }
-        throw new MakefileErrorException('Unterminated variable reference');
+        return new self(
+            $this->context,
+            $this->output,
+            $this->callParameters,
+            $this->source,
+            $this->locals,
+            $this->definitionSource,
+            $expanding,
+        );
     }
 
     /**
@@ -213,7 +214,7 @@ final readonly class VariableExpander
                 return (
                     $this->invokeFunction(
                         $matches[1],
-                        $this->arguments(substr($reference, strlen($matches[0])), $argumentCount, $opening),
+                        ExpansionSyntax::arguments(substr($reference, strlen($matches[0])), $argumentCount, $opening),
                         $expanding,
                     ) ?? ''
                 );
@@ -249,7 +250,7 @@ final readonly class VariableExpander
      */
     private function value(string $name, array $expanding): string
     {
-        $variable = $this->variables[$name] ?? null;
+        $variable = $this->variable($name);
         if ($variable === null) {
             return '';
         }
@@ -259,6 +260,14 @@ final readonly class VariableExpander
         if (in_array($name, $expanding, true)) {
             throw new MakefileErrorException("Recursive variable `{$name}'");
         }
-        return $this->expand($variable->expression, [...$expanding, $name]);
+        return new self(
+            $this->context,
+            $this->output,
+            $this->callParameters,
+            $this->source,
+            $this->locals,
+            $variable->source ?? $this->definitionSource,
+            $this->expanding,
+        )->expand($variable->expression, [...$expanding, $name]);
     }
 }

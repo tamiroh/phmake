@@ -21,11 +21,11 @@ final class Exports
     ) {}
 
     /**
-     * @param list<Variable> $variables
+     * @param list<Variable>|VariableExpander $variables
      * @return array<string, string|false>
      * @throws MakefileErrorException
      */
-    public function environment(array $variables, Output $output): array
+    public function environment(array|VariableExpander $variables, Output $output): array
     {
         $environment = [];
         foreach ($this->directives as $name => $export) {
@@ -33,8 +33,8 @@ final class Exports
                 $environment[$name] = false;
             }
         }
-        $expander = new VariableExpander($variables, $output);
-        foreach ($variables as $variable) {
+        $expander = $variables instanceof VariableExpander ? $variables : new VariableExpander($variables, $output);
+        foreach ($expander->variables() as $variable) {
             $export =
                 $this->directives[$variable->name]
                 ?? !in_array($variable->origin, ['default', 'automatic'], true)

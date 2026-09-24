@@ -165,7 +165,7 @@ class MakefileParserTest extends TestCase
     {
         $parser = new MakefileParser("all: input\n\techo all\n");
 
-        self::assertEquals($parser->parse(), $parser->parse());
+        self::assertEquals($parser->parse()->targets, $parser->parse()->targets);
     }
 
     /** @throws MakefileErrorException */

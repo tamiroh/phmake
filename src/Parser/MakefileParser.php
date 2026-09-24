@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Parser;
 
 use LogicException;
 use Tamiroh\Phmake\Makefile\Assignment;
+use Tamiroh\Phmake\Makefile\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Exports;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
@@ -14,7 +15,12 @@ use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
 
+use function array_keys;
+use function array_slice;
 use function array_values;
+use function count;
+use function explode;
+use function implode;
 use function in_array;
 use function intdiv;
 use function ltrim;
@@ -126,7 +132,8 @@ final readonly class MakefileParser
     public function parse(): Makefile
     {
         $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false));
-        $variables = [];
+        $context = new EvaluationContext();
+        $variables = &$context->variables;
         foreach ($this->defaults as $variable) {
             $variables[$variable->name] = $variable;
         }
@@ -138,12 +145,53 @@ final readonly class MakefileParser
             }
         }
         $exports = new Exports($inherited);
-        $this->readRules($this->source, $builder, $variables, [], $exports, $this->sources);
+        $context->evaluate =
+            /** @throws MakefileErrorException */
+            function (string $text, VariableExpander $expander) use ($builder, $exports): void {
+                try {
+                    $this->readRules(
+                        $text,
+                        $builder,
+                        $expander->context->variables,
+                        [],
+                        $exports,
+                        [],
+                        $expander,
+                        $expander->source,
+                    );
+                } catch (ParseException $error) {
+                    throw new MakefileErrorException($error->reason, $expander->source);
+                }
+            };
+        $scope = new VariableExpander($context, $this->output);
+        if ($this->sources === []) {
+            $this->readRules($this->source, $builder, $variables, [], $exports, [], $scope);
+        } else {
+            $lines = explode("\n", $this->source);
+            $starts = array_keys($this->sources);
+            foreach ($starts as $index => $start) {
+                $this->readRules(
+                    implode("\n", array_slice(
+                        $lines,
+                        $start - 1,
+                        ($starts[$index + 1] ?? (count($lines) + 1)) - $start,
+                    )),
+                    $builder,
+                    $variables,
+                    [],
+                    $exports,
+                    [1 => $this->sources[$start]],
+                    $scope,
+                );
+            }
+        }
+        $context->reading = false;
         return $builder->build(
             array_values($variables),
             $this->configuration->noBuiltinRules ?? false ? [] : $this->builtinRules,
             $exports,
             !($this->configuration->noBuiltinRules ?? false),
+            $context,
         );
     }
 
@@ -155,18 +203,57 @@ final readonly class MakefileParser
     }
 
     /**
+     * @param array<int, string> $sources
+     */
+    private function readDefinition(
+        LineReader $reader,
+        string $prefix,
+        int $start,
+        array $sources,
+        ?string $evaluationSource,
+    ): string {
+        $lines = [];
+        $depth = 1;
+        while (($line = $reader->next($prefix, true)) !== null) {
+            if (!str_starts_with($line, $prefix)) {
+                $directive = trim(self::removeComment($line));
+                $matches = [];
+                if (preg_match('/^define(?:[ \t]+(?![:+?=])\S|$)/', $directive) === 1) {
+                    $depth++;
+                } elseif (preg_match('/^endef(?:\s+(.*))?$/', $directive, $matches) === 1) {
+                    /** @var array{string, 1?: string} $matches */
+                    if (--$depth === 0) {
+                        if (($matches[1] ?? '') !== '') {
+                            $this->output?->writeWarning(
+                                "extraneous text after 'endef' directive",
+                                $evaluationSource ?? self::sourceLocation($sources, $reader->lineNumber),
+                            );
+                        }
+                        return implode("\n", $lines);
+                    }
+                }
+            }
+            $lines[] = $line;
+        }
+        throw new ParseException($start, "missing 'endef', unterminated 'define'");
+    }
+
+    /**
      * @param array<string, Variable> $variables
      * @param list<string> $included
      * @param array<int, string> $sources
+     * @throws ParseException
      * @throws MakefileErrorException
      */
-    private function readRules(
+    private function readLines(
         string $source,
         MakefileBuilder $builder,
         array &$variables,
         array $included,
         Exports $exports,
         array $sources,
+        VariableExpander $scope,
+        ?string $evaluationSource = null,
     ): void {
         $reader = new LineReader($source);
         $rule = null;
@@ -174,7 +261,8 @@ final readonly class MakefileParser
 
         while (($line = $reader->next($variables['.RECIPEPREFIX']->expression[0] ?? "\t")) !== null) {
             $lineNumber = $reader->lineNumber;
-            $location = self::sourceLocation($sources, $lineNumber);
+            $location = $evaluationSource ?? self::sourceLocation($sources, $lineNumber);
+            $expander = $scope->atSource($location);
             if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
                 if (!$conditionals->active()) {
                     continue;
@@ -192,13 +280,19 @@ final readonly class MakefileParser
             }
 
             if (
-                $conditionals->read(
-                    $uncommented,
-                    new VariableExpander(array_values($variables), $this->output, source: $location),
-                    $lineNumber,
-                )
-                || !$conditionals->active()
+                !$conditionals->active()
+                && preg_match('/^\s*(?:(?:override|export|unexport)\s+)*define\s+(?![:+?=])/', $uncommented) === 1
             ) {
+                $this->readDefinition(
+                    $reader,
+                    $variables['.RECIPEPREFIX']->expression[0] ?? "\t",
+                    $lineNumber,
+                    $sources,
+                    $evaluationSource,
+                );
+                continue;
+            }
+            if ($conditionals->read($uncommented, $expander, $lineNumber) || !$conditionals->active()) {
                 continue;
             }
 
@@ -207,14 +301,15 @@ final readonly class MakefileParser
                 $rule = null;
             }
 
+            $uncommented = ltrim($uncommented);
             $matches = [];
             $export = null;
             $origin = 'file';
-            while (
-                Assignment::parse($uncommented) === null
-                && preg_match('/^\s*(override|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1
-            ) {
+            while (preg_match('/^\s*(override|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1) {
                 /** @var array{string, 'override'|'export'|'unexport', string} $matches */
+                if (preg_match('/^(?::::=|::=|:=|\+=|\?=|=)/', ltrim($matches[2])) === 1) {
+                    break;
+                }
                 if ($matches[1] === 'override') {
                     $origin = 'override';
                 } else {
@@ -222,12 +317,56 @@ final readonly class MakefileParser
                 }
                 $uncommented = ltrim($matches[2]);
             }
-            if ($export !== null && Assignment::parse($uncommented) === null) {
-                $names = self::words(new VariableExpander(
-                    array_values($variables),
+            if (
+                preg_match('/^define(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
+                && preg_match('/^(?::::=|::=|:=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
+            ) {
+                /** @var array{string, 1?: string} $matches */
+                $header = Assignment::parse($matches[1] ?? '', allowWhitespace: true) ?? new Assignment(
+                    trim($matches[1] ?? ''),
+                    '=',
+                    '',
+                );
+                $header = $header->resolveName($expander);
+                if ($header->expression !== '') {
+                    $this->output?->writeWarning("extraneous text after 'define' directive", $location);
+                }
+                $body = $this->readDefinition(
+                    $reader,
+                    $variables['.RECIPEPREFIX']->expression[0] ?? "\t",
+                    $lineNumber,
+                    $sources,
+                    $evaluationSource,
+                );
+                new Assignment($header->name, $header->operator, $body)->apply(
+                    $variables,
+                    $origin,
                     $this->output,
-                    source: $location,
-                )->expand($uncommented));
+                    $location,
+                    $expander,
+                );
+                if ($header->name === 'MAKEFLAGS') {
+                    $this->configuration?->updateMakeflags($variables, $expander);
+                }
+                if ($export !== null) {
+                    $exports->set([$header->name], $export);
+                }
+                continue;
+            }
+            if (
+                preg_match('/^undefine(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
+                && preg_match('/^(?::::=|::=|:=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
+            ) {
+                /** @var array{string, 1?: string} $matches */
+                $name = new Assignment(trim($matches[1] ?? ''), '=', '')->resolveName($expander)->name;
+                Assignment::undefine($variables, $name, $origin);
+                continue;
+            }
+            if (preg_match('/^endef(?:\s|$)/', $uncommented) === 1 && Assignment::parse($uncommented) === null) {
+                throw new ParseException($lineNumber, "extraneous 'endef'");
+            }
+            if ($export !== null && Assignment::parse($uncommented) === null) {
+                $names = self::words($expander->expand($uncommented));
                 $exports->set($names, $export);
                 foreach ($names as $name) {
                     $variables[$name] ??= new Variable($name, '', false);
@@ -240,23 +379,20 @@ final readonly class MakefileParser
 
             $assignment = Assignment::parse($uncommented);
             if ($assignment !== null) {
+                $assignment = $assignment->resolveName($expander);
                 if ($export !== null) {
                     $exports->set([$assignment->name], $export);
                 }
-                $assignment->apply($variables, $origin, $this->output, $location);
+                $assignment->apply($variables, $origin, $this->output, $location, $expander);
                 if ($assignment->name === 'MAKEFLAGS') {
-                    $this->configuration?->updateMakeflags($variables);
+                    $this->configuration?->updateMakeflags($variables, $expander);
                 }
                 continue;
             }
 
             if (preg_match('/^\s*(-?include|sinclude)(?:\s+(.*))?$/', $uncommented, $matches) === 1) {
                 /** @var array{string, '-include'|'include'|'sinclude', 2?: string} $matches */
-                $patterns = self::words(new VariableExpander(
-                    array_values($variables),
-                    $this->output,
-                    source: $location,
-                )->expand($matches[2] ?? ''));
+                $patterns = self::words($expander->expand($matches[2] ?? ''));
                 foreach ($patterns as $pattern) {
                     foreach ($this->matchingPaths($pattern) as $path) {
                         $contents = $this->files?->read($path);
@@ -269,18 +405,24 @@ final readonly class MakefileParser
                         if (in_array($path, $included, strict: true)) {
                             throw new ParseException($lineNumber, "Recursive include `$path'");
                         }
-                        $this->readRules($contents, $builder, $variables, [...$included, $path], $exports, [
-                            1 => $path,
-                        ]);
+                        $this->readRules(
+                            $contents,
+                            $builder,
+                            $variables,
+                            [...$included, $path],
+                            $exports,
+                            [
+                                1 => $path,
+                            ],
+                            $scope,
+                        );
                     }
                 }
                 continue;
             }
 
             [$header, $recipe] = self::splitRecipe($line);
-            $expanded = new VariableExpander(array_values($variables), $this->output, source: $location)->expand(
-                $header,
-            );
+            $expanded = $expander->expand($header);
             if (trim($expanded) === '' && $recipe === null) {
                 continue;
             }
@@ -289,6 +431,9 @@ final readonly class MakefileParser
                 throw new ParseException($lineNumber, 'missing separator');
             }
 
+            if (!$scope->context->reading) {
+                throw new MakefileErrorException('prerequisites cannot be defined in recipes', $location);
+            }
             $dependencies = substr($expanded, $colon + 1);
             $names = self::words(substr($expanded, offset: 0, length: $colon));
             if (
@@ -312,6 +457,34 @@ final readonly class MakefileParser
         $conditionals->finish($reader->lineNumber);
         if ($rule !== null) {
             $builder->addRule($rule);
+        }
+    }
+
+    /**
+     * @param array<string, Variable> $variables
+     * @param list<string> $included
+     * @param array<int, string> $sources
+     * @throws MakefileErrorException
+     * @throws ParseException
+     */
+    private function readRules(
+        string $source,
+        MakefileBuilder $builder,
+        array &$variables,
+        array $included,
+        Exports $exports,
+        array $sources,
+        VariableExpander $scope,
+        ?string $evaluationSource = null,
+    ): void {
+        try {
+            $this->readLines($source, $builder, $variables, $included, $exports, $sources, $scope, $evaluationSource);
+        } catch (ParseException $error) {
+            $location = $evaluationSource ?? self::sourceLocation($sources, $error->lineNumber);
+            if ($location === null) {
+                throw $error;
+            }
+            throw new MakefileErrorException($error->reason, $location);
         }
     }
 }

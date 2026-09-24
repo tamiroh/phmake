@@ -1,0 +1,11 @@
+$ ./phmake all
+generated later
+first
+echo second
+second
+first
+second
+changed
+changed
+$ ./phmake values
+value-A value-B undefined

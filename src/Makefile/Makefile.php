@@ -29,6 +29,7 @@ final readonly class Makefile
         public ?string $defaultGoal = null,
         private array $patterns = [],
         private Exports $exports = new Exports(),
+        private ?EvaluationContext $context = null,
     ) {
         $indexed = [];
         foreach ($targets as $target) {
@@ -182,7 +183,7 @@ final readonly class Makefile
                 $shell,
                 $filesystem,
                 $output,
-                $this->variables,
+                $this->context ?? $this->variables,
                 $dependenciesRebuilt,
                 $this->exports,
             );

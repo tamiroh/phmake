@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use function ltrim;
+use function strspn;
+use function substr;
+
 final readonly class Command
 {
     public function __construct(
@@ -12,23 +16,24 @@ final readonly class Command
     ) {}
 
     /**
-     * @param list<Variable> $variables
+     * @param list<Variable>|VariableExpander $variables
      * @throws MakefileErrorException
      */
-    public function expand(array $variables, Output $output): ExpandedCommand
+    public function expand(array|VariableExpander $variables, Output $output): ExpandedCommand
     {
-        return new ExpandedCommand(new VariableExpander(
-            $variables,
-            $output,
-            source: $this->source,
-        )->expand($this->expression));
+        return new ExpandedCommand(
+            ($variables instanceof VariableExpander
+                ? $variables->atSource($this->source)
+                : new VariableExpander($variables, $output, source: $this->source))->expand($this->expression),
+            substr(ltrim($this->expression), 0, strspn(ltrim($this->expression), '@-+')),
+        );
     }
 
     /**
-     * @param list<Variable> $variables
+     * @param list<Variable>|VariableExpander $variables
      * @throws MakefileErrorException
      */
-    public function run(Shell $shell, Output $output, array $variables = []): int
+    public function run(Shell $shell, Output $output, array|VariableExpander $variables = []): int
     {
         return $this->expand($variables, $output)->run($shell, $output);
     }
