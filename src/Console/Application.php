@@ -12,10 +12,18 @@ use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
 
+use function array_values;
+use function chdir;
 use function dirname;
 use function escapeshellarg;
 use function file_get_contents;
+use function getcwd;
 use function getenv;
+use function implode;
+use function in_array;
+use function is_file;
+use function max;
+use function scandir;
 use function substr_count;
 
 final readonly class Application
@@ -24,15 +32,43 @@ final readonly class Application
     public function run(array $arguments): void
     {
         try {
-            $commandLine = new CommandLine($arguments, (string) getenv('MAKEFLAGS'));
+            $defaults = $this->initialVariables();
+            $commandLine = new CommandLine(
+                $arguments,
+                (string) getenv('MAKEFLAGS'),
+                (string) getenv('GNUMAKEFLAGS'),
+                $defaults,
+            );
             if ($commandLine->version) {
                 echo "phmake (development)\n";
                 return;
             }
-            $output = new Output($commandLine->silent);
-            $makefile = $this->createMakefile($commandLine, $output);
-            $environment = ['MAKEFLAGS' => $commandLine->makeflags()];
-            $makefile->run($commandLine->targets, new Shell($environment), new Filesystem(), $output);
+            foreach ($commandLine->directories as $directory) {
+                if (!@chdir($directory)) {
+                    throw new MakefileErrorException("Cannot change directory to '$directory'");
+                }
+            }
+            $level = max(0, (int) getenv('MAKELEVEL'));
+            $output = new Output($commandLine->silent, $level);
+            $printDirectory =
+                $commandLine->printDirectory
+                ?? !$commandLine->silent && ($level > 0 || $commandLine->directories !== []);
+            if ($printDirectory) {
+                $output->writeDirectory(true, (string) getcwd());
+            }
+            try {
+                $makefile = $this->createMakefile($commandLine, $output, $defaults, $level);
+                $makefile->run(
+                    $commandLine->targets,
+                    new Shell(),
+                    new Filesystem(),
+                    new Output($commandLine->silent, $level),
+                );
+            } finally {
+                if ($printDirectory) {
+                    $output->writeDirectory(false, (string) getcwd());
+                }
+            }
         } catch (CommandFailedException $e) {
             Process::stopWithCommandFailure($e->target, $e->exitCode);
         } catch (ParseException $e) {
@@ -45,12 +81,13 @@ final readonly class Application
     /**
      * @throws MakefileErrorException
      * @throws ParseException
+     * @param array<string, Variable> $defaults
      */
-    private function createMakefile(CommandLine $commandLine, Output $output): Makefile
+    private function createMakefile(CommandLine $commandLine, Output $output, array $defaults, int $level): Makefile
     {
         $makefileRaw = '';
         $sources = [];
-        foreach ($commandLine->makefiles === [] ? ['Makefile'] : $commandLine->makefiles as $path) {
+        foreach ($commandLine->makefiles === [] ? $this->defaultMakefiles() : $commandLine->makefiles as $path) {
             $source = @file_get_contents($path === '-' ? 'php://stdin' : $path);
             if ($source === false) {
                 Process::stopWithError(
@@ -63,30 +100,79 @@ final readonly class Application
             $makefileRaw .= $source . "\n";
         }
 
-        $environmentVariables = [];
-        foreach (getenv() as $name => $value) {
-            if ($name !== 'SHELL') {
-                $environmentVariables[] = new Variable($name, $value, origin: 'environment');
+        foreach ($defaults as $name => $variable) {
+            if (
+                $commandLine->noBuiltinVariables
+                && $variable->origin === 'default'
+                && $name !== 'SHELL'
+                && $name !== 'MAKE'
+            ) {
+                unset($defaults[$name]);
+            } elseif ($commandLine->environmentOverrides && $variable->origin === 'environment') {
+                $defaults[$name] = new Variable(
+                    $name,
+                    $variable->expression,
+                    $variable->recursive,
+                    'environment override',
+                );
             }
         }
         return new MakefileParser(
             $makefileRaw,
             new SourceFiles(),
             [
-                ...Builtins::variables(),
-                ...$environmentVariables,
+                ...array_values($defaults),
                 new Variable('MAKEFLAGS', $commandLine->makeflags(), false),
-                new Variable(
-                    'MAKE',
-                    escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname(__DIR__, 2) . '/phmake'),
-                    false,
-                    'default',
+                ...(isset($defaults['GNUMAKEFLAGS']) ? [new Variable('GNUMAKEFLAGS', '', false, 'environment')] : []),
+                new Variable('MAKELEVEL', (string) $level, false, 'environment'),
+                new Variable('CURDIR', (string) getcwd(), false),
+                ...(
+                    $commandLine->targets === []
+                        ? []
+                        : [new Variable('MAKECMDGOALS', implode(' ', $commandLine->targets), false, 'default')]
                 ),
             ],
             $commandLine->variables,
-            Builtins::rules(),
+            $commandLine->noBuiltinRules ? [] : Builtins::rules(),
             $output,
             $sources,
+            $commandLine,
         )->parse();
+    }
+
+    /** @return list<string> */
+    private function defaultMakefiles(): array
+    {
+        $entries = scandir('.');
+        if ($entries === false) {
+            return [];
+        }
+        foreach (['GNUmakefile', 'makefile', 'Makefile'] as $path) {
+            if (in_array($path, $entries, true) && is_file($path)) {
+                return [$path];
+            }
+        }
+        return [];
+    }
+
+    /** @return array<string, Variable> */
+    private function initialVariables(): array
+    {
+        $variables = [];
+        foreach (Builtins::variables() as $variable) {
+            $variables[$variable->name] = $variable;
+        }
+        $variables['MAKE'] = new Variable(
+            'MAKE',
+            escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname(__DIR__, 2) . '/phmake'),
+            false,
+            'default',
+        );
+        foreach (getenv() as $name => $value) {
+            if ($name !== 'SHELL') {
+                $variables[$name] = new Variable($name, $value, origin: 'environment');
+            }
+        }
+        return $variables;
     }
 }

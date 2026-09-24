@@ -33,12 +33,19 @@ final class MakefileBuilder
     private ?string $defaultGoal = null;
 
     /** @var list<string> */
-    private array $suffixes = ['.c', '.o'];
+    private array $suffixes = [];
+
+    public function __construct(
+        private bool $builtinSuffixes = true,
+    ) {}
 
     public function addRule(Rule $rule): void
     {
         foreach ($rule->targetNames as $name) {
             if ($name === '.SUFFIXES') {
+                if ($rule->dependencyNames === []) {
+                    $this->builtinSuffixes = false;
+                }
                 $this->suffixes = $rule->dependencyNames === [] ? [] : [...$this->suffixes, ...$rule->dependencyNames];
                 continue;
             }
@@ -83,8 +90,15 @@ final class MakefileBuilder
      * @param list<Variable> $variables
      * @param list<Target> $builtinRules
      */
-    public function build(array $variables, array $builtinRules = [], Exports $exports = new Exports()): Makefile
-    {
+    public function build(
+        array $variables,
+        array $builtinRules = [],
+        Exports $exports = new Exports(),
+        bool $builtinSuffixes = true,
+    ): Makefile {
+        if ($builtinSuffixes && $this->builtinSuffixes) {
+            $this->suffixes = ['.c', '.o', ...$this->suffixes];
+        }
         foreach ($this->phonyNames as $name) {
             $previous = $this->targets[$name] ?? null;
             $this->targets[$name] = new Target($name, $previous->dependencies ?? [], $previous->commands ?? [], true);

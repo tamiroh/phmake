@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
+use Tamiroh\Phmake\Makefile\Assignment;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Variable;
+use Tamiroh\Phmake\Makefile\VariableExpander;
+use Tamiroh\Phmake\Parser\Configuration;
 
+use function array_values;
 use function count;
 use function implode;
-use function ltrim;
-use function preg_match;
 use function str_contains;
 use function str_replace;
 use function str_starts_with;
 use function strlen;
 use function substr;
 
-final class CommandLine
+final class CommandLine implements Configuration
 {
     /** @var list<string> */
     public private(set) array $targets = [];
@@ -32,49 +34,31 @@ final class CommandLine
 
     public private(set) bool $version = false;
 
+    public private(set) bool $noBuiltinRules = false;
+
+    public private(set) bool $noBuiltinVariables = false;
+
+    public private(set) bool $environmentOverrides = false;
+
+    public private(set) ?bool $printDirectory = null;
+
+    /** @var list<string> */
+    public private(set) array $directories = [];
+
     /**
      * @param list<string> $arguments
+     * @param array<string, Variable> $defaults
      * @throws MakefileErrorException
      */
-    public function __construct(array $arguments, string $makeflags = '')
-    {
-        $assignments = false;
-        foreach (self::splitFlags($makeflags) as $argument) {
-            if ($argument === '--') {
-                $assignments = true;
-            } elseif ($assignments) {
-                self::assign(str_replace('$$', '$', $argument), $this->variables);
-            } elseif (
-                $argument === '--silent'
-                || $argument === '--quiet'
-                || preg_match('/^-?[A-Za-z]*s[A-Za-z]*$/D', $argument) === 1
-            ) {
-                $this->silent = true;
-            }
-        }
-        $options = true;
-        for ($index = 0; $index < count($arguments); $index++) {
-            $argument = $arguments[$index];
-            if ($argument === '--' && $options) {
-                $options = false;
-            } elseif ($options && str_starts_with($argument, '-') && $argument !== '-') {
-                $this->readOption($argument, $arguments, $index);
-            } elseif (!self::assign($argument, $this->variables)) {
-                $this->targets[] = $argument;
-            }
-        }
-    }
-
-    /** @param array<string, Variable> $variables */
-    private static function assign(string $argument, array &$variables): bool
-    {
-        $matches = [];
-        if (preg_match('/^([A-Za-z_][A-Za-z0-9_.-]*)=(.*)$/s', $argument, $matches) !== 1) {
-            return false;
-        }
-        /** @var array{non-empty-string, non-empty-string, string} $matches */
-        $variables[$matches[1]] = new Variable($matches[1], ltrim($matches[2]), origin: 'command line');
-        return true;
+    public function __construct(
+        array $arguments,
+        string $makeflags = '',
+        string $gnumakeflags = '',
+        array $defaults = [],
+    ) {
+        $this->readFlags($gnumakeflags, $defaults);
+        $this->readFlags($makeflags, $defaults);
+        $this->readArguments($arguments, false, $defaults);
     }
 
     /** @return list<string> */
@@ -107,38 +91,148 @@ final class CommandLine
             $assignments[] = str_replace(
                 ['\\', '$', ' ', "\t", "\n"],
                 ['\\\\', '$$', '\\ ', "\\\t", "\\\n"],
-                $variable->name . '=' . $variable->expression,
+                $variable->name
+                . ($variable->recursive ? '=' : ':=')
+                . ($variable->recursive ? $variable->expression : str_replace('$', '$$', $variable->expression)),
             );
         }
-        return ($this->silent ? 's' : '') . ($assignments === [] ? '' : ' -- ' . implode(' ', $assignments));
+        return (
+            ($this->environmentOverrides ? 'e' : '')
+            . ($this->noBuiltinRules ? 'r' : '')
+            . ($this->noBuiltinVariables ? 'R' : '')
+            . ($this->silent ? 's' : '')
+            . ($this->printDirectory === null ? '' : ($this->printDirectory ? 'w' : ' --no-print-directory'))
+            . ($assignments === [] ? '' : ' -- ' . implode(' ', $assignments))
+        );
+    }
+
+    /**
+     * @param array<string, Variable> $variables
+     * @throws MakefileErrorException
+     */
+    #[\Override]
+    public function updateMakeflags(array &$variables): void
+    {
+        $this->readFlags(new VariableExpander(array_values($variables))->expand('$(MAKEFLAGS)'), $variables);
+        foreach ($this->variables as $name => $variable) {
+            if (($variables[$name]->origin ?? '') !== 'override') {
+                $variables[$name] = $variable;
+            }
+        }
+        foreach ($variables as $name => $variable) {
+            if (
+                $this->noBuiltinVariables
+                && $variable->origin === 'default'
+                && $name !== 'SHELL'
+                && $name !== 'MAKE'
+                && $name !== 'MAKECMDGOALS'
+            ) {
+                unset($variables[$name]);
+            } elseif ($this->environmentOverrides && $variable->origin === 'environment' && $name !== 'MAKEFLAGS') {
+                $variables[$name] = new Variable(
+                    $name,
+                    $variable->expression,
+                    $variable->recursive,
+                    'environment override',
+                );
+            }
+        }
+        $variables['MAKEFLAGS'] = new Variable(
+            'MAKEFLAGS',
+            $this->makeflags(),
+            false,
+            $variables['MAKEFLAGS']->origin ?? 'file',
+        );
+    }
+
+    /**
+     * @param array<string, Variable> $defaults
+     * @throws MakefileErrorException
+     */
+    private function assign(string $argument, array $defaults): bool
+    {
+        $assignment = Assignment::parse($argument);
+        if ($assignment === null) {
+            return false;
+        }
+        $variables = [...$defaults, ...$this->variables];
+        $assignment->apply($variables, 'command line');
+        if ($variables[$assignment->name]->origin === 'command line') {
+            $this->variables[$assignment->name] = $variables[$assignment->name];
+        }
+        return true;
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @param array<string, Variable> $defaults
+     * @throws MakefileErrorException
+     */
+    private function readArguments(array $arguments, bool $inherited, array $defaults): void
+    {
+        $options = true;
+        for ($index = 0; $index < count($arguments); $index++) {
+            $argument = $arguments[$index];
+            if ($argument === '--' && $options) {
+                $options = false;
+            } elseif ($options && str_starts_with($argument, '-') && $argument !== '-') {
+                $this->readOption($argument, $arguments, $index, $inherited);
+            } elseif (
+                !$this->assign($inherited ? str_replace('$$', '$', $argument) : $argument, $defaults) && !$inherited
+            ) {
+                $this->targets[] = $argument;
+            }
+        }
+    }
+
+    /**
+     * @param array<string, Variable> $defaults
+     * @throws MakefileErrorException
+     */
+    private function readFlags(string $flags, array $defaults): void
+    {
+        $arguments = self::splitFlags($flags);
+        if (isset($arguments[0]) && !str_starts_with($arguments[0], '-') && !str_contains($arguments[0], '=')) {
+            $arguments[0] = '-' . $arguments[0];
+        }
+        $this->readArguments($arguments, true, $defaults);
     }
 
     /**
      * @param list<string> $arguments
      * @throws MakefileErrorException
      */
-    private function readOption(string $argument, array $arguments, int &$index): void
+    private function readOption(string $argument, array $arguments, int &$index, bool $inherited): void
     {
-        if ($argument === '--silent' || $argument === '--quiet') {
-            $this->silent = true;
+        $argument = match ($argument) {
+            '--silent', '--quiet' => '-s',
+            '--version' => '-v',
+            '--no-builtin-rules' => '-r',
+            '--no-builtin-variables' => '-R',
+            '--environment-overrides' => '-e',
+            '--print-directory' => '-w',
+            '--file', '--makefile' => '-f',
+            '--directory' => '-C',
+            default => $argument,
+        };
+        if ($argument === '--no-print-directory') {
+            $this->printDirectory = false;
             return;
         }
-        if ($argument === '--version') {
-            $this->version = true;
+        if ($argument === '--no-silent' || $argument === '--no-quiet') {
+            $this->silent = false;
             return;
         }
-        foreach (['--file=', '--makefile='] as $prefix) {
+        foreach (['--file=' => '-f', '--makefile=' => '-f', '--directory=' => '-C'] as $prefix => $short) {
             if (str_starts_with($argument, $prefix)) {
-                $path = substr($argument, strlen($prefix));
-                if ($path === '') {
-                    throw new MakefileErrorException('Option -f requires a file name');
+                if ($argument === $prefix) {
+                    throw new MakefileErrorException(
+                        "Option $short requires " . ($short === '-f' ? 'a file name' : 'a directory'),
+                    );
                 }
-                $this->makefiles[] = $path;
-                return;
+                $argument = $short . substr($argument, strlen($prefix));
+                break;
             }
-        }
-        if ($argument === '--file' || $argument === '--makefile') {
-            $argument = '-f';
         }
         for ($offset = 1; $offset < strlen($argument); $offset++) {
             switch ($argument[$offset]) {
@@ -148,15 +242,38 @@ final class CommandLine
                 case 'v':
                     $this->version = true;
                     break;
+                case 'r':
+                    $this->noBuiltinRules = true;
+                    break;
+                case 'R':
+                    $this->noBuiltinVariables = true;
+                    $this->noBuiltinRules = true;
+                    break;
+                case 'e':
+                    $this->environmentOverrides = true;
+                    break;
+                case 'w':
+                    $this->printDirectory = true;
+                    break;
                 case 'f':
+                case 'C':
+                    $option = $argument[$offset];
                     $path = substr($argument, $offset + 1);
                     if ($path === '') {
                         $path = $arguments[++$index] ?? '';
                     }
                     if ($path === '') {
-                        throw new MakefileErrorException('Option -f requires a file name');
+                        throw new MakefileErrorException(
+                            "Option -$option requires " . ($option === 'f' ? 'a file name' : 'a directory'),
+                        );
                     }
-                    $this->makefiles[] = $path;
+                    if (!$inherited) {
+                        if ($option === 'f') {
+                            $this->makefiles[] = $path;
+                        } else {
+                            $this->directories[] = $path;
+                        }
+                    }
                     return;
                 default:
                     throw new MakefileErrorException("Option `$argument' is not supported");

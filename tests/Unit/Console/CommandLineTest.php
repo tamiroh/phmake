@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tamiroh\Phmake\Console\CommandLine;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Variable;
 
 final class CommandLineTest extends TestCase
 {
@@ -34,6 +35,15 @@ final class CommandLineTest extends TestCase
 
     /** @throws MakefileErrorException */
     #[Test]
+    public function conditionalAssignmentDoesNotPromoteAnEnvironmentDefinition(): void
+    {
+        $arguments = new CommandLine(['X?=cli'], defaults: ['X' => new Variable('X', 'env', origin: 'environment')]);
+        self::assertSame([], $arguments->variables);
+        self::assertSame('', $arguments->makeflags());
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
     public function explicitArgumentsOverrideInheritedAssignments(): void
     {
         $arguments = new CommandLine(['CC=child'], ' -- CC=parent FLAGS=-DTEST');
@@ -41,6 +51,33 @@ final class CommandLineTest extends TestCase
         self::assertSame('child', $arguments->variables['CC']->expression ?? null);
         self::assertSame('-DTEST', $arguments->variables['FLAGS']->expression ?? null);
         self::assertSame([], $arguments->targets);
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function ignoresNonInheritedFileAndDirectorySelections(): void
+    {
+        $arguments = new CommandLine([], '-f absent.mk -C absent -- VALUE=kept');
+        self::assertSame([], $arguments->makefiles);
+        self::assertSame([], $arguments->directories);
+        self::assertSame('kept', $arguments->variables['VALUE']->expression);
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function normalizesFlagsFromAllSourcesWithoutPropagatingDirectoriesOrGoals(): void
+    {
+        $arguments = new CommandLine(['-C', 'first', '--directory=second', '-R', '--no-silent', 'goal'], 's', '-e -r');
+        $child = new CommandLine([], $arguments->makeflags());
+
+        self::assertSame(['first', 'second'], $arguments->directories);
+        self::assertSame('erR', $arguments->makeflags());
+        self::assertTrue($child->noBuiltinRules);
+        self::assertTrue($child->noBuiltinVariables);
+        self::assertTrue($child->environmentOverrides);
+        self::assertFalse($child->silent);
+        self::assertSame([], $child->directories);
+        self::assertSame([], $child->targets);
     }
 
     /** @throws MakefileErrorException */
@@ -79,10 +116,34 @@ final class CommandLineTest extends TestCase
 
     /** @throws MakefileErrorException */
     #[Test]
+    public function rejectsAnEmptyLongOptionArgumentInsteadOfConsumingTheNextGoal(): void
+    {
+        $this->expectException(MakefileErrorException::class);
+        new CommandLine(['--file=', 'all']);
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
     public function rejectsUnsupportedOptions(): void
     {
         $this->expectException(MakefileErrorException::class);
         new CommandLine(['--jobs=2']);
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function retainsSimpleAndRecursiveAssignmentsAcrossGenerations(): void
+    {
+        $arguments = new CommandLine(['X=before', 'S:=$(X) $$literal', 'S+= tail', 'R=$(X)', 'X=after', 'X?=ignored']);
+        $child = new CommandLine([], $arguments->makeflags());
+        $grandchild = new CommandLine([], $child->makeflags());
+
+        self::assertSame('before $literal tail', $arguments->variables['S']->expression);
+        self::assertFalse($arguments->variables['S']->recursive);
+        self::assertSame('$(X)', $arguments->variables['R']->expression);
+        self::assertSame('after', $arguments->variables['X']->expression);
+        self::assertEquals($arguments->variables, $child->variables);
+        self::assertEquals($arguments->variables, $grandchild->variables);
     }
 
     /** @throws MakefileErrorException */

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser;
 
 use LogicException;
+use Tamiroh\Phmake\Makefile\Assignment;
 use Tamiroh\Phmake\Makefile\Exports;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
@@ -42,6 +43,7 @@ final readonly class MakefileParser
         private array $builtinRules = [],
         private ?Output $output = null,
         private array $sources = [],
+        private ?Configuration $configuration = null,
     ) {}
 
     private static function removeComment(string $line): string
@@ -123,21 +125,26 @@ final readonly class MakefileParser
     /** @throws MakefileErrorException */
     public function parse(): Makefile
     {
-        $builder = new MakefileBuilder();
+        $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false));
         $variables = [];
         foreach ($this->defaults as $variable) {
             $variables[$variable->name] = $variable;
         }
         $variables = [...$variables, ...$this->overrides];
-        $inherited = [];
+        $inherited = ['MAKEFLAGS'];
         foreach ($variables as $variable) {
-            if (in_array($variable->origin, ['environment', 'command line'], true)) {
+            if (in_array($variable->origin, ['environment', 'environment override', 'command line'], true)) {
                 $inherited[] = $variable->name;
             }
         }
         $exports = new Exports($inherited);
         $this->readRules($this->source, $builder, $variables, [], $exports, $this->sources);
-        return $builder->build(array_values($variables), $this->builtinRules, $exports);
+        return $builder->build(
+            array_values($variables),
+            $this->configuration->noBuiltinRules ?? false ? [] : $this->builtinRules,
+            $exports,
+            !($this->configuration->noBuiltinRules ?? false),
+        );
     }
 
     /** @return list<string> */
@@ -202,63 +209,54 @@ final readonly class MakefileParser
 
             $matches = [];
             $export = null;
-            if (preg_match('/^\s*(export|unexport)(?:[ \\t]+|$)(.*)$/s', $uncommented, $matches) === 1) {
-                /** @var array{string, 'export'|'unexport', string} $matches */
-                if (preg_match('/^(?::=|\\+=|\\?=|=)/', ltrim($matches[2])) !== 1) {
+            $origin = 'file';
+            while (
+                Assignment::parse($uncommented) === null
+                && preg_match('/^\s*(override|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1
+            ) {
+                /** @var array{string, 'override'|'export'|'unexport', string} $matches */
+                if ($matches[1] === 'override') {
+                    $origin = 'override';
+                } else {
                     $export = $matches[1] === 'export';
-                    $uncommented = ltrim($matches[2]);
-                    if (preg_match('/^[A-Za-z_.][A-Za-z0-9_.-]*\\s*(?::=|\\+=|\\?=|=)/', $uncommented) !== 1) {
-                        $names = self::words(new VariableExpander(
-                            array_values($variables),
-                            $this->output,
-                            source: $location,
-                        )->expand($uncommented));
-                        $exports->set($names, $export);
-                        foreach ($names as $name) {
-                            $variables[$name] ??= new Variable($name, '', false);
-                        }
-                        continue;
-                    }
                 }
+                $uncommented = ltrim($matches[2]);
+            }
+            if ($export !== null && Assignment::parse($uncommented) === null) {
+                $names = self::words(new VariableExpander(
+                    array_values($variables),
+                    $this->output,
+                    source: $location,
+                )->expand($uncommented));
+                $exports->set($names, $export);
+                foreach ($names as $name) {
+                    $variables[$name] ??= new Variable($name, '', false);
+                }
+                continue;
             }
             if (preg_match('/^\\.EXPORT_ALL_VARIABLES\\s*:/', $uncommented) === 1) {
                 $exports->set([], true);
             }
 
-            $matches = [];
-            if (preg_match('/^\s*([A-Za-z_.][A-Za-z0-9_.-]*)\s*(:=|\+=|\?=|=)(.*)$/s', $uncommented, $matches) === 1) {
-                /** @var array{string, non-empty-string, ':='|'+='|'?='|'=', string} $matches */
+            $assignment = Assignment::parse($uncommented);
+            if ($assignment !== null) {
                 if ($export !== null) {
-                    $exports->set([$matches[1]], $export);
+                    $exports->set([$assignment->name], $export);
                 }
-                if (isset($this->overrides[$matches[1]])) {
-                    continue;
+                $assignment->apply($variables, $origin, $this->output, $location);
+                if ($assignment->name === 'MAKEFLAGS') {
+                    $this->configuration?->updateMakeflags($variables);
                 }
-                $previous = $variables[$matches[1]] ?? null;
-                if ($matches[2] === '?=' && $previous !== null) {
-                    continue;
-                }
-                $value = ltrim($matches[3]);
-                $recursive = $matches[2] === '+=' ? $previous->recursive ?? true : $matches[2] !== ':=';
-                if (!$recursive) {
-                    $value = new VariableExpander(array_values($variables), $this->output, source: $location)->expand(
-                        $value,
-                    );
-                }
-                if ($matches[2] === '+=' && $previous !== null) {
-                    $value = $previous->expression . ' ' . $value;
-                }
-                $variables[$matches[1]] = new Variable($matches[1], $value, $recursive);
                 continue;
             }
 
-            if (preg_match('/^\s*(-?include|sinclude)\s+(.+)$/', $uncommented, $matches) === 1) {
-                /** @var array{non-falsy-string, '-include'|'include'|'sinclude', non-empty-string} $matches */
+            if (preg_match('/^\s*(-?include|sinclude)(?:\s+(.*))?$/', $uncommented, $matches) === 1) {
+                /** @var array{string, '-include'|'include'|'sinclude', 2?: string} $matches */
                 $patterns = self::words(new VariableExpander(
                     array_values($variables),
                     $this->output,
                     source: $location,
-                )->expand($matches[2]));
+                )->expand($matches[2] ?? ''));
                 foreach ($patterns as $pattern) {
                     foreach ($this->matchingPaths($pattern) as $path) {
                         $contents = $this->files?->read($path);

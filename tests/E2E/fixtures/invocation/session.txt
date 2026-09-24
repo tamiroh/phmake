@@ -1,0 +1,16 @@
+$ VALUE=environment ./phmake 'APPEND=command' 'FIXED:=fixed $$literal' 'FALLBACK?=command' EXPORTED=command
+file|file|command forced|override|fixed $literal|simple|command
+export=from-file
+$ VALUE=environment ./phmake -e 'APPEND=command' 'FIXED:=fixed $$literal' 'FALLBACK?=command'
+environment|environment override|command forced|override|fixed $literal|simple|command
+export=from-file
+$ VALUE=environment ./phmake VALUE=command 'FIXED:=fixed' parent --no-print-directory
+parent=0|command|command line|fixed|simple
+child=1|command|command line|fixed|simple|child
+$ ./phmake -r builtins
+default|default|/bin/sh
+$ ./phmake -R builtins
+undefined|undefined|/bin/sh
+$ mkdir sub && cp directory.mk sub/GNUmakefile
+$ ./phmake --no-print-directory -C sub all
+sub|all

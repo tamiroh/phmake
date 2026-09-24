@@ -12,6 +12,7 @@ final class Output implements OutputInterface
 {
     public function __construct(
         private readonly bool $silent = false,
+        private readonly int $level = 0,
     ) {}
 
     #[\Override]
@@ -20,10 +21,15 @@ final class Output implements OutputInterface
         echo $text;
     }
 
+    public function writeDirectory(bool $entering, string $directory): void
+    {
+        echo $this->prefix() . ': ' . ($entering ? 'Entering' : 'Leaving') . " directory '$directory'" . PHP_EOL;
+    }
+
     #[\Override]
     public function writeInfo(string $message): void
     {
-        $this->writeLine("phmake: $message");
+        $this->writeLine($this->prefix() . ": $message");
     }
 
     #[\Override]
@@ -38,5 +44,10 @@ final class Output implements OutputInterface
     public function writeWarning(string $message, ?string $source = null): void
     {
         fwrite(STDERR, ($source ?? 'phmake') . ": $message" . PHP_EOL);
+    }
+
+    private function prefix(): string
+    {
+        return 'phmake' . ($this->level === 0 ? '' : "[$this->level]");
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile;
 
 use function in_array;
+use function max;
 use function preg_match;
 
 final class Exports
@@ -38,7 +39,7 @@ final class Exports
                 $this->directives[$variable->name]
                 ?? !in_array($variable->origin, ['default', 'automatic'], true)
                     && (
-                        in_array($variable->origin, ['environment', 'command line'], true)
+                        in_array($variable->origin, ['environment', 'environment override', 'command line'], true)
                         || ($this->all ?? in_array($variable->name, $this->inherited, true))
                     );
             if (
@@ -48,12 +49,20 @@ final class Exports
                     || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $variable->name) === 1
                 )
             ) {
-                $environment[$variable->name] = $variable->origin === 'environment'
+                $environment[$variable->name] = in_array(
+                    $variable->origin,
+                    ['environment', 'environment override'],
+                    true,
+                )
                     ? $variable->expression
                     : $expander->expand('$(' . $variable->name . ')');
             } elseif (in_array($variable->name, $this->inherited, true)) {
                 $environment[$variable->name] = false;
             }
+        }
+        $level = $expander->variable('MAKELEVEL');
+        if ($level !== null) {
+            $environment['MAKELEVEL'] = (string) (max(0, (int) $expander->expand('$(MAKELEVEL)')) + 1);
         }
         return $environment;
     }
