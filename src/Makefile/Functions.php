@@ -12,15 +12,19 @@ use function array_slice;
 use function array_unique;
 use function array_values;
 use function count;
+use function explode;
 use function implode;
 use function ltrim;
 use function max;
 use function preg_match;
 use function preg_replace_callback;
 use function preg_split;
+use function rtrim;
 use function sort;
 use function str_contains;
+use function str_ends_with;
 use function str_replace;
+use function str_starts_with;
 use function strcmp;
 use function strcspn;
 use function strlen;
@@ -41,6 +45,12 @@ final class Functions
         'foreach' => 3,
         'let' => 3,
         'eval' => 1,
+        'shell' => 1,
+        'file' => 2,
+        'wildcard' => 1,
+        'abspath' => 1,
+        'realpath' => 1,
+        'intcmp' => 5,
         'if' => 3,
         'and' => PHP_INT_MAX,
         'or' => PHP_INT_MAX,
@@ -70,6 +80,44 @@ final class Functions
         'basename' => 1,
         'suffix' => 1,
     ];
+
+    /**
+     * Normalize paths to absolute names without requiring existing files.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @echo $(abspath /tmp/../example)
+     * ```
+     * Run:
+     * ```text
+     * $ ./phmake
+     * /example
+     * ```
+     * @throws MakefileErrorException
+     */
+    public static function abspath(Filesystem $files, ?string $paths = null): string
+    {
+        if ($paths === null) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'abspath'");
+        }
+        $result = [];
+        foreach (self::splitWords($paths) as $path) {
+            $normalized = '';
+            foreach (explode(
+                '/',
+                str_starts_with($path, '/') ? $path : $files->workingDirectory() . '/' . $path,
+            ) as $part) {
+                if ($part === '..') {
+                    $slash = strrpos($normalized, '/');
+                    $normalized = $slash === false ? '' : substr($normalized, 0, $slash);
+                } elseif ($part !== '' && $part !== '.') {
+                    $normalized .= '/' . $part;
+                }
+            }
+            $result[] = $normalized === '' ? '/' : $normalized;
+        }
+        return implode(' ', $result);
+    }
 
     /**
      * Prepend a shared prefix to each word.
@@ -299,6 +347,51 @@ final class Functions
     }
 
     /**
+     * Read a file or write text, adding a final newline when needed.
+     *
+     * Makefile:
+     * ```makefile
+     * $(file >message.txt,hello)
+     * all: ; @echo $(file <message.txt)
+     * ```
+     * Run:
+     * ```text
+     * $ ./phmake
+     * hello
+     * ```
+     * @throws MakefileErrorException
+     */
+    public static function file(
+        Filesystem $files,
+        ?string $operation = null,
+        ?string $text = null,
+        ?string $source = null,
+    ): string {
+        $operation = trim($operation ?? '');
+        if (!str_starts_with($operation, '>') && !str_starts_with($operation, '<')) {
+            throw new MakefileErrorException('file: invalid file operation: ' . $operation, $source);
+        }
+        $append = str_starts_with($operation, '>>');
+        $path = trim(substr($operation, $append ? 2 : 1));
+        if ($path === '') {
+            throw new MakefileErrorException('file: missing filename', $source);
+        }
+        try {
+            if ($operation[0] === '<') {
+                if ($text !== null) {
+                    throw new MakefileErrorException('file: too many arguments', $source);
+                }
+                $contents = $files->read($path) ?? '';
+                return str_ends_with($contents, "\n") ? substr($contents, 0, -1) : $contents;
+            }
+            $files->write($path, $text === null ? '' : $text . (str_ends_with($text, "\n") ? '' : "\n"), $append);
+            return '';
+        } catch (MakefileErrorException $error) {
+            throw new MakefileErrorException($error->getMessage(), $source);
+        }
+    }
+
+    /**
      * Keep only words matching at least one of the given patterns.
      *
      * Makefile:
@@ -511,6 +604,45 @@ final class Functions
     {
         $output?->write($message . "\n");
         return '';
+    }
+
+    /**
+     * Compare arbitrary-size decimal integers and expand only the selected branch.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @echo $(intcmp 2,3,less,equal,greater)
+     * ```
+     * Run:
+     * ```text
+     * $ ./phmake
+     * less
+     * ```
+     * @param Closure(string): string $expand
+     * @param list<string> $arguments
+     * @throws MakefileErrorException
+     */
+    public static function intcmp(Closure $expand, array $arguments, ?string $source = null): string
+    {
+        if (count($arguments) < 2) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'intcmp'", $source);
+        }
+        $left = self::integer($expand($arguments[0]), 'first', $source);
+        $right = self::integer($expand($arguments[1]), 'second', $source);
+        $leftNegative = str_starts_with($left, '-');
+        $rightNegative = str_starts_with($right, '-');
+        $comparison = $leftNegative !== $rightNegative
+            ? ($leftNegative ? -1 : 1)
+            : (strlen($left) === strlen($right) ? strcmp($left, $right) : strlen($left) <=> strlen($right))
+            * ($leftNegative ? -1 : 1);
+        if (count($arguments) === 2) {
+            return $comparison === 0 ? $left : '';
+        }
+        return $expand(
+            $comparison < 0
+                ? $arguments[2]
+                : ($comparison === 0 ? $arguments[3] ?? '' : $arguments[4] ?? $arguments[3] ?? ''),
+        );
     }
 
     /**
@@ -743,6 +875,77 @@ final class Functions
     }
 
     /**
+     * Resolve symlinks and return absolute paths for existing files only.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @echo $(notdir $(realpath Makefile missing-file))
+     * ```
+     * Run:
+     * ```text
+     * $ ./phmake
+     * Makefile
+     * ```
+     * @throws MakefileErrorException
+     */
+    public static function realpath(Filesystem $files, ?string $paths = null): string
+    {
+        if ($paths === null) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'realpath'");
+        }
+        $result = [];
+        foreach (self::splitWords($paths) as $path) {
+            $resolved = $files->realpath($path);
+            if ($resolved !== null) {
+                $result[] = $resolved;
+            }
+        }
+        return implode(' ', $result);
+    }
+
+    /**
+     * Run a shell command and replace output line endings with spaces.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @echo $(shell printf 'one\ntwo\n')
+     * ```
+     * Run:
+     * ```text
+     * $ ./phmake
+     * one two
+     * ```
+     * @throws MakefileErrorException
+     */
+    public static function shell(
+        Shell $shell,
+        VariableExpander $expander,
+        ?string $command = null,
+        ?Output $output = null,
+        bool $trimNewlines = true,
+    ): string {
+        if ($command === null) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'shell'", $expander->source);
+        }
+        if (trim($command) === '') {
+            return '';
+        }
+        $result = new ExportingShell($shell, $expander->context->exports, $expander, $output)->capture($command);
+        $expander->context->variables['.SHELLSTATUS'] = new Variable(
+            '.SHELLSTATUS',
+            (string) $result->status,
+            false,
+            'override',
+        );
+        $text = str_replace("\r\n", "\n", $result->output);
+        return str_replace(
+            "\n",
+            ' ',
+            $trimNewlines ? rtrim($text, "\n") : (str_ends_with($text, "\n") ? substr($text, 0, -1) : $text),
+        );
+    }
+
+    /**
      * Sort words lexicographically and remove duplicates.
      *
      * Makefile:
@@ -894,6 +1097,32 @@ final class Functions
     }
 
     /**
+     * Expand each wildcard pattern into sorted existing paths.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @echo $(wildcard Make*)
+     * ```
+     * Run (with only Makefile matching):
+     * ```text
+     * $ ./phmake
+     * Makefile
+     * ```
+     * @throws MakefileErrorException
+     */
+    public static function wildcard(Filesystem $files, ?string $patterns = null): string
+    {
+        if ($patterns === null) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'wildcard'");
+        }
+        $paths = [];
+        foreach (self::splitWords($patterns) as $pattern) {
+            $paths = [...$paths, ...$files->matching($pattern)];
+        }
+        return implode(' ', $paths);
+    }
+
+    /**
      * Return the word at the given one-based position.
      *
      * Makefile:
@@ -987,7 +1216,9 @@ final class Functions
     private static function index(string $value, string $function, string $position, int $minimum): int
     {
         if (preg_match('/^[0-9]+$/D', trim($value)) !== 1) {
-            throw new MakefileErrorException("invalid $position argument to '$function' function: '$value'");
+            throw new MakefileErrorException(
+                "invalid $position argument to '$function' function: " . ($value === '' ? 'empty value' : "'$value'"),
+            );
         }
         $digits = ltrim(trim($value), '0');
         if (
@@ -999,9 +1230,26 @@ final class Functions
             );
         }
         if ((int) $digits < $minimum) {
+            if ($function === 'wordlist') {
+                throw new MakefileErrorException("invalid $position argument to '$function' function: '$value'");
+            }
             throw new MakefileErrorException("$position argument to '$function' function must be greater than 0");
         }
         return (int) $digits;
+    }
+
+    /** @throws MakefileErrorException */
+    private static function integer(string $text, string $position, ?string $source): string
+    {
+        $text = trim($text);
+        if (preg_match('/^[+-]?[0-9]+$/D', $text) !== 1) {
+            throw new MakefileErrorException(
+                "non-numeric $position argument to 'intcmp' function: " . ($text === '' ? 'empty value' : "'$text'"),
+                $source,
+            );
+        }
+        $digits = ltrim(ltrim($text, '+-'), '0');
+        return $digits === '' ? '0' : (str_starts_with($text, '-') ? '-' : '') . $digits;
     }
 
     /** @return list<string> */

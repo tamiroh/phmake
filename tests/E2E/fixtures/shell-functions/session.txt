@@ -1,0 +1,8 @@
+$ ./phmake
+<one two>
+<later>
+<a b>
+$ ./phmake SHELL=
+<one two>
+<later>
+<a b>

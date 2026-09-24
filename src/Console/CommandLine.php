@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Tamiroh\Phmake\Makefile\Assignment;
+use Tamiroh\Phmake\Makefile\EvaluationContext;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
@@ -88,6 +89,9 @@ final class CommandLine implements Configuration
     {
         $assignments = [];
         foreach ($this->variables as $variable) {
+            if ($variable->origin !== 'command line') {
+                continue;
+            }
             $assignments[] = str_replace(
                 ['\\', '$', ' ', "\t", "\n"],
                 ['\\\\', '$$', '\\ ', "\\\t", "\\\n"],
@@ -158,9 +162,16 @@ final class CommandLine implements Configuration
         if ($assignment === null) {
             return false;
         }
-        $variables = [...$defaults, ...$this->variables];
-        $assignment = $assignment->resolveName(new VariableExpander(array_values($variables)));
-        $assignment->apply($variables, 'command line');
+        $context = new EvaluationContext(array_values([...$defaults, ...$this->variables]));
+        $context->shell = new Shell();
+        $context->filesystem = new Filesystem();
+        $variables = &$context->variables;
+        $expander = new VariableExpander($context, new Output());
+        $assignment = $assignment->resolveName($expander);
+        $assignment->apply($variables, 'command line', expander: $expander);
+        if (isset($variables['.SHELLSTATUS'])) {
+            $this->variables['.SHELLSTATUS'] = $variables['.SHELLSTATUS'];
+        }
         if ($variables[$assignment->name]->origin === 'command line') {
             $this->variables[$assignment->name] = $variables[$assignment->name];
         }

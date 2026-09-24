@@ -1,0 +1,11 @@
+$ touch empty.txt generated.txt newline.txt
+$ ln -s generated.txt linked.txt
+$ ./phmake
+first
+second
+<>
+<empty.txt generated.txt linked.txt newline.txt>
+<missing>
+<generated.txt>
+$ ./phmake update
+later.txt

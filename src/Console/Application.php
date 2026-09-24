@@ -137,6 +137,8 @@ final readonly class Application
             $output,
             $sources,
             $commandLine,
+            new Shell(),
+            new Filesystem(),
         )->parse();
     }
 

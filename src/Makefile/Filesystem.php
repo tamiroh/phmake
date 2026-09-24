@@ -9,4 +9,17 @@ interface Filesystem
     public function exists(string $path): bool;
 
     public function lastModified(string $path): ?int;
+
+    /** @return list<string> */
+    public function matching(string $pattern): array;
+
+    /** @throws MakefileErrorException */
+    public function read(string $path): ?string;
+
+    public function realpath(string $path): ?string;
+
+    public function workingDirectory(): string;
+
+    /** @throws MakefileErrorException */
+    public function write(string $path, string $text, bool $append): void;
 }

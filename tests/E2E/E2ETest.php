@@ -15,11 +15,13 @@ use function basename;
 use function dirname;
 use function file_get_contents;
 use function glob;
+use function is_file;
 use function preg_match_all;
 use function preg_quote;
 use function preg_replace;
 use function preg_replace_callback;
 use function str_replace;
+use function trim;
 
 final class E2ETest extends TestCase
 {
@@ -41,6 +43,13 @@ final class E2ETest extends TestCase
     #[DataProvider('provideSessions')]
     public function gnuMakeMatchesCommandSnapshot(string $fixtureDirectory): void
     {
+        if (is_file($fixtureDirectory . '/gnu-version.txt')) {
+            $minimum = file_get_contents($fixtureDirectory . '/gnu-version.txt');
+            self::assertIsString($minimum);
+            if (!GnuMake::supports(trim($minimum))) {
+                self::markTestSkipped('Reference GNU make requires version ' . trim($minimum));
+            }
+        }
         $expected = $this->readSnapshot($fixtureDirectory);
         $executable = GnuMake::executable();
         $actual = $this->runSession($fixtureDirectory, $expected, $executable);

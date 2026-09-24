@@ -1,0 +1,12 @@
+$ RECURSIVE=inherited ./phmake
+<|kept|7>
+<expanded |recursive>
+<from-make>
+<130>
+<inherited>
+$ ./phmake fail 2>/dev/null
+[exit 2]
+$ ./phmake cli SHELL=/bin/sh 'CLI!=printf command'
+<command|recursive>
+$ ./phmake cli SHELL=/bin/sh 'CLI:=$(shell printf command)'
+<command|simple>

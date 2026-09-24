@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use LogicException;
+
 use function array_values;
 use function ltrim;
 use function preg_match;
@@ -38,13 +40,13 @@ final readonly class Assignment
             } elseif ($depth === 0) {
                 if (!$allowWhitespace && str_contains(" \t", $text[$index])) {
                     $index += strspn($text, " \t", $index);
-                    if (preg_match('/^(:::=|::=|:=|\+=|\?=|=)/', substr($text, $index)) !== 1) {
+                    if (preg_match('/^(:::=|::=|:=|!=|\+=|\?=|=)/', substr($text, $index)) !== 1) {
                         return null;
                     }
                 }
                 $matches = [];
-                if (preg_match('/^(:::=|::=|:=|\+=|\?=|=)/', substr($text, $index), $matches) === 1) {
-                    /** @var array{non-falsy-string, ':::='|'::='|':='|'+='|'?='|'='} $matches */
+                if (preg_match('/^(:::=|::=|:=|!=|\+=|\?=|=)/', substr($text, $index), $matches) === 1) {
+                    /** @var array{non-falsy-string, ':::='|'::='|':='|'!='|'+='|'?='|'='} $matches */
                     return new self(
                         trim(substr($text, 0, $index)),
                         $matches[1],
@@ -92,6 +94,17 @@ final readonly class Assignment
         ?string $source = null,
         ?VariableExpander $expander = null,
     ): void {
+        $shellValue = null;
+        if ($this->operator === '!=') {
+            $scope = $expander ?? new VariableExpander(array_values($variables), $output, source: $source);
+            $shellValue = Functions::shell(
+                $scope->context->shell ?? throw new LogicException('Missing shell service'),
+                $scope,
+                $scope->expand($this->expression),
+                $output,
+                false,
+            );
+        }
         $previous = $variables[$this->name] ?? null;
         if (
             $previous !== null && self::priority($previous->origin) > self::priority($origin)
@@ -109,6 +122,9 @@ final readonly class Assignment
                 $output,
                 source: $source,
             ))->expand($this->expression);
+        if ($shellValue !== null) {
+            $value = $shellValue;
+        }
         if ($this->operator === ':::=') {
             $value = str_replace('$', '$$', $value);
         }

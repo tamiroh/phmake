@@ -40,7 +40,7 @@ final readonly class Sandbox
         try {
             /** @var SplFileInfo $file */
             foreach (new FilesystemIterator($fixtureDirectory) as $file) {
-                if ($file->getFilename() === 'session.txt') {
+                if ($file->getFilename() === 'session.txt' || $file->getFilename() === 'gnu-version.txt') {
                     continue;
                 }
                 if (!copy($file->getPathname(), $sandbox->path . '/' . $file->getFilename())) {

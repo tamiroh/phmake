@@ -96,12 +96,13 @@ final readonly class VariableExpander
             return null;
         }
         $arguments = array_slice($arguments, 0, $maximum);
-        if (in_array($name, ['if', 'and', 'or'], true)) {
+        if (in_array($name, ['if', 'and', 'or', 'intcmp'], true)) {
             $expand = $argumentsExpanded
                 ? static fn(string $argument): string => $argument
                 : /** @throws MakefileErrorException */
                 fn(string $argument): string => $this->expand($argument, $expanding);
             return match ($name) {
+                'intcmp' => Functions::intcmp($expand, $arguments, $this->source),
                 'if' => Functions::if($expand, $arguments[0] ?? null, $arguments[1] ?? null, $arguments[2] ?? ''),
                 'and' => Functions::and($arguments, $expand),
                 'or' => Functions::or($arguments, $expand),
@@ -126,6 +127,30 @@ final readonly class VariableExpander
         $second = $arguments[1] ?? null;
         $third = $arguments[2] ?? null;
         return match ($name) {
+            'shell' => Functions::shell(
+                $this->context->shell ?? throw new LogicException('Missing shell service'),
+                $this->inExpansion($expanding),
+                $first,
+                $this->output,
+            ),
+            'file' => Functions::file(
+                $this->context->filesystem ?? throw new LogicException('Missing filesystem service'),
+                $first,
+                $second,
+                $this->source,
+            ),
+            'wildcard' => Functions::wildcard(
+                $this->context->filesystem ?? throw new LogicException('Missing filesystem service'),
+                $first,
+            ),
+            'abspath' => Functions::abspath(
+                $this->context->filesystem ?? throw new LogicException('Missing filesystem service'),
+                $first,
+            ),
+            'realpath' => Functions::realpath(
+                $this->context->filesystem ?? throw new LogicException('Missing filesystem service'),
+                $first,
+            ),
             'call' => Functions::call($arguments, $this, $expanding),
             'eval' => Functions::eval($first ?? '', $this->context->evaluate, $this->inExpansion($expanding)),
             'info' => Functions::info($first ?? '', $this->output),
@@ -211,13 +236,24 @@ final readonly class VariableExpander
             /** @var array{non-empty-string, non-empty-string} $matches */
             $argumentCount = Functions::ARGUMENT_COUNTS[$matches[1]] ?? null;
             if ($argumentCount !== null) {
-                return (
-                    $this->invokeFunction(
-                        $matches[1],
-                        ExpansionSyntax::arguments(substr($reference, strlen($matches[0])), $argumentCount, $opening),
-                        $expanding,
-                    ) ?? ''
-                );
+                try {
+                    return (
+                        $this->invokeFunction(
+                            $matches[1],
+                            ExpansionSyntax::arguments(
+                                substr($reference, strlen($matches[0])),
+                                $argumentCount,
+                                $opening,
+                            ),
+                            $expanding,
+                        ) ?? ''
+                    );
+                } catch (MakefileErrorException $error) {
+                    throw new MakefileErrorException(
+                        $error->getMessage(),
+                        $error->source ?? $this->definitionSource ?? $this->source,
+                    );
+                }
             }
         }
         $reference = $this->expand($reference, $expanding);
@@ -258,6 +294,9 @@ final readonly class VariableExpander
             return $variable->expression;
         }
         if (in_array($name, $expanding, true)) {
+            if ($this->context->shellEnvironment) {
+                return $this->context->inheritedEnvironment[$name] ?? '';
+            }
             throw new MakefileErrorException("Recursive variable `{$name}'");
         }
         return new self(

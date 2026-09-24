@@ -8,9 +8,11 @@ use LogicException;
 use Tamiroh\Phmake\Makefile\Assignment;
 use Tamiroh\Phmake\Makefile\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Exports;
+use Tamiroh\Phmake\Makefile\Filesystem;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Output;
+use Tamiroh\Phmake\Makefile\Shell;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
@@ -50,11 +52,14 @@ final readonly class MakefileParser
         private ?Output $output = null,
         private array $sources = [],
         private ?Configuration $configuration = null,
+        private ?Shell $shell = null,
+        private ?Filesystem $filesystem = null,
     ) {}
 
     private static function removeComment(string $line): string
     {
         $result = '';
+        $depth = 0;
         for ($index = 0; $index < strlen($line); $index++) {
             if ($line[$index] === '\\') {
                 $start = $index;
@@ -80,7 +85,15 @@ final readonly class MakefileParser
                 $index--;
                 continue;
             }
-            if ($line[$index] === '#') {
+            if (
+                ($line[$index] === '(' || $line[$index] === '{')
+                && ($depth > 0 || $index > 0 && $line[$index - 1] === '$')
+            ) {
+                $depth++;
+            } elseif (($line[$index] === ')' || $line[$index] === '}') && $depth > 0) {
+                $depth--;
+            }
+            if ($line[$index] === '#' && $depth === 0) {
                 break;
             }
             $result .= $line[$index];
@@ -133,9 +146,14 @@ final readonly class MakefileParser
     {
         $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false));
         $context = new EvaluationContext();
+        $context->shell = $this->shell;
+        $context->filesystem = $this->filesystem;
         $variables = &$context->variables;
         foreach ($this->defaults as $variable) {
             $variables[$variable->name] = $variable;
+            if (in_array($variable->origin, ['environment', 'environment override'], true)) {
+                $context->inheritedEnvironment[$variable->name] = $variable->expression;
+            }
         }
         $variables = [...$variables, ...$this->overrides];
         $inherited = ['MAKEFLAGS'];
@@ -145,6 +163,7 @@ final readonly class MakefileParser
             }
         }
         $exports = new Exports($inherited);
+        $context->exports = $exports;
         $context->evaluate =
             /** @throws MakefileErrorException */
             function (string $text, VariableExpander $expander) use ($builder, $exports): void {
@@ -218,7 +237,7 @@ final readonly class MakefileParser
             if (!str_starts_with($line, $prefix)) {
                 $directive = trim(self::removeComment($line));
                 $matches = [];
-                if (preg_match('/^define(?:[ \t]+(?![:+?=])\S|$)/', $directive) === 1) {
+                if (preg_match('/^define(?:[ \t]+(?![:+?!=])\S|$)/', $directive) === 1) {
                     $depth++;
                 } elseif (preg_match('/^endef(?:\s+(.*))?$/', $directive, $matches) === 1) {
                     /** @var array{string, 1?: string} $matches */
@@ -281,7 +300,7 @@ final readonly class MakefileParser
 
             if (
                 !$conditionals->active()
-                && preg_match('/^\s*(?:(?:override|export|unexport)\s+)*define\s+(?![:+?=])/', $uncommented) === 1
+                && preg_match('/^\s*(?:(?:override|export|unexport)\s+)*define\s+(?![:+?!=])/', $uncommented) === 1
             ) {
                 $this->readDefinition(
                     $reader,
@@ -307,7 +326,7 @@ final readonly class MakefileParser
             $origin = 'file';
             while (preg_match('/^\s*(override|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1) {
                 /** @var array{string, 'override'|'export'|'unexport', string} $matches */
-                if (preg_match('/^(?::::=|::=|:=|\+=|\?=|=)/', ltrim($matches[2])) === 1) {
+                if (preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[2])) === 1) {
                     break;
                 }
                 if ($matches[1] === 'override') {
@@ -319,7 +338,7 @@ final readonly class MakefileParser
             }
             if (
                 preg_match('/^define(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
-                && preg_match('/^(?::::=|::=|:=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
+                && preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
             ) {
                 /** @var array{string, 1?: string} $matches */
                 $header = Assignment::parse($matches[1] ?? '', allowWhitespace: true) ?? new Assignment(
@@ -355,7 +374,7 @@ final readonly class MakefileParser
             }
             if (
                 preg_match('/^undefine(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
-                && preg_match('/^(?::::=|::=|:=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
+                && preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
             ) {
                 /** @var array{string, 1?: string} $matches */
                 $name = new Assignment(trim($matches[1] ?? ''), '=', '')->resolveName($expander)->name;

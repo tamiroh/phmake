@@ -1,0 +1,9 @@
+$ ./phmake
+chosen
+<2>
+<less>
+<equal>
+<>
+<yes>
+$ ./phmake bad 2>/dev/null
+[exit 2]

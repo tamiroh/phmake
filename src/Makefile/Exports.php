@@ -25,7 +25,7 @@ final class Exports
      * @return array<string, string|false>
      * @throws MakefileErrorException
      */
-    public function environment(array|VariableExpander $variables, Output $output): array
+    public function environment(array|VariableExpander $variables, ?Output $output): array
     {
         $environment = [];
         foreach ($this->directives as $name => $export) {
