@@ -1,0 +1,9 @@
+$ ./phmake
+all
+all
+$ touch output
+$ ./phmake -f cycle.mk
+phmake: `output' is up to date.
+$ INHERITED='$(literal)' CYCLE='$(CYCLE)' ./phmake -f inherited.mk
+$(literal)
+unset

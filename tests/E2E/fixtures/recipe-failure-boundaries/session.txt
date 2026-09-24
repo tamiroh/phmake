@@ -1,0 +1,7 @@
+$ ./phmake stop 2>/dev/null
+[exit 2]
+$ ./phmake ignore 2>/dev/null
+unreachable
+$ ./phmake expand-first 2>/dev/null
+[exit 2]
+$ test ! -e started
