@@ -1,0 +1,33 @@
+$ ./phmake
+<after after>
+<before before>
+<after>
+<default>
+<>
+<$(name) $(name)>
+<before before>
+<$(loop)>
+<>
+<recursive>
+<simple>
+<recursive>
+<undefined>
+<file>
+<default>
+<default>
+<automatic>
+<undefined>
+<$(name) $(name)>
+<simple>
+<automatic>
+<automatic:simple:a automatic:simple:b>
+<file:after>
+<automatic:simple:$(literal)>
+$ PHMAKE_SAMPLE_ENV=sample fallback=environment name=environment ./phmake environment
+<environment:sample>
+<environment:environment>
+<file:after>
+$ PHMAKE_SAMPLE_ENV=sample ./phmake environment fallback=command name=command
+<environment:sample>
+<command line:command>
+<command line:command>

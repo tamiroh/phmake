@@ -73,7 +73,7 @@ final class CommandLine
             return false;
         }
         /** @var array{non-empty-string, non-empty-string, string} $matches */
-        $variables[$matches[1]] = new Variable($matches[1], ltrim($matches[2]));
+        $variables[$matches[1]] = new Variable($matches[1], ltrim($matches[2]), origin: 'command line');
         return true;
     }
 

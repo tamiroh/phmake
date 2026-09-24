@@ -42,6 +42,9 @@ final class Functions
         'and' => PHP_INT_MAX,
         'or' => PHP_INT_MAX,
         'info' => 1,
+        'value' => 1,
+        'flavor' => 1,
+        'origin' => 1,
         'subst' => 3,
         'patsubst' => 3,
         'strip' => 1,
@@ -207,7 +210,7 @@ final class Functions
         $variables = [];
         $parameters = max($expander->callParameters, count($arguments) - 1);
         for ($index = 0; $index <= $parameters; $index++) {
-            $variables[] = new Variable((string) $index, $arguments[$index] ?? '', false);
+            $variables[] = new Variable((string) $index, $arguments[$index] ?? '', false, 'automatic');
         }
         return $expander->withVariables($variables, $parameters)->expand(
             $variable->expression,
@@ -339,6 +342,32 @@ final class Functions
     }
 
     /**
+     * Return whether a variable is simple, recursive, or undefined.
+     *
+     * Makefile:
+     * ```makefile
+     * greeting := hello
+     * all: ; @printf '<%s>\n' '$(flavor greeting)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <simple>
+     * ```
+     *
+     * @throws MakefileErrorException
+     */
+    public static function flavor(VariableExpander $expander, ?string $name = null): string
+    {
+        if ($name === null) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'flavor'");
+        }
+        $variable = $expander->variable($name);
+        return $variable === null ? 'undefined' : ($variable->recursive ? 'recursive' : 'simple');
+    }
+
+    /**
      * Expand the body once per list word in a temporary variable scope and join the results with spaces.
      *
      * Makefile:
@@ -369,10 +398,9 @@ final class Functions
         $words = self::splitWords($expander->expand($list, $expanding));
         $result = [];
         foreach ($words as $word) {
-            $result[] = $expander->withVariables($name === '' ? [] : [new Variable($name, $word, false)])->expand(
-                $body,
-                $expanding,
-            );
+            $result[] = $expander->withVariables(
+                $name === '' ? [] : [new Variable($name, $word, false, 'automatic')],
+            )->expand($body, $expanding);
         }
         return implode(' ', $result);
     }
@@ -539,6 +567,31 @@ final class Functions
     }
 
     /**
+     * Return where a variable was defined, or undefined when it does not exist.
+     *
+     * Makefile:
+     * ```makefile
+     * greeting = hello
+     * all: ; @printf '<%s>\n' '$(origin greeting)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <file>
+     * ```
+     *
+     * @throws MakefileErrorException
+     */
+    public static function origin(VariableExpander $expander, ?string $name = null): string
+    {
+        if ($name === null) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'origin'");
+        }
+        return $expander->variable($name)->origin ?? 'undefined';
+    }
+
+    /**
      * Replace words matching a percent pattern, preserving unmatched words.
      *
      * Makefile:
@@ -685,6 +738,31 @@ final class Functions
             }
         }
         return implode(' ', $result);
+    }
+
+    /**
+     * Return the stored value of a variable without expanding it.
+     *
+     * Makefile:
+     * ```makefile
+     * greeting = hello $(name)
+     * all: ; @printf '<%s>\n' '$(value greeting)'
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * <hello $(name)>
+     * ```
+     *
+     * @throws MakefileErrorException
+     */
+    public static function value(VariableExpander $expander, ?string $name = null): string
+    {
+        if ($name === null) {
+            throw new MakefileErrorException("insufficient number of arguments to function 'value'");
+        }
+        return $expander->variable($name)->expression ?? '';
     }
 
     /**

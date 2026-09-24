@@ -40,11 +40,11 @@ final readonly class Target
 
         $variables = [
             ...$variables,
-            new Variable('@', $this->name, false),
-            new Variable('<', $this->dependencies[0] ?? '', false),
-            new Variable('^', implode(' ', array_unique($this->dependencies)), false),
-            new Variable('+', implode(' ', $this->dependencies), false),
-            new Variable('*', $this->stem, false),
+            new Variable('@', $this->name, false, 'automatic'),
+            new Variable('<', $this->dependencies[0] ?? '', false, 'automatic'),
+            new Variable('^', implode(' ', array_unique($this->dependencies)), false, 'automatic'),
+            new Variable('+', implode(' ', $this->dependencies), false, 'automatic'),
+            new Variable('*', $this->stem, false, 'automatic'),
         ];
         $commands = [];
         foreach ($this->commands as $command) {

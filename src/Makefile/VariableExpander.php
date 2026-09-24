@@ -115,6 +115,9 @@ final readonly class VariableExpander
         return match ($name) {
             'call' => Functions::call($arguments, $this, $expanding),
             'info' => Functions::info($first ?? '', $this->output),
+            'value' => Functions::value($this, $first),
+            'flavor' => Functions::flavor($this, $first),
+            'origin' => Functions::origin($this, $first),
             'subst' => Functions::subst($first, $second, $third),
             'patsubst' => Functions::patsubst($first, $second, $third),
             'strip' => Functions::strip($first),

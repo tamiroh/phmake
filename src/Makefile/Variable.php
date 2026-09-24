@@ -10,5 +10,6 @@ final readonly class Variable
         public string $name,
         public string $expression,
         public bool $recursive = true,
+        public string $origin = 'file',
     ) {}
 }

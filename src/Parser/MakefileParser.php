@@ -153,19 +153,24 @@ final readonly class MakefileParser
             }
 
             $matches = [];
-            if (preg_match('/^\s*([A-Za-z_][A-Za-z0-9_.-]*)\s*(:=|=)(.*)$/s', $uncommented, $matches) === 1) {
-                /** @var array{string, non-empty-string, ':='|'=', string} $matches */
+            if (preg_match('/^\s*([A-Za-z_][A-Za-z0-9_.-]*)\s*(:=|\+=|\?=|=)(.*)$/s', $uncommented, $matches) === 1) {
+                /** @var array{string, non-empty-string, ':='|'+='|'?='|'=', string} $matches */
                 if (isset($this->overrides[$matches[1]])) {
                     continue;
                 }
+                $previous = $variables[$matches[1]] ?? null;
+                if ($matches[2] === '?=' && $previous !== null) {
+                    continue;
+                }
                 $value = ltrim($matches[3]);
-                $variables[$matches[1]] = new Variable(
-                    $matches[1],
-                    $matches[2] === ':='
-                        ? new VariableExpander(array_values($variables), $this->output)->expand($value)
-                        : $value,
-                    $matches[2] === '=',
-                );
+                $recursive = $matches[2] === '+=' ? $previous->recursive ?? true : $matches[2] !== ':=';
+                if (!$recursive) {
+                    $value = new VariableExpander(array_values($variables), $this->output)->expand($value);
+                }
+                if ($matches[2] === '+=' && $previous !== null) {
+                    $value = $previous->expression . ' ' . $value;
+                }
+                $variables[$matches[1]] = new Variable($matches[1], $value, $recursive);
                 continue;
             }
 

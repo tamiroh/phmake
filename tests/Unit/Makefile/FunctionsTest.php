@@ -42,6 +42,9 @@ final class FunctionsTest extends TestCase
     public static function invalidExpressions(): iterable
     {
         yield 'missing argument' => ['$(subst a,b)'];
+        yield 'missing value argument' => ['$(call value)'];
+        yield 'missing flavor argument' => ['$(call flavor)'];
+        yield 'missing origin argument' => ['$(call origin)'];
         yield 'empty index' => ['$(word ,a)'];
         yield 'zero index' => ['$(word 0,a)'];
         yield 'negative index' => ['$(word -1,a)'];

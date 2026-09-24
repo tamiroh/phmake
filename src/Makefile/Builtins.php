@@ -16,11 +16,11 @@ final class Builtins
     public static function variables(): array
     {
         return [
-            new Variable('CC', 'cc'),
-            new Variable('AR', 'ar'),
-            new Variable('SHELL', '/bin/sh'),
-            new Variable('COMPILE.c', '$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c'),
-            new Variable('OUTPUT_OPTION', '-o $@'),
+            new Variable('CC', 'cc', origin: 'default'),
+            new Variable('AR', 'ar', origin: 'default'),
+            new Variable('SHELL', '/bin/sh', origin: 'default'),
+            new Variable('COMPILE.c', '$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c', origin: 'default'),
+            new Variable('OUTPUT_OPTION', '-o $@', origin: 'default'),
         ];
     }
 }

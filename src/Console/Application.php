@@ -65,15 +65,23 @@ final readonly class Application
             $makefileRaw .= $source . "\n";
         }
 
+        $environmentVariables = [];
+        foreach (getenv() as $name => $value) {
+            if ($name !== 'SHELL') {
+                $environmentVariables[] = new Variable($name, $value, origin: 'environment');
+            }
+        }
         return new MakefileParser(
             $makefileRaw,
             new SourceFiles(),
             [
                 ...Builtins::variables(),
+                ...$environmentVariables,
                 new Variable(
                     'MAKE',
                     escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname(__DIR__, 2) . '/phmake'),
                     false,
+                    'default',
                 ),
             ],
             $commandLine->variables,
