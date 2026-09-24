@@ -1,0 +1,15 @@
+$ ./phmake
+included.mk:1: from include
+Makefile:5: through variable
+first
+Makefile:7: item a
+Makefile:7: item b
+second
+safe
+$ ./phmake -s -f first.mk -f second.mk
+second.mk:2: second file
+result
+$ ./phmake -f error.mk || echo "exit=$?"
+prerequisite
+error.mk:3: *** stopped.  Stop.
+exit=2

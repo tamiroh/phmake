@@ -20,6 +20,9 @@ final class FakeOutput implements Output
     /** @var list<string> */
     public private(set) array $warnings = [];
 
+    /** @var list<?string> */
+    public private(set) array $warningSources = [];
+
     #[\Override]
     public function write(string $text): void
     {
@@ -39,8 +42,9 @@ final class FakeOutput implements Output
     }
 
     #[\Override]
-    public function writeWarning(string $message): void
+    public function writeWarning(string $message, ?string $source = null): void
     {
         $this->warnings[] = $message;
+        $this->warningSources[] = $source;
     }
 }

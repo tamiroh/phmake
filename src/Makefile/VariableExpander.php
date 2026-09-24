@@ -32,6 +32,7 @@ final readonly class VariableExpander
         array $variables,
         private ?Output $output = null,
         public int $callParameters = 0,
+        private ?string $source = null,
     ) {
         $indexed = [];
         foreach ($variables as $variable) {
@@ -101,7 +102,7 @@ final readonly class VariableExpander
             );
         }
         if (!$argumentsExpanded) {
-            if ($name === 'info') {
+            if (in_array($name, ['info', 'warning', 'error'], true)) {
                 $arguments[0] = ltrim($arguments[0] ?? '');
             }
             foreach ($arguments as &$argument) {
@@ -115,6 +116,8 @@ final readonly class VariableExpander
         return match ($name) {
             'call' => Functions::call($arguments, $this, $expanding),
             'info' => Functions::info($first ?? '', $this->output),
+            'warning' => Functions::warning($first ?? '', $this->output, $this->source),
+            'error' => Functions::error($first ?? '', $this->source),
             'value' => Functions::value($this, $first),
             'flavor' => Functions::flavor($this, $first),
             'origin' => Functions::origin($this, $first),
@@ -153,6 +156,7 @@ final readonly class VariableExpander
             [...array_values($this->variables), ...$variables],
             $this->output,
             $callParameters ?? $this->callParameters,
+            $this->source,
         );
     }
 

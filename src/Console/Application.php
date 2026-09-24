@@ -16,6 +16,7 @@ use function dirname;
 use function escapeshellarg;
 use function file_get_contents;
 use function getenv;
+use function substr_count;
 
 final readonly class Application
 {
@@ -37,7 +38,7 @@ final readonly class Application
         } catch (ParseException $e) {
             Process::stopWithError($e->reason, ($commandLine->makefiles[0] ?? 'Makefile') . ":$e->lineNumber");
         } catch (MakefileErrorException $e) {
-            Process::stopWithError($e->getMessage());
+            Process::stopWithError($e->getMessage(), $e->source ?? 'phmake');
         }
     }
 
@@ -48,6 +49,7 @@ final readonly class Application
     private function createMakefile(CommandLine $commandLine, Output $output): Makefile
     {
         $makefileRaw = '';
+        $sources = [];
         foreach ($commandLine->makefiles === [] ? ['Makefile'] : $commandLine->makefiles as $path) {
             $source = @file_get_contents($path === '-' ? 'php://stdin' : $path);
             if ($source === false) {
@@ -57,6 +59,7 @@ final readonly class Application
                         : "Makefile `$path' not found",
                 );
             }
+            $sources[substr_count($makefileRaw, "\n") + 1] = $path;
             $makefileRaw .= $source . "\n";
         }
 
@@ -83,6 +86,7 @@ final readonly class Application
             $commandLine->variables,
             Builtins::rules(),
             $output,
+            $sources,
         )->parse();
     }
 }

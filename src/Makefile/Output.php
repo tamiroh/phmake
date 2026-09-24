@@ -12,5 +12,5 @@ interface Output
 
     public function writeLine(string $line): void;
 
-    public function writeWarning(string $message): void;
+    public function writeWarning(string $message, ?string $source = null): void;
 }

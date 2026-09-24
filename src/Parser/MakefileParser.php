@@ -32,6 +32,7 @@ final readonly class MakefileParser
      * @param list<Variable> $defaults
      * @param array<string, Variable> $overrides
      * @param list<Target> $builtinRules
+     * @param array<int, string> $sources
      */
     public function __construct(
         private string $source,
@@ -40,6 +41,7 @@ final readonly class MakefileParser
         private array $overrides = [],
         private array $builtinRules = [],
         private ?Output $output = null,
+        private array $sources = [],
     ) {}
 
     private static function removeComment(string $line): string
@@ -76,6 +78,21 @@ final readonly class MakefileParser
             $result .= $line[$index];
         }
         return $result;
+    }
+
+    /**
+     * @param array<int, string> $sources
+     */
+    private static function sourceLocation(array $sources, int $lineNumber): ?string
+    {
+        $location = null;
+        foreach ($sources as $start => $path) {
+            if ($start > $lineNumber) {
+                break;
+            }
+            $location = $path . ':' . ($lineNumber - $start + 1);
+        }
+        return $location;
     }
 
     /** @return array{string, ?string} */
@@ -119,7 +136,7 @@ final readonly class MakefileParser
             }
         }
         $exports = new Exports($inherited);
-        $this->readRules($this->source, $builder, $variables, [], $exports);
+        $this->readRules($this->source, $builder, $variables, [], $exports, $this->sources);
         return $builder->build(array_values($variables), $this->builtinRules, $exports);
     }
 
@@ -133,6 +150,7 @@ final readonly class MakefileParser
     /**
      * @param array<string, Variable> $variables
      * @param list<string> $included
+     * @param array<int, string> $sources
      * @throws MakefileErrorException
      */
     private function readRules(
@@ -141,6 +159,7 @@ final readonly class MakefileParser
         array &$variables,
         array $included,
         Exports $exports,
+        array $sources,
     ): void {
         $reader = new LineReader($source);
         $rule = null;
@@ -148,6 +167,7 @@ final readonly class MakefileParser
 
         while (($line = $reader->next($variables['.RECIPEPREFIX']->expression[0] ?? "\t")) !== null) {
             $lineNumber = $reader->lineNumber;
+            $location = self::sourceLocation($sources, $lineNumber);
             if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
                 if (!$conditionals->active()) {
                     continue;
@@ -155,7 +175,7 @@ final readonly class MakefileParser
                 if ($rule === null) {
                     throw new ParseException($lineNumber, 'Recipe without a rule');
                 }
-                $rule->addRecipe(substr($line, offset: 1));
+                $rule->addRecipe(substr($line, offset: 1), $location);
                 continue;
             }
 
@@ -167,7 +187,7 @@ final readonly class MakefileParser
             if (
                 $conditionals->read(
                     $uncommented,
-                    new VariableExpander(array_values($variables), $this->output),
+                    new VariableExpander(array_values($variables), $this->output, source: $location),
                     $lineNumber,
                 )
                 || !$conditionals->active()
@@ -188,9 +208,11 @@ final readonly class MakefileParser
                     $export = $matches[1] === 'export';
                     $uncommented = ltrim($matches[2]);
                     if (preg_match('/^[A-Za-z_.][A-Za-z0-9_.-]*\\s*(?::=|\\+=|\\?=|=)/', $uncommented) !== 1) {
-                        $names = self::words(new VariableExpander(array_values($variables), $this->output)->expand(
-                            $uncommented,
-                        ));
+                        $names = self::words(new VariableExpander(
+                            array_values($variables),
+                            $this->output,
+                            source: $location,
+                        )->expand($uncommented));
                         $exports->set($names, $export);
                         foreach ($names as $name) {
                             $variables[$name] ??= new Variable($name, '', false);
@@ -219,7 +241,9 @@ final readonly class MakefileParser
                 $value = ltrim($matches[3]);
                 $recursive = $matches[2] === '+=' ? $previous->recursive ?? true : $matches[2] !== ':=';
                 if (!$recursive) {
-                    $value = new VariableExpander(array_values($variables), $this->output)->expand($value);
+                    $value = new VariableExpander(array_values($variables), $this->output, source: $location)->expand(
+                        $value,
+                    );
                 }
                 if ($matches[2] === '+=' && $previous !== null) {
                     $value = $previous->expression . ' ' . $value;
@@ -230,9 +254,11 @@ final readonly class MakefileParser
 
             if (preg_match('/^\s*(-?include|sinclude)\s+(.+)$/', $uncommented, $matches) === 1) {
                 /** @var array{non-falsy-string, '-include'|'include'|'sinclude', non-empty-string} $matches */
-                $patterns = self::words(new VariableExpander(array_values($variables), $this->output)->expand(
-                    $matches[2],
-                ));
+                $patterns = self::words(new VariableExpander(
+                    array_values($variables),
+                    $this->output,
+                    source: $location,
+                )->expand($matches[2]));
                 foreach ($patterns as $pattern) {
                     foreach ($this->matchingPaths($pattern) as $path) {
                         $contents = $this->files?->read($path);
@@ -245,14 +271,18 @@ final readonly class MakefileParser
                         if (in_array($path, $included, strict: true)) {
                             throw new ParseException($lineNumber, "Recursive include `$path'");
                         }
-                        $this->readRules($contents, $builder, $variables, [...$included, $path], $exports);
+                        $this->readRules($contents, $builder, $variables, [...$included, $path], $exports, [
+                            1 => $path,
+                        ]);
                     }
                 }
                 continue;
             }
 
             [$header, $recipe] = self::splitRecipe($line);
-            $expanded = new VariableExpander(array_values($variables), $this->output)->expand($header);
+            $expanded = new VariableExpander(array_values($variables), $this->output, source: $location)->expand(
+                $header,
+            );
             if (trim($expanded) === '' && $recipe === null) {
                 continue;
             }
@@ -277,7 +307,7 @@ final readonly class MakefileParser
             }
             $rule = new Rule($names, $prerequisites, $lineNumber);
             if ($recipe !== null) {
-                $rule->addRecipe(ltrim($recipe));
+                $rule->addRecipe(ltrim($recipe), $location);
             }
         }
 

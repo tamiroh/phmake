@@ -8,6 +8,7 @@ final readonly class Command
 {
     public function __construct(
         public string $expression,
+        public ?string $source = null,
     ) {}
 
     /**
@@ -16,7 +17,11 @@ final readonly class Command
      */
     public function expand(array $variables, Output $output): ExpandedCommand
     {
-        return new ExpandedCommand(new VariableExpander($variables, $output)->expand($this->expression));
+        return new ExpandedCommand(new VariableExpander(
+            $variables,
+            $output,
+            source: $this->source,
+        )->expand($this->expression));
     }
 
     /**

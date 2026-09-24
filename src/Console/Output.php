@@ -35,8 +35,8 @@ final class Output implements OutputInterface
     }
 
     #[\Override]
-    public function writeWarning(string $message): void
+    public function writeWarning(string $message, ?string $source = null): void
     {
-        fwrite(STDERR, "phmake: $message" . PHP_EOL);
+        fwrite(STDERR, ($source ?? 'phmake') . ": $message" . PHP_EOL);
     }
 }

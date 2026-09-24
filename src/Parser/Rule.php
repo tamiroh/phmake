@@ -25,11 +25,11 @@ final class Rule
         public readonly int $lineNumber,
     ) {}
 
-    public function addRecipe(string $recipe): void
+    public function addRecipe(string $recipe, ?string $source = null): void
     {
         $this->hasRecipe = true;
         if (trim($recipe) !== '') {
-            $this->commands[] = new Command($recipe);
+            $this->commands[] = new Command($recipe, $source);
         }
     }
 }

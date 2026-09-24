@@ -42,6 +42,8 @@ final class Functions
         'and' => PHP_INT_MAX,
         'or' => PHP_INT_MAX,
         'info' => 1,
+        'warning' => 1,
+        'error' => 1,
         'value' => 1,
         'flavor' => 1,
         'origin' => 1,
@@ -243,6 +245,27 @@ final class Functions
             $slash = strrpos($word, '/');
             return $slash === false ? './' : substr($word, 0, $slash + 1);
         }, self::splitWords($text)));
+    }
+
+    /**
+     * Stop expansion with a fatal diagnostic at the current source location.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @echo $(error stopped)
+     * ```
+     *
+     * Run (exit status 2):
+     * ```text
+     * $ ./phmake
+     * Makefile:1: *** stopped.  Stop.
+     * ```
+     *
+     * @throws MakefileErrorException
+     */
+    public static function error(string $message, ?string $source = null): never
+    {
+        throw new MakefileErrorException($message, $source);
     }
 
     /**
@@ -763,6 +786,27 @@ final class Functions
             throw new MakefileErrorException("insufficient number of arguments to function 'value'");
         }
         return $expander->variable($name)->expression ?? '';
+    }
+
+    /**
+     * Print a diagnostic with its source location and continue with an empty value.
+     *
+     * Makefile:
+     * ```makefile
+     * all: ; @echo $(warning check)done
+     * ```
+     *
+     * Run:
+     * ```text
+     * $ ./phmake
+     * Makefile:1: check
+     * done
+     * ```
+     */
+    public static function warning(string $message, ?Output $output, ?string $source = null): string
+    {
+        $output?->writeWarning($message, $source);
+        return '';
     }
 
     /**
