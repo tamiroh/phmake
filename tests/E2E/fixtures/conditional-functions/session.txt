@@ -22,4 +22,4 @@ expanded
 first
 second
 $ touch cached && ./phmake cached
-phmake: `cached' is up to date.
+phmake: 'cached' is up to date.

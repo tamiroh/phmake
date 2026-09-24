@@ -1,0 +1,2 @@
+all: a.o b.o
+a.o b.o &: ; @echo $@:$*

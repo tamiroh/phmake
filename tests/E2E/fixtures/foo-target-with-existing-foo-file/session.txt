@@ -1,2 +1,2 @@
 $ ./phmake foo
-phmake: `foo' is up to date.
+phmake: 'foo' is up to date.

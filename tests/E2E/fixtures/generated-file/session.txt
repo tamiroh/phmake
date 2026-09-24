@@ -7,4 +7,4 @@ phmake
 $ cat foo.txt
 hello
 $ ./phmake
-phmake: `foo.txt' is up to date.
+phmake: 'foo.txt' is up to date.

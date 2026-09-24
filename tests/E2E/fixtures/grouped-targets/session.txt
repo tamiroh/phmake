@@ -1,0 +1,17 @@
+$ ./phmake
+group:one
+$ rm two
+$ ./phmake one
+group:one
+$ ./phmake
+phmake: Nothing to be done for 'all'.
+$ ./phmake -f double.mk
+first:a
+second:c
+$ touch -t 202001020000 input
+$ touch -t 202001030000 one
+$ touch -t 202001010000 two
+$ ./phmake one
+group:one
+$ ./phmake -f suffix.mk
+a.o:a

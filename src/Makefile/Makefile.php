@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-use function array_filter;
-use function array_key_exists;
-use function array_values;
 use function basename;
+use function count;
 use function str_contains;
 use function strlen;
 use function substr;
@@ -16,20 +14,20 @@ use function usort;
 final readonly class Makefile
 {
     /** @var array<string, Target> */
-    private array $targetsByName;
+    public array $targetsByName;
 
     /**
      * @param list<Target> $targets
      * @param list<Variable> $variables
-     * @param list<Target> $patterns
+     * @param list<PatternRule> $patterns
      */
     public function __construct(
         public array $targets = [],
         public array $variables = [],
         public ?string $defaultGoal = null,
         private array $patterns = [],
-        private Exports $exports = new Exports(),
-        private ?EvaluationContext $context = null,
+        public Exports $exports = new Exports(),
+        public ?EvaluationContext $context = null,
     ) {
         $indexed = [];
         foreach ($targets as $target) {
@@ -38,160 +36,124 @@ final readonly class Makefile
         $this->targetsByName = $indexed;
     }
 
-    /**
-     * @param list<string> $targets
+    /** @param array<int, true> $usedPatterns */
+    public function resolveTarget(string $name, Filesystem $filesystem, array $usedPatterns = []): ?Target
+    {
+        $explicit = $this->targetsByName[$name] ?? null;
+        if ($explicit !== null) {
+            if ($explicit->isPhony) {
+                return $explicit;
+            }
+            $rules = [];
+            foreach ($explicit->rules as $rule) {
+                $rules[] = $rule->recipe !== null
+                    ? $rule
+                    : $this->resolveImplicit($name, $filesystem, $rule, $usedPatterns) ?? $rule;
+            }
+            return new Target($name, $rules);
+        }
+        $implicit = $this->resolveImplicit($name, $filesystem, null, $usedPatterns);
+        if ($implicit !== null) {
+            return new Target($name, [$implicit]);
+        }
+        if (!$filesystem->exists($name) && isset($this->targetsByName['.DEFAULT'])) {
+            return new Target($name, [new BuildRule(
+                recipe: $this->targetsByName['.DEFAULT']->rules[0]->recipe ?? null,
+                firstPrerequisite: $name,
+            )]);
+        }
+        return null;
+    }
+
+    /** @param list<string> $targets
      * @throws MakefileErrorException
      * @throws CommandFailedException
      */
     public function run(array $targets, Shell $shell, Filesystem $filesystem, Output $output): void
     {
-        if ($targets === []) {
-            if ($this->defaultGoal === null) {
-                throw new MakefileErrorException('No targets');
-            }
-            $targets = [$this->defaultGoal];
-        }
-
-        $results = [];
-        $visiting = [];
-        foreach ($targets as $target) {
-            $commandsExecuted = false;
-            $this->runTarget($target, $shell, $filesystem, $output, $results, $visiting, $commandsExecuted);
-            if (!$commandsExecuted) {
-                $output->writeInfo(
-                    ($this->resolveTarget($target, $filesystem)->commands ?? []) === []
-                        ? "Nothing to be done for `$target'."
-                        : "`$target' is up to date.",
-                );
-            }
-        }
+        new Build($this, $shell, $filesystem, $output)->run($targets);
     }
 
     /** @param array<int, true> $usedPatterns */
-    private function resolveTarget(string $name, Filesystem $filesystem, array $usedPatterns = []): ?Target
-    {
-        $explicit = $this->targetsByName[$name] ?? null;
-        if ($explicit !== null && ($explicit->hasRecipe || $explicit->commands !== [] || $explicit->isPhony)) {
-            return $explicit;
-        }
+    private function resolveImplicit(
+        string $name,
+        Filesystem $filesystem,
+        ?BuildRule $explicit,
+        array $usedPatterns,
+    ): ?BuildRule {
         $candidates = [];
         foreach ($this->patterns as $index => $pattern) {
-            if ($pattern->commands === [] || isset($usedPatterns[$index])) {
+            if ($pattern->rule->recipe === null || isset($usedPatterns[$index])) {
                 continue;
             }
-            $hasDirectory = str_contains($pattern->name, '/');
-            $stem = new Pattern($pattern->name)->match($hasDirectory ? $name : basename($name));
-            if ($stem === null || $stem === '') {
-                continue;
+            foreach ($pattern->names as $targetPattern) {
+                $hasDirectory = str_contains($targetPattern, '/');
+                $stem = new Pattern($targetPattern)->match($hasDirectory ? $name : basename($name));
+                if ($stem === null || $stem === '') {
+                    continue;
+                }
+                $directory = $hasDirectory ? '' : substr($name, 0, strlen($name) - strlen(basename($name)));
+                $candidates[] = [
+                    new BuildRule(
+                        new Prerequisites(
+                            $this->substitute($pattern->rule->prerequisites->normal, $stem, $directory),
+                            $this->substitute($pattern->rule->prerequisites->orderOnly, $stem, $directory),
+                            $pattern->rule->prerequisites->expressions,
+                        ),
+                        $pattern->rule->recipe,
+                        $pattern->rule->doubleColon,
+                        $directory . $stem,
+                        count($pattern->names) > 1 ? $this->substitute($pattern->names, $stem, $directory) : [],
+                    ),
+                    $index,
+                ];
             }
-            $directory = $hasDirectory ? '' : substr($name, 0, strlen($name) - strlen(basename($name)));
-            $dependencies = [];
-            foreach ($pattern->dependencies as $dependency) {
-                $dependencies[] =
-                    (str_contains($dependency, '%') ? $directory : '') . new Pattern($dependency)->substitute($stem);
-            }
-            $candidates[] = [new Target($name, $dependencies, $pattern->commands, false, $directory . $stem), $index];
         }
         usort($candidates, static fn(array $a, array $b): int => strlen($a[0]->stem) <=> strlen($b[0]->stem));
         foreach ([false, true] as $allowChaining) {
             foreach ($candidates as [$candidate, $index]) {
-                foreach ($candidate->dependencies as $dependency) {
+                foreach ([
+                    ...$candidate->prerequisites->normal,
+                    ...$candidate->prerequisites->orderOnly,
+                ] as $dependency) {
                     if (
                         !$filesystem->exists($dependency)
-                        && !isset($this->targetsByName[$dependency])
                         && (
-                            !$allowChaining
-                            || $this->resolveTarget($dependency, $filesystem, $usedPatterns + [$index => true]) === null
+                            $candidate->doubleColon
+                            || !isset($this->targetsByName[$dependency])
+                            && (
+                                !$allowChaining
+                                || $this->resolveTarget($dependency, $filesystem, $usedPatterns + [$index => true])
+                                === null
+                            )
                         )
                     ) {
                         continue 2;
                     }
                 }
-                return new Target(
-                    $name,
-                    [...$candidate->dependencies, ...($explicit->dependencies ?? [])],
-                    $candidate->commands,
-                    false,
+                $prerequisites = $candidate->prerequisites->merge($explicit->prerequisites ?? new Prerequisites());
+                return new BuildRule(
+                    $prerequisites,
+                    $candidate->recipe,
+                    $explicit->doubleColon ?? false,
                     $candidate->stem,
+                    $candidate->group,
                 );
             }
         }
-        return $explicit;
+        return null;
     }
 
-    /**
-     * @param array<string, bool> $results
-     * @param array<string, true> $visiting
-     * @throws MakefileErrorException
-     * @throws CommandFailedException
+    /** @param list<string> $names
+     * @return list<string>
      */
-    private function runTarget(
-        string $name,
-        Shell $shell,
-        Filesystem $filesystem,
-        Output $output,
-        array &$results,
-        array &$visiting,
-        bool &$commandsExecuted,
-        ?string $neededBy = null,
-    ): bool {
-        if (array_key_exists($name, $results)) {
-            return $results[$name];
+    private function substitute(array $names, string $stem, string $directory): array
+    {
+        $result = [];
+        foreach ($names as $name) {
+            $pattern = new Pattern($name);
+            $result[] = ($pattern->hasWildcard() ? $directory : '') . $pattern->substitute($stem);
         }
-        $target = $this->resolveTarget($name, $filesystem);
-        if ($target === null) {
-            if ($filesystem->exists($name)) {
-                return $results[$name] = false;
-            }
-            throw new MakefileErrorException(
-                "No rule to make target `$name'" . ($neededBy === null ? '' : ", needed by `$neededBy'"),
-            );
-        }
-
-        $visiting[$name] = true;
-        try {
-            $dependenciesRebuilt = false;
-            foreach ($target->dependencies as $dependency) {
-                if (isset($visiting[$dependency])) {
-                    $output->writeWarning("Circular $name <- $dependency dependency dropped.");
-                    $target = new Target(
-                        $target->name,
-                        array_values(array_filter(
-                            $target->dependencies,
-                            static fn(string $candidate): bool => $candidate !== $dependency,
-                        )),
-                        $target->commands,
-                        $target->isPhony,
-                        $target->stem,
-                        $target->hasRecipe,
-                    );
-                    continue;
-                }
-                $rebuilt = $this->runTarget(
-                    $dependency,
-                    $shell,
-                    $filesystem,
-                    $output,
-                    $results,
-                    $visiting,
-                    $commandsExecuted,
-                    $name,
-                );
-                $dependenciesRebuilt = $dependenciesRebuilt || $rebuilt;
-            }
-            $rebuilt = $target->run(
-                $shell,
-                $filesystem,
-                $output,
-                $this->context ?? $this->variables,
-                $dependenciesRebuilt,
-                $this->exports,
-            );
-            $commandsExecuted = $commandsExecuted || $rebuilt && $target->commands !== [];
-            return $results[$name] =
-                $rebuilt && ($target->commands !== [] || $target->isPhony || !$filesystem->exists($name));
-        } finally {
-            unset($visiting[$name]);
-        }
+        return $result;
     }
 }

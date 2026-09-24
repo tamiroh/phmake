@@ -12,8 +12,8 @@ use Tamiroh\Phmake\Makefile\Filesystem;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Output;
+use Tamiroh\Phmake\Makefile\PatternRule;
 use Tamiroh\Phmake\Makefile\Shell;
-use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
 
@@ -31,7 +31,6 @@ use function preg_split;
 use function str_repeat;
 use function str_starts_with;
 use function strlen;
-use function strpos;
 use function substr;
 use function trim;
 
@@ -40,7 +39,7 @@ final readonly class MakefileParser
     /**
      * @param list<Variable> $defaults
      * @param array<string, Variable> $overrides
-     * @param list<Target> $builtinRules
+     * @param list<PatternRule> $builtinRules
      * @param array<int, string> $sources
      */
     public function __construct(
@@ -144,7 +143,7 @@ final readonly class MakefileParser
     /** @throws MakefileErrorException */
     public function parse(): Makefile
     {
-        $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false));
+        $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false), $this->output);
         $context = new EvaluationContext();
         $context->shell = $this->shell;
         $context->filesystem = $this->filesystem;
@@ -445,29 +444,10 @@ final readonly class MakefileParser
             if (trim($expanded) === '' && $recipe === null) {
                 continue;
             }
-            $colon = strpos($expanded, needle: ':');
-            if ($colon === false) {
-                throw new ParseException($lineNumber, 'missing separator');
-            }
-
             if (!$scope->context->reading) {
                 throw new MakefileErrorException('prerequisites cannot be defined in recipes', $location);
             }
-            $dependencies = substr($expanded, $colon + 1);
-            $names = self::words(substr($expanded, offset: 0, length: $colon));
-            if (
-                $names === []
-                || preg_match('/[:=|&]/', substr($expanded, offset: 0, length: $colon) . $dependencies) === 1
-            ) {
-                throw new ParseException($lineNumber, 'Unsupported rule syntax');
-            }
-            $prerequisites = [];
-            foreach (self::words($dependencies) as $dependency) {
-                foreach ($this->matchingPaths($dependency) as $path) {
-                    $prerequisites[] = $path;
-                }
-            }
-            $rule = new Rule($names, $prerequisites, $lineNumber);
+            $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->files);
             if ($recipe !== null) {
                 $rule->addRecipe(ltrim($recipe), $location);
             }

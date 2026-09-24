@@ -1,0 +1,8 @@
+$ ./phmake
+prepare
+<one|one.in|one.in|prepare|one.in>
+<two|two.in|two.in|prepare|two.in>
+$ ./phmake
+prepare
+$ ./phmake -f stems.mk
+all.foo all.one all.foo.two

@@ -4,11 +4,11 @@ compile dir/sample.c -> dir/sample.o (dir/sample)
 convert result.in -> result.out
 single tool.in -> tool
 $ ./phmake dir/sample.o
-phmake: `dir/sample.o' is up to date.
+phmake: 'dir/sample.o' is up to date.
 $ rm dir/sample.o && printf '\n%%.o: %%.c\n\t@echo pattern\n\t@cp $< $@\n' >> Makefile
 $ ./phmake dir/sample.o
 pattern
 $ rm result.out && printf '\n.SUFFIXES:\n' >> Makefile
 $ ./phmake result.out
-phmake: *** No rule to make target `result.out'.  Stop.
+phmake: *** No rule to make target 'result.out'.  Stop.
 [exit 2]

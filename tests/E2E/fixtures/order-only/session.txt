@@ -1,0 +1,8 @@
+$ ./phmake
+prepare
+rebuild
+$ ./phmake
+prepare
+$ ./phmake promoted
+prepare
+<prepare input|prepare input|>

@@ -6,10 +6,13 @@ namespace Tamiroh\Phmake\Makefile;
 
 final class Builtins
 {
-    /** @return list<Target> */
+    /** @return list<PatternRule> */
     public static function rules(): array
     {
-        return [new Target('%.o', ['%.c'], [new Command('$(COMPILE.c) $(OUTPUT_OPTION) $<')], false)];
+        return [new PatternRule(
+            ['%.o'],
+            new BuildRule(new Prerequisites(['%.c']), new Recipe([new Command('$(COMPILE.c) $(OUTPUT_OPTION) $<')])),
+        )];
     }
 
     /** @return list<Variable> */

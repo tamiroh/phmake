@@ -1,0 +1,6 @@
+$ ./phmake 2>/dev/null
+<second|second first|second first>
+$ ./phmake -f mixed.mk 2>/dev/null
+[exit 2]
+$ ./phmake -f invalid-pattern.mk 2>/dev/null
+[exit 2]

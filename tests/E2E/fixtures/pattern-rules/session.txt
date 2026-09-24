@@ -3,6 +3,6 @@ $ ./phmake
 $ cat build/item.result
 build/item.result from build/item.source stem build/item deps build/item.source
 $ ./phmake
-phmake: Nothing to be done for `all'.
+phmake: Nothing to be done for 'all'.
 $ ./phmake build/item.result
-phmake: `build/item.result' is up to date.
+phmake: 'build/item.result' is up to date.

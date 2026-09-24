@@ -1,0 +1,13 @@
+$ ./phmake
+first
+second
+$ ./phmake
+phmake: Nothing to be done for 'all'.
+$ touch always
+$ ./phmake always
+one
+two
+$ ./phmake -f implicit.mk
+source.in:source.in extra
+$ ./phmake -f implicit.mk
+phmake: Nothing to be done for 'all'.

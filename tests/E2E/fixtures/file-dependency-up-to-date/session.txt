@@ -1,4 +1,4 @@
 $ ./phmake
 cp input.txt output
 $ ./phmake
-phmake: `output' is up to date.
+phmake: 'output' is up to date.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser;
 
 use Tamiroh\Phmake\Makefile\Command;
+use Tamiroh\Phmake\Makefile\Prerequisites;
 
 use function trim;
 
@@ -12,17 +13,17 @@ final class Rule
 {
     /** @var list<Command> */
     public private(set) array $commands = [];
-
     public private(set) bool $hasRecipe = false;
 
-    /**
-     * @param list<string> $targetNames
-     * @param list<string> $dependencyNames
-     */
+    /** @param list<string> $targetNames */
     public function __construct(
         public readonly array $targetNames,
-        public readonly array $dependencyNames,
+        public readonly Prerequisites $prerequisites,
         public readonly int $lineNumber,
+        public readonly bool $doubleColon = false,
+        public readonly bool $grouped = false,
+        public readonly ?string $targetPattern = null,
+        public readonly ?string $source = null,
     ) {}
 
     public function addRecipe(string $recipe, ?string $source = null): void

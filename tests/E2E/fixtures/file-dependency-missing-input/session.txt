@@ -1,3 +1,3 @@
 $ ./phmake
-phmake: *** No rule to make target `input.txt', needed by `output'.  Stop.
+phmake: *** No rule to make target 'input.txt', needed by 'output'.  Stop.
 [exit 2]

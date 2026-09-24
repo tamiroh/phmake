@@ -2,17 +2,17 @@ $ chmod +x compiler.sh
 $ ./phmake > log && grep '^compiler:' log
 compiler: -O2 -DTEST -c -o sample.o sample.c
 $ ./phmake sample.o
-phmake: `sample.o' is up to date.
+phmake: 'sample.o' is up to date.
 $ rm sample.o && printf '\nCOMPILE.c = @$(CC) -DCUSTOM $(CFLAGS) $(CPPFLAGS) -c\n' >> Makefile
 $ ./phmake
 compiler: -DCUSTOM -O2 -DTEST -c -o sample.o sample.c
 $ rm sample.o && printf '\n.SUFFIXES:\n' >> Makefile
 $ ./phmake
-phmake: *** No rule to make target `sample.o', needed by `all'.  Stop.
+phmake: *** No rule to make target 'sample.o', needed by 'all'.  Stop.
 [exit 2]
 $ printf '\n.SUFFIXES: .c .o\n%%.o: %%.c\n' >> Makefile
 $ ./phmake
-phmake: *** No rule to make target `sample.o', needed by `all'.  Stop.
+phmake: *** No rule to make target 'sample.o', needed by 'all'.  Stop.
 [exit 2]
 $ printf '\n%%.o: %%.c\n\t@cp $< $@\n' >> Makefile
 $ ./phmake && cmp sample.c sample.o
