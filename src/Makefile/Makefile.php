@@ -28,6 +28,7 @@ final readonly class Makefile
         public array $variables = [],
         public ?string $defaultGoal = null,
         private array $patterns = [],
+        private Exports $exports = new Exports(),
     ) {
         $indexed = [];
         foreach ($targets as $target) {
@@ -177,7 +178,14 @@ final readonly class Makefile
                 );
                 $dependenciesRebuilt = $dependenciesRebuilt || $rebuilt;
             }
-            $rebuilt = $target->run($shell, $filesystem, $output, $this->variables, $dependenciesRebuilt);
+            $rebuilt = $target->run(
+                $shell,
+                $filesystem,
+                $output,
+                $this->variables,
+                $dependenciesRebuilt,
+                $this->exports,
+            );
             $commandsExecuted = $commandsExecuted || $rebuilt && $target->commands !== [];
             return $results[$name] =
                 $rebuilt && ($target->commands !== [] || $target->isPhony || !$filesystem->exists($name));

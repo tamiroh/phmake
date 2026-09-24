@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use Tamiroh\Phmake\Makefile\Exports;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\Variable;
@@ -82,7 +83,7 @@ final class MakefileBuilder
      * @param list<Variable> $variables
      * @param list<Target> $builtinRules
      */
-    public function build(array $variables, array $builtinRules = []): Makefile
+    public function build(array $variables, array $builtinRules = [], Exports $exports = new Exports()): Makefile
     {
         foreach ($this->phonyNames as $name) {
             $previous = $this->targets[$name] ?? null;
@@ -106,7 +107,7 @@ final class MakefileBuilder
                 $patterns[] = $builtin;
             }
         }
-        return new Makefile(array_values($this->targets), $variables, $this->defaultGoal, $patterns);
+        return new Makefile(array_values($this->targets), $variables, $this->defaultGoal, $patterns, $exports);
     }
 
     private function suffixPattern(Target $target): ?Target

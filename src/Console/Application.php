@@ -9,7 +9,6 @@ use Tamiroh\Phmake\Makefile\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Variable;
-use Tamiroh\Phmake\Makefile\VariableExpander;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
 
@@ -32,10 +31,6 @@ final readonly class Application
             $output = new Output($commandLine->silent);
             $makefile = $this->createMakefile($commandLine, $output);
             $environment = ['MAKEFLAGS' => $commandLine->makeflags()];
-            $expander = new VariableExpander($makefile->variables, $output);
-            foreach ($commandLine->variables as $variable) {
-                $environment[$variable->name] = $expander->expand('$(' . $variable->name . ')');
-            }
             $makefile->run($commandLine->targets, new Shell($environment), new Filesystem(), $output);
         } catch (CommandFailedException $e) {
             Process::stopWithCommandFailure($e->target, $e->exitCode);
@@ -77,6 +72,7 @@ final readonly class Application
             [
                 ...Builtins::variables(),
                 ...$environmentVariables,
+                new Variable('MAKEFLAGS', $commandLine->makeflags(), false),
                 new Variable(
                     'MAKE',
                     escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname(__DIR__, 2) . '/phmake'),

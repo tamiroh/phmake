@@ -1,0 +1,14 @@
+$ PHMAKE_IMPORTED=original PHMAKE_REMOVED=original ./phmake
+<unset|private:all||from-include>
+<changed|unset>
+<file:simple>
+<private>
+$ ./phmake -s child
+<environment:from-include>
+<environment:private:child>
+$ PHMAKE_IMPORTED=original ./phmake -f all.mk
+<plain|unset|changed>
+$ PHMAKE_IMPORTED=original ./phmake -f none.mk
+<unset|kept|original>
+$ ./phmake -f pseudo.mk
+<plain>

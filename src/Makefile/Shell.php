@@ -6,5 +6,9 @@ namespace Tamiroh\Phmake\Makefile;
 
 interface Shell
 {
-    public function exec(string $command): int;
+    /**
+     * @param array<string, string|false> $environment
+     * @throws MakefileErrorException
+     */
+    public function exec(string $command, array $environment = []): int;
 }

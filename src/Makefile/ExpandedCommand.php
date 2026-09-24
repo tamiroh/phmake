@@ -15,6 +15,7 @@ final readonly class ExpandedCommand
         public string $expression,
     ) {}
 
+    /** @throws MakefileErrorException */
     public function run(Shell $shell, Output $output): int
     {
         $expanded = ltrim($this->expression);

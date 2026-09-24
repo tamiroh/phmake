@@ -14,15 +14,16 @@ use function stream_isatty;
 
 final class Shell implements ShellInterface
 {
-    /** @param array<string, string> $environment */
+    /** @param array<string, string|false> $environment */
     public function __construct(
         private readonly array $environment = [],
     ) {}
 
+    /** @param array<string, string|false> $environment */
     #[\Override]
-    public function exec(string $command): int
+    public function exec(string $command, array $environment = []): int
     {
-        $process = SymfonyProcess::fromShellCommandline($command, env: $this->environment);
+        $process = SymfonyProcess::fromShellCommandline($command, env: [...$this->environment, ...$environment]);
         $process->setTimeout(null);
 
         if ($this->isStdoutTty() && SymfonyProcess::isTtySupported()) {

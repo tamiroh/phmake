@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser;
 
 use LogicException;
+use Tamiroh\Phmake\Makefile\Exports;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Output;
@@ -111,8 +112,15 @@ final readonly class MakefileParser
             $variables[$variable->name] = $variable;
         }
         $variables = [...$variables, ...$this->overrides];
-        $this->readRules($this->source, $builder, $variables, []);
-        return $builder->build(array_values($variables), $this->builtinRules);
+        $inherited = [];
+        foreach ($variables as $variable) {
+            if (in_array($variable->origin, ['environment', 'command line'], true)) {
+                $inherited[] = $variable->name;
+            }
+        }
+        $exports = new Exports($inherited);
+        $this->readRules($this->source, $builder, $variables, [], $exports);
+        return $builder->build(array_values($variables), $this->builtinRules, $exports);
     }
 
     /** @return list<string> */
@@ -127,8 +135,13 @@ final readonly class MakefileParser
      * @param list<string> $included
      * @throws MakefileErrorException
      */
-    private function readRules(string $source, MakefileBuilder $builder, array &$variables, array $included): void
-    {
+    private function readRules(
+        string $source,
+        MakefileBuilder $builder,
+        array &$variables,
+        array $included,
+        Exports $exports,
+    ): void {
         $reader = new LineReader($source);
         $rule = null;
 
@@ -153,8 +166,34 @@ final readonly class MakefileParser
             }
 
             $matches = [];
+            $export = null;
+            if (preg_match('/^\s*(export|unexport)(?:[ \\t]+|$)(.*)$/s', $uncommented, $matches) === 1) {
+                /** @var array{string, 'export'|'unexport', string} $matches */
+                if (preg_match('/^(?::=|\\+=|\\?=|=)/', ltrim($matches[2])) !== 1) {
+                    $export = $matches[1] === 'export';
+                    $uncommented = ltrim($matches[2]);
+                    if (preg_match('/^[A-Za-z_][A-Za-z0-9_.-]*\\s*(?::=|\\+=|\\?=|=)/', $uncommented) !== 1) {
+                        $names = self::words(new VariableExpander(array_values($variables), $this->output)->expand(
+                            $uncommented,
+                        ));
+                        $exports->set($names, $export);
+                        foreach ($names as $name) {
+                            $variables[$name] ??= new Variable($name, '', false);
+                        }
+                        continue;
+                    }
+                }
+            }
+            if (preg_match('/^\\.EXPORT_ALL_VARIABLES\\s*:/', $uncommented) === 1) {
+                $exports->set([], true);
+            }
+
+            $matches = [];
             if (preg_match('/^\s*([A-Za-z_][A-Za-z0-9_.-]*)\s*(:=|\+=|\?=|=)(.*)$/s', $uncommented, $matches) === 1) {
                 /** @var array{string, non-empty-string, ':='|'+='|'?='|'=', string} $matches */
+                if ($export !== null) {
+                    $exports->set([$matches[1]], $export);
+                }
                 if (isset($this->overrides[$matches[1]])) {
                     continue;
                 }
@@ -191,7 +230,7 @@ final readonly class MakefileParser
                         if (in_array($path, $included, strict: true)) {
                             throw new ParseException($lineNumber, "Recursive include `$path'");
                         }
-                        $this->readRules($contents, $builder, $variables, [...$included, $path]);
+                        $this->readRules($contents, $builder, $variables, [...$included, $path], $exports);
                     }
                 }
                 continue;

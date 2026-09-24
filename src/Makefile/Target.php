@@ -33,6 +33,7 @@ final readonly class Target
         Output $output,
         array $variables = [],
         bool $dependenciesRebuilt = false,
+        Exports $exports = new Exports(),
     ): bool {
         if (!$this->isPhony && !$dependenciesRebuilt && !$this->needsRebuild($filesystem)) {
             return false;
@@ -50,6 +51,7 @@ final readonly class Target
         foreach ($this->commands as $command) {
             $commands[] = $command->expand($variables, $output);
         }
+        $shell = new ExportingShell($shell, $exports, $variables, $output);
         foreach ($commands as $command) {
             $exitCode = $command->run($shell, $output);
             if ($exitCode !== 0) {
