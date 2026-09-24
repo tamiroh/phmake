@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use LogicException;
+
+use function array_slice;
 use function array_values;
 use function count;
 use function explode;
@@ -59,6 +62,80 @@ final readonly class VariableExpander
             }
         }
         return $result;
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @param list<string> $expanding
+     * @throws MakefileErrorException
+     */
+    public function invokeFunction(
+        string $name,
+        array $arguments,
+        array $expanding = [],
+        bool $argumentsExpanded = false,
+    ): ?string {
+        $maximum = Functions::ARGUMENT_COUNTS[$name] ?? null;
+        if ($maximum === null) {
+            return null;
+        }
+        $arguments = array_slice($arguments, 0, $maximum);
+        if (in_array($name, ['if', 'and', 'or'], true)) {
+            $expand = $argumentsExpanded
+                ? static fn(string $argument): string => $argument
+                : /** @throws MakefileErrorException */
+                fn(string $argument): string => $this->expand($argument, $expanding);
+            return match ($name) {
+                'if' => Functions::if($expand, $arguments[0] ?? null, $arguments[1] ?? null, $arguments[2] ?? ''),
+                'and' => Functions::and($arguments, $expand),
+                'or' => Functions::or($arguments, $expand),
+            };
+        }
+        if ($name === 'foreach') {
+            return Functions::foreach(
+                $this,
+                $expanding,
+                $arguments[0] ?? null,
+                $arguments[1] ?? null,
+                $arguments[2] ?? null,
+            );
+        }
+        if (!$argumentsExpanded) {
+            if ($name === 'info') {
+                $arguments[0] = ltrim($arguments[0] ?? '');
+            }
+            foreach ($arguments as &$argument) {
+                $argument = $this->expand($argument, $expanding);
+            }
+            unset($argument);
+        }
+        $first = $arguments[0] ?? null;
+        $second = $arguments[1] ?? null;
+        $third = $arguments[2] ?? null;
+        return match ($name) {
+            'call' => Functions::call($arguments, $this, $expanding),
+            'info' => Functions::info($first ?? '', $this->output),
+            'subst' => Functions::subst($first, $second, $third),
+            'patsubst' => Functions::patsubst($first, $second, $third),
+            'strip' => Functions::strip($first),
+            'findstring' => Functions::findstring($first, $second),
+            'filter' => Functions::filter($first, $second),
+            'filter-out' => Functions::filterOut($first, $second),
+            'sort' => Functions::sort($first),
+            'word' => Functions::word($first, $second),
+            'wordlist' => Functions::wordlist($first, $second, $third),
+            'words' => Functions::words($first),
+            'firstword' => Functions::firstword($first),
+            'lastword' => Functions::lastword($first),
+            'addprefix' => Functions::addprefix($first, $second),
+            'addsuffix' => Functions::addsuffix($first, $second),
+            'join' => Functions::join($first, $second),
+            'dir' => Functions::dir($first),
+            'notdir' => Functions::notdir($first),
+            'basename' => Functions::basename($first),
+            'suffix' => Functions::suffix($first),
+            default => throw new LogicException("Unknown function: $name"),
+        };
     }
 
     public function variable(string $name): ?Variable
@@ -124,31 +201,15 @@ final readonly class VariableExpander
         $matches = [];
         if (preg_match('/^([a-z-]+)[ \t\n]+/', $reference, $matches) === 1) {
             /** @var array{non-empty-string, non-empty-string} $matches */
-            $argumentCount = Functions::argumentCount($matches[1]);
+            $argumentCount = Functions::ARGUMENT_COUNTS[$matches[1]] ?? null;
             if ($argumentCount !== null) {
-                $arguments = $this->arguments(substr($reference, strlen($matches[0])), $argumentCount, $opening);
-                if ($matches[1] === 'info') {
-                    return Functions::info($this->expand(ltrim($arguments[0]), $expanding), $this->output);
-                }
-                if ($matches[1] === 'foreach') {
-                    return Functions::foreach($arguments, $this, $expanding);
-                }
-                if (in_array($matches[1], ['if', 'and', 'or'], strict: true)) {
-                    return Functions::conditional(
+                return (
+                    $this->invokeFunction(
                         $matches[1],
-                        $arguments,
-                        /** @throws MakefileErrorException */
-                        fn(string $argument): string => $this->expand($argument, $expanding),
-                    );
-                }
-                foreach ($arguments as &$argument) {
-                    $argument = $this->expand($argument, $expanding);
-                }
-                unset($argument);
-                if ($matches[1] === 'call') {
-                    return Functions::call($arguments, $this, $expanding, $this->output);
-                }
-                return Functions::expand($matches[1], $arguments);
+                        $this->arguments(substr($reference, strlen($matches[0])), $argumentCount, $opening),
+                        $expanding,
+                    ) ?? ''
+                );
             }
         }
         $reference = $this->expand($reference, $expanding);

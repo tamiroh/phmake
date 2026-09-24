@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Tests\Unit\Makefile;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Tamiroh\Phmake\Makefile\Functions;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Makefile\VariableExpander;
@@ -48,6 +49,37 @@ final class FunctionsTest extends TestCase
         yield 'overflowing index' => ['$(word 9999999999999999999,a)'];
         yield 'zero range start' => ['$(wordlist 0,1,a)'];
         yield 'negative range end' => ['$(wordlist 1,-1,a)'];
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function directCallsDistinguishEmptyAndMissingArguments(): void
+    {
+        self::assertSame('', Functions::subst('', '', ''));
+        $this->expectException(MakefileErrorException::class);
+        $this->expectExceptionMessageMatches("/^insufficient number of arguments to function 'subst'$/");
+        Functions::subst('', '');
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function directForeachRejectsMissingBodyEvenWithEmptyList(): void
+    {
+        self::assertSame('', Functions::foreach(new VariableExpander([]), [], 'x', '', ''));
+        $this->expectException(MakefileErrorException::class);
+        $this->expectExceptionMessageMatches("/^insufficient number of arguments to function 'foreach'$/");
+        Functions::foreach(new VariableExpander([]), [], 'x', '');
+    }
+
+    /** @throws MakefileErrorException */
+    #[Test]
+    public function directIfRejectsMissingBranchBeforeExpanding(): void
+    {
+        $this->expectException(MakefileErrorException::class);
+        $this->expectExceptionMessageMatches("/^insufficient number of arguments to function 'if'$/");
+        Functions::if(static function (string $argument): string {
+            self::fail('Missing arguments must be rejected before expansion: ' . $argument);
+        }, 'yes');
     }
 
     /** @throws MakefileErrorException */
