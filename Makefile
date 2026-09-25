@@ -1,6 +1,7 @@
 MAGO = vendor/bin/mago
 PHPSTAN = vendor/bin/phpstan
 PHPUNIT = vendor/bin/phpunit
+PHP_CS_FIXER = vendor/bin/php-cs-fixer
 
 .PHONY: test
 test:
@@ -12,6 +13,7 @@ lint:
 	$(MAGO) --colors always lint
 	$(MAGO) --colors always analyze
 	$(MAGO) --colors always guard
+	$(PHP_CS_FIXER) fix --dry-run --diff --using-cache=no --sequential
 
 .PHONY: format
 format:
