@@ -54,8 +54,13 @@ final readonly class ExportingShell implements Shell
      * @throws MakefileErrorException
      */
     #[Override]
-    public function exec(string $command, array $environment = [], string $shell = '/bin/sh', string $flags = '-c'): int
-    {
+    public function exec(
+        string $command,
+        array $environment = [],
+        string $shell = '/bin/sh',
+        string $flags = '-c',
+        bool $ignoreErrors = false,
+    ): int {
         return $this->shell->exec(
             $command,
             [
@@ -63,7 +68,13 @@ final readonly class ExportingShell implements Shell
                 ...$environment,
             ],
             $this->shellName($shell),
-            $this->variables->variable('.SHELLFLAGS') === null ? $flags : $this->variables->expand('$(.SHELLFLAGS)'),
+            $ignoreErrors && ($this->variables->variable('.SHELLFLAGS')->origin ?? 'default') === 'default'
+                ? '-c'
+                : (
+                    $this->variables->variable('.SHELLFLAGS') === null
+                        ? $flags
+                        : $this->variables->expand('$(.SHELLFLAGS)')
+                ),
         );
     }
 

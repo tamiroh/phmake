@@ -12,7 +12,7 @@ final readonly class ReadFile
     public function __construct(
         public string $path,
         public ?string $text,
-        public ?int $modifiedAt,
+        public ?string $modifiedAt,
         public bool $optional = false,
         public bool $defaultGoal = true,
         public ?string $source = null,

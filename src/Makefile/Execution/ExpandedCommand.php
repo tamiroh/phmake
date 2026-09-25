@@ -12,22 +12,36 @@ use function explode;
 use function ltrim;
 use function rtrim;
 use function str_contains;
+use function str_replace;
 use function strlen;
 use function strspn;
 use function substr;
+use function trim;
 
 final readonly class ExpandedCommand
 {
     public function __construct(
         public string $expression,
         private string $prefix = '',
+        private bool $recursive = false,
     ) {}
 
     /**
      * @throws MakefileErrorException
      */
-    public function run(Shell $shell, Output $output): int
-    {
+    public function run(
+        Shell $shell,
+        Output $output,
+        ExecutionOptions $options = new ExecutionOptions(),
+        bool $oneShell = false,
+        ?string $target = null,
+    ): CommandResult {
+        if ($oneShell) {
+            return $this->runLine($this->expression, $shell, $output, $options, $target);
+        }
+        $active = false;
+        $simulated = false;
+        $needsUpdate = false;
         $pending = '';
         foreach (explode("\n", $this->expression) as $line) {
             $pending .= $line;
@@ -35,35 +49,58 @@ final readonly class ExpandedCommand
                 $pending .= "\n";
                 continue;
             }
-            $exitCode = $this->runLine($pending, $shell, $output);
-            if ($exitCode !== 0) {
-                return $exitCode;
+            $result = $this->runLine($pending, $shell, $output, $options, $target);
+            $active = $active || $result->active;
+            $simulated = $simulated || $result->simulated;
+            $needsUpdate = $needsUpdate || $result->needsUpdate;
+            if ($result->exitCode !== 0) {
+                return $result;
             }
             $pending = '';
         }
-        return $pending === '' ? 0 : $this->runLine($pending, $shell, $output);
+        return $pending === ''
+            ? new CommandResult($active, $simulated, needsUpdate: $needsUpdate)
+            : $this->runLine($pending, $shell, $output, $options, $target);
     }
 
     /**
      * @throws MakefileErrorException
      */
-    private function runLine(string $line, Shell $shell, Output $output): int
-    {
+    private function runLine(
+        string $line,
+        Shell $shell,
+        Output $output,
+        ExecutionOptions $options,
+        ?string $target,
+    ): CommandResult {
         $expanded = ltrim($line);
-        $prefixLength = strspn($expanded, '@-+');
+        $prefixLength = strspn($expanded, "@-+ \t");
         $prefix = $this->prefix . substr($expanded, 0, $prefixLength);
         $expanded = ltrim(substr($expanded, $prefixLength));
-        if ($expanded === '') {
-            return 0;
+        if (trim(str_replace("\\\n", '', $expanded)) === '') {
+            return new CommandResult();
         }
-        if (!str_contains($prefix, '@')) {
-            $output->writeLine($expanded);
+        $recursive = $this->recursive || str_contains($prefix, '+');
+        if ($options->question && !$recursive) {
+            return new CommandResult(true, true, needsUpdate: true);
         }
-        $exitCode = $shell->exec($expanded);
-        if ($exitCode !== 0 && str_contains($prefix, '-')) {
-            $output->writeWarning("Error {$exitCode} (ignored)");
-            return 0;
+        if (
+            $options->dryRun && !$options->touch
+            || !$options->silent && !str_contains($prefix, '@') && (!$options->touch || $recursive)
+        ) {
+            $output->write($expanded . "\n");
         }
-        return $exitCode;
+        if (!$recursive && ($options->dryRun || $options->touch)) {
+            return new CommandResult(true, true);
+        }
+        $exitCode = $shell->exec($expanded, ignoreErrors: $options->ignoreErrors || str_contains($prefix, '-'));
+        if ($exitCode === 1 && $options->question) {
+            return new CommandResult(true, true, needsUpdate: true);
+        }
+        if ($exitCode !== 0 && ($options->ignoreErrors || str_contains($prefix, '-'))) {
+            $output->writeWarning(($target === null ? '' : "[$target] ") . "Error {$exitCode} (ignored)");
+            return new CommandResult(true);
+        }
+        return new CommandResult(true, exitCode: $exitCode);
     }
 }

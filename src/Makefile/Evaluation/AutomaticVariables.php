@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Evaluation;
 
+use Closure;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 
@@ -17,6 +18,7 @@ final class AutomaticVariables
 {
     /**
      * @param list<string> $changed
+     * @param Closure(string): ?int|null $timestamp
      *
      * @return list<Variable>
      */
@@ -26,10 +28,11 @@ final class AutomaticVariables
         ?int $modifiedAt,
         array $changed,
         Filesystem $filesystem,
+        ?Closure $timestamp = null,
     ): array {
         $newer = [];
         foreach (array_unique($rule->prerequisites->normal) as $dependency) {
-            $time = $filesystem->lastModified($dependency);
+            $time = $timestamp === null ? $filesystem->lastModified($dependency) : $timestamp($dependency);
             if (
                 $modifiedAt === null
                 || $time === null

@@ -1,0 +1,4 @@
+$ ./phmake -rR
+continued
+$ ./phmake -rR '.SHELLFLAGS=-ec'
+phmake: [all] Error 1 (ignored)

@@ -1,0 +1,20 @@
+$ ./phmake -rR -n
+echo built > output
+echo done
+$ test ! -f output
+$ ./phmake -rR -q
+[exit 1]
+$ ./phmake -rR
+done
+$ ./phmake -rR -q output
+$ ./phmake -rR -n recursive
+echo forced
+forced
+$ rm output
+$ ./phmake -rR -t output
+touch output
+$ test -f output && test ! -s output
+$ rm output
+$ ./phmake -rR -nt output
+touch output
+$ test ! -f output

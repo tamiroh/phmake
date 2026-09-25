@@ -44,21 +44,34 @@ final readonly class Application
                 }
             }
             $level = max(0, (int) getenv('MAKELEVEL'));
-            $output = new Output($commandLine->silent, $level);
+            $output = new Output($commandLine->execution->silent, $level);
             $printDirectory =
                 $commandLine->printDirectory
-                ?? !$commandLine->silent && ($level > 0 || $commandLine->input->directories !== []);
+                ?? !$commandLine->execution->silent
+                    && !$commandLine->execution->question
+                    && ($level > 0 || $commandLine->input->directories !== []);
             if ($printDirectory) {
                 $output->writeDirectory(true, (string) getcwd());
             }
             try {
-                new MakefileLoader($commandLine, $output, $defaults, $level)->load()->run($commandLine->targets);
+                $status = new MakefileLoader(
+                    $commandLine,
+                    $output,
+                    $defaults,
+                    $level,
+                )->load()->run($commandLine->targets);
             } finally {
                 if ($printDirectory) {
                     $output->writeDirectory(false, (string) getcwd());
                 }
             }
+            if ($status !== 0) {
+                exit($status);
+            }
         } catch (CommandFailedException $e) {
+            if ($e->reported) {
+                exit(2);
+            }
             Process::stopWithCommandFailure($e->target, $e->exitCode);
         } catch (ParseException $e) {
             Process::stopWithError($e->reason, ($commandLine->input->makefiles[0] ?? 'Makefile') . ":$e->lineNumber");

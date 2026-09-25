@@ -1,0 +1,13 @@
+$ ./phmake -rR
+build:input
+$ ./phmake -rR
+phmake: 'output' is up to date.
+$ ./phmake -rR -B
+build:input
+$ ./phmake -rR -W input
+build:input
+$ ./phmake -rR -B -o output
+phmake: 'output' is up to date.
+$ ./phmake -rR -n -W input
+echo 'build:input'
+cp input output

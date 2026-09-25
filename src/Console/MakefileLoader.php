@@ -64,7 +64,21 @@ final readonly class MakefileLoader
                 new Shell(),
                 new Filesystem(),
             )->parse();
-            $build = new Build($makefile, new Shell(), new Filesystem(), $this->output);
+            $build = new Build(
+                $makefile,
+                new Shell(),
+                new Filesystem(),
+                $this->output,
+                $configuration->execution,
+                $restarts,
+            );
+            if ($makefile->context !== null) {
+                $makefile->context->variables['MAKEFLAGS'] = new Variable(
+                    'MAKEFLAGS',
+                    $configuration->makeflags($restarts),
+                    false,
+                );
+            }
             try {
                 if ($this->remake($sources, $build)) {
                     $build->cleanup();
@@ -74,6 +88,14 @@ final readonly class MakefileLoader
             } catch (MakefileErrorException|CommandFailedException $error) {
                 $build->cleanup();
                 throw $error;
+            } finally {
+                if ($makefile->context !== null) {
+                    $makefile->context->variables['MAKEFLAGS'] = new Variable(
+                        'MAKEFLAGS',
+                        $configuration->makeflags(),
+                        false,
+                    );
+                }
             }
             if ($this->commandLine->targets === [] && $makefile->defaultGoal === null && !$this->hasMain($sources)) {
                 throw new MakefileErrorException('No targets specified and no makefile found');
@@ -115,21 +137,25 @@ final readonly class MakefileLoader
     private function remake(MakefileSources $sources, Build $build): bool
     {
         $names = [];
+        $inputs = [];
         $unreadable = [];
         foreach ($sources->read as $file) {
             if ($file->rebuild) {
-                $names[] = $file->path;
-                if ($file->text === null) {
-                    $unreadable[] = $file->path;
-                }
+                $inputs[$file->path] = $file;
+            }
+        }
+        foreach ($inputs as $file) {
+            $names[] = $file->path;
+            if ($file->text === null) {
+                $unreadable[] = $file->path;
             }
         }
         $errors = $build->remake($names, $unreadable);
-        foreach ($sources->read as $file) {
+        foreach ($inputs as $file) {
             if (
                 $file->rebuild
-                && ($text = $sources->files->read($file->path)->text) !== null
-                && ($text !== $file->text || new Filesystem()->lastModified($file->path) !== $file->modifiedAt)
+                && ($contents = $sources->files->read($file->path))->text !== null
+                && ($contents->text !== $file->text || $contents->modifiedAt !== $file->modifiedAt)
             ) {
                 return true;
             }

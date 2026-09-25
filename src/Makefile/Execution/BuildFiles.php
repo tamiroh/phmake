@@ -16,8 +16,12 @@ use Tamiroh\Phmake\Makefile\Search\RuleSearch;
 use function array_map;
 use function implode;
 use function in_array;
+use function preg_replace;
 use function sort;
 use function str_starts_with;
+
+use const PHP_INT_MAX;
+use const PHP_INT_MIN;
 
 /**
  * File names, timestamps, and intermediate lifetime for one build invocation.
@@ -40,8 +44,20 @@ final class BuildFiles
         private readonly RuleSearch $search,
         private readonly Filesystem $filesystem,
         private readonly Output $output,
+        private readonly ExecutionOptions $options,
+        private readonly BuildState $state,
     ) {
         $this->policy = new FilePolicy($makefile->targetsByName);
+    }
+
+    public function assumedOld(string $name): bool
+    {
+        foreach ($this->options->oldFiles as $file) {
+            if (preg_replace('~^(?:\./)+~', '', $file) === preg_replace('~^(?:\./)+~', '', $this->path($name))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function cleanup(): void
@@ -127,6 +143,20 @@ final class BuildFiles
 
     public function time(string $name): ?int
     {
-        return $this->filesystem->lastModified($this->path($name));
+        $path = $this->path($name);
+        if ($this->assumedOld($name)) {
+            return PHP_INT_MIN;
+        }
+        if (isset($this->state->simulated[$path])) {
+            return PHP_INT_MAX;
+        }
+        if (!$this->state->remaking || $this->state->restarts === 0) {
+            foreach ($this->options->newFiles as $file) {
+                if (preg_replace('~^(?:\./)+~', '', $file) === preg_replace('~^(?:\./)+~', '', $path)) {
+                    return PHP_INT_MAX;
+                }
+            }
+        }
+        return $this->filesystem->lastModified($path);
     }
 }

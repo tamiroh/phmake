@@ -1,0 +1,4 @@
+$ ./phmake -rR -B
+restarts=1
+$ ./phmake -rR -B
+restarts=1

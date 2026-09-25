@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\Configuration;
 
@@ -33,7 +34,7 @@ final class CommandLine implements Configuration
 
     public readonly InputOptions $input;
 
-    public private(set) bool $silent = false;
+    public readonly ExecutionOptions $execution;
 
     public private(set) bool $version = false;
 
@@ -63,6 +64,7 @@ final class CommandLine implements Configuration
         array $defaults = [],
     ) {
         $this->input = new InputOptions();
+        $this->execution = new ExecutionOptions();
         $this->readFlags($gnumakeflags, $defaults);
         $this->readFlags($makeflags, $defaults);
         $this->readArguments($arguments, false, $defaults);
@@ -93,8 +95,9 @@ final class CommandLine implements Configuration
         return $words;
     }
 
-    public function makeflags(): string
+    public function makeflags(?int $makefileRestart = null): string
     {
+        $execution = $makefileRestart === null ? $this->execution : $this->execution->forMakefiles($makefileRestart);
         $assignments = [];
         foreach ($this->variables as $variable) {
             if ($variable->origin !== 'command line') {
@@ -109,10 +112,16 @@ final class CommandLine implements Configuration
             );
         }
         return (
-            ($this->environmentOverrides ? 'e' : '')
+            ($execution->alwaysMake ? 'B' : '')
+            . ($this->environmentOverrides ? 'e' : '')
+            . ($execution->ignoreErrors ? 'i' : '')
+            . ($execution->keepGoing ? 'k' : '')
+            . ($execution->dryRun ? 'n' : '')
+            . ($execution->question ? 'q' : '')
             . ($this->noBuiltinRules ? 'r' : '')
             . ($this->noBuiltinVariables ? 'R' : '')
-            . ($this->silent ? 's' : '')
+            . ($execution->silent ? 's' : '')
+            . ($execution->touch ? 't' : '')
             . ($this->printDirectory === null ? '' : ($this->printDirectory ? 'w' : ' --no-print-directory'))
             . implode('', array_map(
                 static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
@@ -252,6 +261,15 @@ final class CommandLine implements Configuration
             '--directory' => '-C',
             '--include-dir' => '-I',
             '--eval' => '-E',
+            '--just-print', '--dry-run', '--recon' => '-n',
+            '--question' => '-q',
+            '--touch' => '-t',
+            '--always-make' => '-B',
+            '--keep-going' => '-k',
+            '--no-keep-going', '--stop' => '-S',
+            '--ignore-errors' => '-i',
+            '--assume-new', '--new-file', '--what-if' => '-W',
+            '--assume-old', '--old-file' => '-o',
             default => $argument,
         };
         if ($argument === '--no-print-directory') {
@@ -259,7 +277,7 @@ final class CommandLine implements Configuration
             return;
         }
         if ($argument === '--no-silent' || $argument === '--no-quiet') {
-            $this->silent = false;
+            $this->execution->silent = false;
             return;
         }
         foreach ([
@@ -268,6 +286,11 @@ final class CommandLine implements Configuration
             '--directory=' => '-C',
             '--include-dir=' => '-I',
             '--eval=' => '-E',
+            '--assume-new=' => '-W',
+            '--new-file=' => '-W',
+            '--what-if=' => '-W',
+            '--assume-old=' => '-o',
+            '--old-file=' => '-o',
         ] as $prefix => $short) {
             if (str_starts_with($argument, $prefix)) {
                 if ($argument === $prefix) {
@@ -281,8 +304,29 @@ final class CommandLine implements Configuration
         }
         for ($offset = 1; $offset < strlen($argument); $offset++) {
             switch ($argument[$offset]) {
+                case 'n':
+                    $this->execution->dryRun = true;
+                    break;
+                case 'q':
+                    $this->execution->question = true;
+                    break;
+                case 't':
+                    $this->execution->touch = true;
+                    break;
+                case 'B':
+                    $this->execution->alwaysMake = true;
+                    break;
+                case 'k':
+                    $this->execution->keepGoing = true;
+                    break;
+                case 'S':
+                    $this->execution->keepGoing = false;
+                    break;
+                case 'i':
+                    $this->execution->ignoreErrors = true;
+                    break;
                 case 's':
-                    $this->silent = true;
+                    $this->execution->silent = true;
                     break;
                 case 'v':
                     $this->version = true;
@@ -304,6 +348,8 @@ final class CommandLine implements Configuration
                 case 'C':
                 case 'I':
                 case 'E':
+                case 'W':
+                case 'o':
                     $option = $argument[$offset];
                     $path = substr($argument, $offset + 1);
                     if ($path === '') {
@@ -326,7 +372,11 @@ final class CommandLine implements Configuration
                             $this->input->evaluations[] = $path;
                         }
                     } elseif (!$inherited) {
-                        if ($option === 'f') {
+                        if ($option === 'W') {
+                            $this->execution->newFiles[] = $path;
+                        } elseif ($option === 'o') {
+                            $this->execution->oldFiles[] = $path;
+                        } elseif ($option === 'f') {
                             $this->input->makefiles[] = $path;
                         } else {
                             $this->input->directories[] = $path;
@@ -342,5 +392,6 @@ final class CommandLine implements Configuration
     public function __clone(): void
     {
         $this->input = clone $this->input;
+        $this->execution = clone $this->execution;
     }
 }

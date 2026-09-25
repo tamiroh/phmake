@@ -91,7 +91,7 @@ final class MakefileSources
         return $this->read[] = new ReadFile(
             $path,
             $contents->text,
-            $this->filesystem->lastModified($path),
+            $contents->modifiedAt,
             $optional || $main && $this->optionalMain,
             $defaultGoal,
             $source,

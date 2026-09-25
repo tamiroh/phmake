@@ -8,6 +8,8 @@ use Exception;
 
 final class CommandFailedException extends Exception
 {
+    public bool $reported = false;
+
     public function __construct(
         public readonly string $target,
         public readonly int $exitCode,

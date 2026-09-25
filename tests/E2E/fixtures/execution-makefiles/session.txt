@@ -1,0 +1,15 @@
+$ ./phmake -rR -n
+generated
+echo 'loaded' > result
+echo ready
+$ test -f generated.mk && test ! -f result
+$ rm generated.mk
+$ ./phmake -rR -q
+generated
+[exit 1]
+$ test -f generated.mk && test ! -f result
+$ ./phmake -rR -B
+generated
+ready
+$ cat result
+loaded

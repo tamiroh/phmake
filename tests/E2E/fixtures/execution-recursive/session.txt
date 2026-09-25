@@ -1,0 +1,10 @@
+$ ./phmake -rR -n
+./phmake --no-print-directory -f child.mk
+echo child > output
+$ test ! -f output
+$ ./phmake -rR -q
+[exit 1]
+$ test ! -f output
+$ ./phmake -rR -t
+touch output
+$ test -f output && test ! -s output && test ! -f all

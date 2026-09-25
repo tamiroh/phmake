@@ -52,8 +52,13 @@ final class Shell implements ShellInterface
      * @param array<string, string|false> $environment
      */
     #[Override]
-    public function exec(string $command, array $environment = [], string $shell = '/bin/sh', string $flags = '-c'): int
-    {
+    public function exec(
+        string $command,
+        array $environment = [],
+        string $shell = '/bin/sh',
+        string $flags = '-c',
+        bool $ignoreErrors = false,
+    ): int {
         $process = $this->process($command, $environment, $shell, $flags);
 
         if ($this->isStdoutTty() && SymfonyProcess::isTtySupported()) {

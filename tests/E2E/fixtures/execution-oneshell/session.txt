@@ -1,0 +1,7 @@
+$ ./phmake -rR
+hello
+survived
+$ ./phmake -rR '.SHELLFLAGS=-ec'
+hello
+phmake: *** [all] Error 1
+[exit 2]

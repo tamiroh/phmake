@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser;
 
 use LogicException;
+use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\Exports;
@@ -509,6 +510,13 @@ final readonly class MakefileParser
                 throw new MakefileErrorException('prerequisites cannot be defined in recipes', $location);
             }
             $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->sources->files);
+            if (in_array('.POSIX', $rule->targetNames, true)) {
+                foreach (Builtins::posixVariables() as $variable) {
+                    if (($variables[$variable->name]->origin ?? 'default') === 'default') {
+                        $variables[$variable->name] = $variable;
+                    }
+                }
+            }
             if ($this->sources->defaultGoal) {
                 $builder->selectDefault($rule, $scope);
             }

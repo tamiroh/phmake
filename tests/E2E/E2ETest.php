@@ -80,7 +80,7 @@ final class E2ETest extends TestCase
                 $message = str_replace('`', replace: "'", subject: $matches[1]);
                 $message =
                     preg_replace(
-                        '/^(\*\*\* \[)Makefile:[0-9]+: (.*\] Error [0-9]+)$/',
+                        '/^((?:\*\*\* )?\[)Makefile:[0-9]+: (.*\] Error [0-9]+(?: \(ignored\))?)$/',
                         replacement: '$1$2',
                         subject: $message,
                     ) ?? $message;

@@ -1,0 +1,3 @@
+$ ./phmake -rR -k
+Makefile:2: *** aborted.  Stop.
+[exit 2]

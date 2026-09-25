@@ -14,6 +14,22 @@ use Tamiroh\Phmake\Makefile\Rule\Recipe;
 final class Builtins
 {
     /**
+     * @return list<Variable>
+     */
+    public static function posixVariables(): array
+    {
+        return [
+            new Variable('.SHELLFLAGS', '-ec', false, 'default'),
+            new Variable('CC', 'c99', false, 'default'),
+            new Variable('CFLAGS', '-O1', false, 'default'),
+            new Variable('FC', 'fort77', false, 'default'),
+            new Variable('FFLAGS', '-O1', false, 'default'),
+            new Variable('SCCSGETFLAGS', '-s', false, 'default'),
+            new Variable('ARFLAGS', '-rv', false, 'default'),
+        ];
+    }
+
+    /**
      * @return list<PatternRule>
      */
     public static function rules(): array
@@ -68,6 +84,8 @@ final class Builtins
             new Variable('.LIBPATTERNS', 'lib%.so lib%.a', origin: 'default'),
             new Variable('CC', 'cc', origin: 'default'),
             new Variable('FC', 'f77', origin: 'default'),
+            new Variable('LEX', 'lex', origin: 'default'),
+            new Variable('YACC', 'yacc', origin: 'default'),
             new Variable('LINK.o', '$(CC) $(LDFLAGS) $(TARGET_ARCH)', origin: 'default'),
             new Variable('LINK.c', '$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(TARGET_ARCH)', origin: 'default'),
             new Variable('LINK.f', '$(FC) $(FFLAGS) $(LDFLAGS) $(TARGET_ARCH)', origin: 'default'),

@@ -1,0 +1,15 @@
+$ ./phmake -rR quiet normal
+quiet
+echo normal
+normal
+$ ./phmake -rR ignored
+false
+phmake: [ignored] Error 1 (ignored)
+echo continued
+continued
+$ ./phmake -rR -sn quiet normal
+echo quiet
+echo normal
+$ ./phmake -rR -n spaced
+echo prefix
+prefix

@@ -1,0 +1,9 @@
+$ echo retained > second
+$ ./phmake -rR -k
+phmake: *** [first] Error 1
+phmake: *** Deleting file 'first'
+phmake: *** [first] Deleting file 'second'
+independent
+phmake: Target 'all' not remade because of errors.
+[exit 2]
+$ test ! -f first && test ! -f second

@@ -11,6 +11,7 @@ use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 use function ltrim;
+use function str_contains;
 use function strspn;
 use function substr;
 
@@ -32,7 +33,8 @@ final readonly class Command
             ($variables instanceof VariableExpander
                 ? $variables->atSource($this->source)
                 : new VariableExpander($variables, $output, source: $this->source))->expand($this->expression),
-            substr(ltrim($this->expression), 0, strspn(ltrim($this->expression), '@-+')),
+            substr(ltrim($this->expression), 0, strspn(ltrim($this->expression), "@-+ \t")),
+            str_contains($this->expression, '$(MAKE)') || str_contains($this->expression, '${MAKE}'),
         );
     }
 
@@ -43,6 +45,6 @@ final readonly class Command
      */
     public function run(Shell $shell, Output $output, array|VariableExpander $variables = []): int
     {
-        return $this->expand($variables, $output)->run($shell, $output);
+        return $this->expand($variables, $output)->run($shell, $output)->exitCode;
     }
 }

@@ -26,6 +26,11 @@ interface Filesystem
 
     public function remove(string $path): bool;
 
+    /**
+     * @throws MakefileErrorException
+     */
+    public function touch(string $path): void;
+
     public function workingDirectory(): string;
 
     /**

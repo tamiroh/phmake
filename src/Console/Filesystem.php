@@ -20,6 +20,7 @@ use function is_dir;
 use function preg_replace;
 use function realpath;
 use function str_starts_with;
+use function touch;
 use function ucfirst;
 use function unlink;
 
@@ -84,6 +85,18 @@ final class Filesystem implements FilesystemInterface
     public function remove(string $path): bool
     {
         return @unlink($path);
+    }
+
+    /**
+     * @throws MakefileErrorException
+     */
+    #[Override]
+    public function touch(string $path): void
+    {
+        if (!@touch($path)) {
+            throw $this->failure('touch', $path);
+        }
+        clearstatcache(true, $path);
     }
 
     #[Override]

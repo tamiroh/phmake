@@ -30,5 +30,6 @@ interface Shell
         array $environment = [],
         string $shell = '/bin/sh',
         string $flags = '-c',
+        bool $ignoreErrors = false,
     ): int;
 }

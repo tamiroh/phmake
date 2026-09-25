@@ -1,0 +1,4 @@
+$ ./phmake -rR
+loaded
+$ ./phmake -rR
+loaded
