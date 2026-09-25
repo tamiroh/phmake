@@ -8,9 +8,12 @@ use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\Exports;
 use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Makefile;
+use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
+use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 use Tamiroh\Phmake\Makefile\Rule\PrerequisiteExpression;
@@ -22,6 +25,7 @@ use Tamiroh\Phmake\Makefile\Search\SearchPaths;
 use function array_filter;
 use function array_map;
 use function array_values;
+use function count;
 use function in_array;
 use function str_contains;
 use function str_ends_with;
@@ -123,9 +127,6 @@ final class MakefileBuilder
                 }
                 continue;
             }
-            if ($this->defaultGoal === null && (!str_starts_with($name, '.') || str_contains($name, '/'))) {
-                $this->defaultGoal = $name;
-            }
             $stem = $rule->targetPattern === null ? '' : new Pattern($rule->targetPattern)->match($name);
             if ($stem === null) {
                 $this->output?->writeWarning("target '$name' doesn't match the target pattern", $rule->source);
@@ -173,6 +174,8 @@ final class MakefileBuilder
     /**
      * @param list<Variable> $variables
      * @param list<PatternRule> $builtinRules
+     *
+     * @throws MakefileErrorException
      */
     public function build(
         array $variables,
@@ -214,16 +217,44 @@ final class MakefileBuilder
                 $patterns[] = $builtin;
             }
         }
+        $goal = $context === null
+            ? $this->defaultGoal
+            : new VariableExpander($context, $this->output)->expand('$(.DEFAULT_GOAL)');
+        if ($goal !== null && !isset($this->targets[$goal])) {
+            $names = DependencySyntax::words($goal);
+            if (count($names) > 1) {
+                throw new MakefileErrorException('.DEFAULT_GOAL contains more than one target');
+            }
+            $goal = $names[0] ?? null;
+        }
         return new Makefile(
             array_values($this->targets),
             $variables,
-            $this->defaultGoal,
+            $goal === '' ? null : $goal,
             $patterns,
             $exports,
             $context,
             $this->scopes,
             $this->paths,
         );
+    }
+
+    public function selectDefault(Rule $rule, VariableExpander $expander): void
+    {
+        if (($expander->variable('.DEFAULT_GOAL')->expression ?? '') !== '') {
+            return;
+        }
+        foreach ($rule->targetNames as $rawName) {
+            if ($rule->targetPattern === null && new Pattern($rawName)->hasWildcard()) {
+                continue;
+            }
+            $name = new Pattern($rawName)->substitute('%');
+            if (!str_starts_with($name, '.') || str_contains($name, '/')) {
+                $this->defaultGoal = $name;
+                $expander->context->variables['.DEFAULT_GOAL'] = new Variable('.DEFAULT_GOAL', $name, false);
+                return;
+            }
+        }
     }
 
     /**

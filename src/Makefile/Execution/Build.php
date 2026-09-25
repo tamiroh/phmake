@@ -40,7 +40,7 @@ final class Build
     /** @var array<string, true> */
     private array $visiting = [];
 
-    /** @var array<string, bool> */
+    /** @var array<string, bool|CommandFailedException> */
     private array $completedRecipes = [];
 
     private readonly RuleSearch $search;
@@ -63,6 +63,49 @@ final class Build
         $this->scope = new VariableScope($makefile->context ?? new EvaluationContext($makefile->variables));
     }
 
+    public function cleanup(): void
+    {
+        $this->files->cleanup();
+    }
+
+    /**
+     * Update input makefiles quietly, retaining successful results for ordinary goals.
+     *
+     * @param list<string> $names
+     * @param list<string> $unreadable
+     *
+     * @return array<string, MakefileErrorException|CommandFailedException>
+     */
+    public function remake(array $names, array $unreadable = []): array
+    {
+        $this->files->goals = $names;
+        $errors = [];
+        foreach (array_unique($names) as $name) {
+            $target = $this->makefile->targetsByName[$name] ?? null;
+            if ($target?->isPhony === true) {
+                if (!$this->filesystem->exists($name)) {
+                    $errors[$name] = new MakefileErrorException("No rule to make target '$name'");
+                }
+                continue;
+            }
+            foreach ($target->rules ?? [] as $rule) {
+                if ($rule->doubleColon && $rule->prerequisites->sequence === [] && $rule->recipe !== null) {
+                    if (!$this->filesystem->exists($name)) {
+                        $errors[$name] = new MakefileErrorException("No rule to make target '$name'");
+                    }
+                    continue 2;
+                }
+            }
+            $executed = false;
+            try {
+                $this->update($name, $executed, force: in_array($name, $unreadable, true));
+            } catch (MakefileErrorException|CommandFailedException $error) {
+                $errors[$name] = $error;
+            }
+        }
+        return $errors;
+    }
+
     /**
      * @param list<string> $names
      *
@@ -71,19 +114,19 @@ final class Build
      */
     public function run(array $names): void
     {
-        if ($names === []) {
-            if ($this->makefile->defaultGoal === null) {
-                throw new MakefileErrorException('No targets');
-            }
-            $names = [$this->makefile->defaultGoal];
-        }
-        $this->files->goals = $names;
         try {
+            if ($names === []) {
+                if ($this->makefile->defaultGoal === null) {
+                    throw new MakefileErrorException('No targets');
+                }
+                $names = [$this->makefile->defaultGoal];
+            }
+            $this->files->goals = $names;
             foreach ($names as $name) {
                 $executed = false;
                 $this->update($name, $executed);
                 if (!$executed) {
-                    $target = $this->resolve($name);
+                    $target = $this->search->resolve($name, $this->scope);
                     $this->output->writeInfo(
                         $target === null || $target->isPhony || ($target->rules[0]->recipe ?? null) === null
                             ? "Nothing to be done for '$name'."
@@ -109,6 +152,9 @@ final class Build
     ): bool {
         $key = $rule->recipe === null ? '' : spl_object_id($rule->recipe) . ':' . implode("\0", $rule->group);
         if ($rule->group !== [] && isset($this->completedRecipes[$key])) {
+            if ($this->completedRecipes[$key] instanceof CommandFailedException) {
+                throw $this->completedRecipes[$key];
+            }
             return $this->completedRecipes[$key];
         }
         $rule = SecondaryExpansion::explicit(
@@ -156,7 +202,14 @@ final class Build
             $target->name,
             new VariableExpander($this->scope->context, $this->output, scope: $this->scope),
         );
-        $ran = $this->execute($target, $rule, $modifiedAt, $changed);
+        try {
+            $ran = $this->execute($target, $rule, $modifiedAt, $changed);
+        } catch (CommandFailedException $error) {
+            if ($rule->group !== []) {
+                $this->completedRecipes[$key] = $error;
+            }
+            throw $error;
+        }
         $executed = $executed || $ran;
         $updated = $ran || $target->isPhony || !$this->filesystem->exists($target->name);
         if ($rule->group !== []) {
@@ -165,7 +218,7 @@ final class Build
                 if ($rule->implicit && !isset($this->search->state->targets[$peer])) {
                     $this->search->state->targets[$peer] = new Target($peer, [$rule]);
                 }
-                if (count($this->resolve($peer)->rules ?? []) === 1) {
+                if (count($this->search->resolve($peer, $this->scope)->rules ?? []) === 1) {
                     $this->results[$peer] = $updated;
                 }
             }
@@ -272,7 +325,7 @@ final class Build
                 $members[] = $peer;
                 continue;
             }
-            foreach ($this->resolve($peer)->rules ?? [] as $other) {
+            foreach ($this->search->resolve($peer, $this->scope)->rules ?? [] as $other) {
                 if ($other->recipe === $rule->recipe && $other->group === $rule->group) {
                     $members[] = $peer;
                     break;
@@ -308,7 +361,7 @@ final class Build
             $this->visiting[$peer] = true;
             try {
                 $rules = [];
-                foreach ($this->resolve($peer)->rules ?? [] as $other) {
+                foreach ($this->search->resolve($peer, $this->scope)->rules ?? [] as $other) {
                     if ($other->recipe === $rule->recipe && $other->group === $rule->group) {
                         $other = SecondaryExpansion::explicit(
                             $peer,
@@ -327,7 +380,7 @@ final class Build
                 $this->search->state->targets[$peer] = new Target(
                     $peer,
                     $rules,
-                    $this->resolve($peer)->isPhony ?? false,
+                    $this->search->resolve($peer, $this->scope)->isPhony ?? false,
                 );
             } finally {
                 unset($this->visiting[$peer]);
@@ -339,25 +392,22 @@ final class Build
 
     /**
      * @throws MakefileErrorException
-     */
-    private function resolve(string $name): ?Target
-    {
-        return $this->search->resolve($name, $this->scope);
-    }
-
-    /**
-     * @throws MakefileErrorException
      * @throws CommandFailedException
      */
-    private function update(string $name, bool &$executed, ?string $neededBy = null, ?int $threshold = null): bool
-    {
+    private function update(
+        string $name,
+        bool &$executed,
+        ?string $neededBy = null,
+        ?int $threshold = null,
+        bool $force = false,
+    ): bool {
         if (array_key_exists($name, $this->results)) {
             return $this->results[$name];
         }
         $parent = $this->scope;
         $this->scope = $this->makefile->scopes->scope($name, $parent->inherit(), $this->output);
         try {
-            $target = $this->resolve($name);
+            $target = $this->search->resolve($name, $this->scope);
             if ($target === null) {
                 if ($this->files->time($name) !== null) {
                     return $this->results[$name] = false;
@@ -366,7 +416,7 @@ final class Build
                     "No rule to make target '$name'" . ($neededBy === null ? '' : ", needed by '$neededBy'"),
                 );
             }
-            $modifiedAt = $this->files->time($name);
+            $modifiedAt = $force ? null : $this->files->time($name);
             $deferred = $modifiedAt === null && $threshold !== null && $this->files->intermediate($name);
             $this->visiting[$name] = true;
             try {

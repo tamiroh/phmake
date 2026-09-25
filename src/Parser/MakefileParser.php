@@ -17,11 +17,7 @@ use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 
-use function array_keys;
-use function array_slice;
 use function array_values;
-use function count;
-use function explode;
 use function implode;
 use function in_array;
 use function intdiv;
@@ -42,16 +38,13 @@ final readonly class MakefileParser
      * @param list<Variable> $defaults
      * @param array<string, Variable> $overrides
      * @param list<PatternRule> $builtinRules
-     * @param array<int, string> $sources
      */
     public function __construct(
-        private string $source,
-        private ?SourceFiles $files = null,
+        private MakefileSources $sources,
         private array $defaults = [],
         private array $overrides = [],
         private array $builtinRules = [],
         private ?Output $output = null,
-        private array $sources = [],
         private ?Configuration $configuration = null,
         private ?Shell $shell = null,
         private ?Filesystem $filesystem = null,
@@ -168,7 +161,7 @@ final readonly class MakefileParser
         foreach ($this->overrides as $variable) {
             $variables[$variable->name] = $variable;
         }
-        $inherited = ['MAKEFLAGS'];
+        $inherited = ['MAKEFLAGS', 'MAKEFILES'];
         foreach ($variables as $variable) {
             if (in_array($variable->origin, ['environment', 'environment override', 'command line'], true)) {
                 $inherited[] = $variable->name;
@@ -195,26 +188,27 @@ final readonly class MakefileParser
                 }
             };
         $scope = new VariableExpander($context, $this->output);
-        if ($this->sources === []) {
-            $this->readRules($this->source, $builder, $variables, [], $exports, [], $scope);
-        } else {
-            $lines = explode("\n", $this->source);
-            $starts = array_keys($this->sources);
-            foreach ($starts as $index => $start) {
-                $this->readRules(
-                    implode("\n", array_slice(
-                        $lines,
-                        $start - 1,
-                        ($starts[$index + 1] ?? (count($lines) + 1)) - $start,
-                    )),
-                    $builder,
-                    $variables,
-                    [],
-                    $exports,
-                    [1 => $this->sources[$start]],
-                    $scope,
-                );
-            }
+        $variables['MAKEFILE_LIST'] = new Variable('MAKEFILE_LIST', '', false);
+        $variables['.INCLUDE_DIRS'] = new Variable(
+            '.INCLUDE_DIRS',
+            implode(' ', $this->sources->directories()),
+            false,
+            'default',
+        );
+        foreach ($this->sources->evaluations as $text) {
+            $this->readRules($text, $builder, $variables, [], $exports, [], $scope, '<command-line>');
+        }
+        foreach (self::words($scope->expand('$(MAKEFILES)')) as $path) {
+            $this->readFile(
+                $this->sources->open($path, optional: true, defaultGoal: false),
+                $builder,
+                $exports,
+                $scope,
+                [],
+            );
+        }
+        foreach ($this->sources->main as $path) {
+            $this->readFile($this->sources->open($path, main: true), $builder, $exports, $scope, []);
         }
         $context->reading = false;
         return $builder->build(
@@ -224,15 +218,6 @@ final readonly class MakefileParser
             !($this->configuration->noBuiltinRules ?? false),
             $context,
         );
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function matchingPaths(string $pattern): array
-    {
-        $paths = $this->files?->matching($pattern) ?? [];
-        return $paths === [] ? [$pattern] : $paths;
     }
 
     /**
@@ -269,6 +254,50 @@ final readonly class MakefileParser
             $lines[] = $line;
         }
         throw new ParseException($start, "missing 'endef', unterminated 'define'");
+    }
+
+    /**
+     * @param list<string> $included
+     *
+     * @throws MakefileErrorException
+     * @throws ParseException
+     */
+    private function readFile(
+        ReadFile $file,
+        MakefileBuilder $builder,
+        Exports $exports,
+        VariableExpander $scope,
+        array $included,
+    ): void {
+        if ($file->text === null) {
+            if (!$file->optional && $file->source === null) {
+                $this->output?->writeWarning($file->path . ': ' . ($file->error ?? 'No such file or directory'));
+            }
+            return;
+        }
+        if (in_array($file->path, $included, true)) {
+            throw new MakefileErrorException("Recursive include `{$file->path}'", $file->source);
+        }
+        $scope->context->variables['MAKEFILE_LIST'] = new Variable(
+            'MAKEFILE_LIST',
+            trim($scope->expand('$(MAKEFILE_LIST)') . ' ' . $file->path),
+            false,
+        );
+        $defaultGoal = $this->sources->defaultGoal;
+        $this->sources->defaultGoal = $file->defaultGoal;
+        try {
+            $this->readRules(
+                $file->text,
+                $builder,
+                $scope->context->variables,
+                [...$included, $file->path],
+                $exports,
+                [1 => $file->path],
+                $scope,
+            );
+        } finally {
+            $this->sources->defaultGoal = $defaultGoal;
+        }
     }
 
     /**
@@ -387,6 +416,12 @@ final readonly class MakefileParser
                 );
                 if ($header->name === 'MAKEFLAGS') {
                     $this->configuration?->updateMakeflags($variables, $expander);
+                    $variables['.INCLUDE_DIRS'] = new Variable(
+                        '.INCLUDE_DIRS',
+                        implode(' ', $this->sources->directories()),
+                        false,
+                        'default',
+                    );
                 }
                 if ($export !== null) {
                     $exports->set([$header->name], $export);
@@ -426,35 +461,30 @@ final readonly class MakefileParser
                 $assignment->apply($variables, $origin, $this->output, $location, $expander, $private);
                 if ($assignment->name === 'MAKEFLAGS') {
                     $this->configuration?->updateMakeflags($variables, $expander);
+                    $variables['.INCLUDE_DIRS'] = new Variable(
+                        '.INCLUDE_DIRS',
+                        implode(' ', $this->sources->directories()),
+                        false,
+                        'default',
+                    );
                 }
                 continue;
             }
 
             if (preg_match('/^\s*(-?include|sinclude)(?:\s+(.*))?$/', $uncommented, $matches) === 1) {
-                /** @var array{string, '-include'|'include'|'sinclude', 2?: string} $matches */
-                $patterns = self::words($expander->expand($matches[2] ?? ''));
-                foreach ($patterns as $pattern) {
-                    foreach ($this->matchingPaths($pattern) as $path) {
-                        $contents = $this->files?->read($path);
-                        if ($contents === null) {
-                            if ($matches[1] === 'include') {
-                                throw new ParseException($lineNumber, "Included makefile `$path' not found");
-                            }
-                            continue;
-                        }
-                        if (in_array($path, $included, strict: true)) {
-                            throw new ParseException($lineNumber, "Recursive include `$path'");
-                        }
-                        $this->readRules(
-                            $contents,
+                foreach (self::words($expander->expand($matches[2] ?? '')) as $pattern) {
+                    foreach ($this->sources->matching($pattern) as $path) {
+                        $this->readFile(
+                            $this->sources->open(
+                                $path,
+                                $matches[1] !== 'include',
+                                $this->sources->defaultGoal,
+                                $location,
+                            ),
                             $builder,
-                            $variables,
-                            [...$included, $path],
                             $exports,
-                            [
-                                1 => $path,
-                            ],
                             $scope,
+                            $included,
                         );
                     }
                 }
@@ -478,7 +508,10 @@ final readonly class MakefileParser
             if (!$scope->context->reading) {
                 throw new MakefileErrorException('prerequisites cannot be defined in recipes', $location);
             }
-            $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->files);
+            $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->sources->files);
+            if ($this->sources->defaultGoal) {
+                $builder->selectDefault($rule, $scope);
+            }
             if ($recipe !== null) {
                 $rule->addRecipe(ltrim($recipe), $location);
             }

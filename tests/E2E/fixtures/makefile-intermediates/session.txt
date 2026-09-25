@@ -1,0 +1,6 @@
+$ touch -t 200001010000 stable.mk
+$ ./phmake -rR
+unchanged
+payload
+rm temporary
+$ test -f result && test ! -f temporary

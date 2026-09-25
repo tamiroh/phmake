@@ -15,6 +15,9 @@ interface Configuration
 {
     public bool $noBuiltinRules { get; }
 
+    /** @var list<string> */
+    public array $includeDirectories { get; }
+
     /**
      * @param array<string, Variable> $variables
      *

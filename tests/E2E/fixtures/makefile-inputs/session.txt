@@ -1,0 +1,8 @@
+$ ./phmake -rR -f bootstrap.mk -f generated.mk
+phmake: generated.mk: No such file or directory
+generated:1:bootstrap.mk generated.mk
+$ ./phmake -rR -f bootstrap.mk -f generated.mk
+generated::bootstrap.mk generated.mk
+$ rm generated.mk
+$ cat input.mk | ./phmake -rR -f -
+stdin:generated:1

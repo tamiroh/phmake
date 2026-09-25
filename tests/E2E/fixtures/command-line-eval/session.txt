@@ -1,0 +1,10 @@
+$ ./phmake -rR --eval='VALUE := from-cli' -E '$(info eval $(VALUE))'
+eval from-cli
+file from-cli
+run
+$ ./phmake -rR --eval='VALUE := from-cli' -E '$(info eval $(VALUE))' recurse
+eval from-cli
+file from-cli
+eval from-cli
+file from-cli
+run

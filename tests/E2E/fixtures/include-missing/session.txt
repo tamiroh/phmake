@@ -1,0 +1,9 @@
+$ ./phmake -rR
+Makefile:1: missing.mk: No such file or directory
+phmake: *** No rule to make target 'missing.mk'.  Stop.
+[exit 2]
+$ ./phmake -rR -f optional.mk
+optional
+$ ./phmake -rR -f optional.mk required
+phmake: *** No rule to make target 'missing.mk', needed by 'required'.  Stop.
+[exit 2]

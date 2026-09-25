@@ -1,0 +1,5 @@
+$ mkdir first second && printf 'VALUE = first\n' > first/settings.mk && printf 'VALUE = second\n' > second/settings.mk
+$ ./phmake -rR -I- -Ifirst --include-dir=second MAKEFILES=prelude.mk
+main:first:first second
+prelude.mk nested.mk Makefile first/settings.mk
+child:first:first second

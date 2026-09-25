@@ -1,0 +1,12 @@
+$ ./phmake -rR ARG=kept
+reading :once
+generate-first
+reading 1:once
+generate-second
+reading 2:once
+value=ready arg=kept restarts=2 state=once
+exported=
+$ ./phmake -rR ARG=kept
+reading :once
+value=ready arg=kept restarts= state=once
+exported=

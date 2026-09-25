@@ -1,0 +1,5 @@
+$ ./phmake -rR
+chosen
+$ ./phmake -rR -f spaces.mk
+one
+two

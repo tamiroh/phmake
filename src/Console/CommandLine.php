@@ -12,9 +12,11 @@ use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\Configuration;
 
+use function array_map;
 use function array_values;
 use function count;
 use function implode;
+use function in_array;
 use function str_contains;
 use function str_replace;
 use function str_starts_with;
@@ -29,8 +31,7 @@ final class CommandLine implements Configuration
     /** @var array<string, Variable> */
     public private(set) array $variables = [];
 
-    /** @var list<string> */
-    public private(set) array $makefiles = [];
+    public readonly InputOptions $input;
 
     public private(set) bool $silent = false;
 
@@ -45,7 +46,9 @@ final class CommandLine implements Configuration
     public private(set) ?bool $printDirectory = null;
 
     /** @var list<string> */
-    public private(set) array $directories = [];
+    public array $includeDirectories {
+        get => $this->input->includes;
+    }
 
     /**
      * @param list<string> $arguments
@@ -59,6 +62,7 @@ final class CommandLine implements Configuration
         string $gnumakeflags = '',
         array $defaults = [],
     ) {
+        $this->input = new InputOptions();
         $this->readFlags($gnumakeflags, $defaults);
         $this->readFlags($makeflags, $defaults);
         $this->readArguments($arguments, false, $defaults);
@@ -110,6 +114,15 @@ final class CommandLine implements Configuration
             . ($this->noBuiltinVariables ? 'R' : '')
             . ($this->silent ? 's' : '')
             . ($this->printDirectory === null ? '' : ($this->printDirectory ? 'w' : ' --no-print-directory'))
+            . implode('', array_map(
+                static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
+                $this->input->includes,
+            ))
+            . implode('', array_map(
+                static fn(string $text): string => ' --eval='
+                . str_replace(['\\', '$', ' ', "\t", "\n"], ['\\\\', '$$', '\\ ', "\\\t", "\\\n"], $text),
+                $this->input->evaluations,
+            ))
             . ($assignments === [] ? '' : ' -- ' . implode(' ', $assignments))
         );
     }
@@ -237,6 +250,8 @@ final class CommandLine implements Configuration
             '--print-directory' => '-w',
             '--file', '--makefile' => '-f',
             '--directory' => '-C',
+            '--include-dir' => '-I',
+            '--eval' => '-E',
             default => $argument,
         };
         if ($argument === '--no-print-directory') {
@@ -247,7 +262,13 @@ final class CommandLine implements Configuration
             $this->silent = false;
             return;
         }
-        foreach (['--file=' => '-f', '--makefile=' => '-f', '--directory=' => '-C'] as $prefix => $short) {
+        foreach ([
+            '--file=' => '-f',
+            '--makefile=' => '-f',
+            '--directory=' => '-C',
+            '--include-dir=' => '-I',
+            '--eval=' => '-E',
+        ] as $prefix => $short) {
             if (str_starts_with($argument, $prefix)) {
                 if ($argument === $prefix) {
                     throw new MakefileErrorException(
@@ -281,6 +302,8 @@ final class CommandLine implements Configuration
                     break;
                 case 'f':
                 case 'C':
+                case 'I':
+                case 'E':
                     $option = $argument[$offset];
                     $path = substr($argument, $offset + 1);
                     if ($path === '') {
@@ -291,11 +314,22 @@ final class CommandLine implements Configuration
                             "Option -$option requires " . ($option === 'f' ? 'a file name' : 'a directory'),
                         );
                     }
-                    if (!$inherited) {
+                    if ($option === 'I') {
+                        if ($path === '-') {
+                            $this->input->includes = ['-'];
+                        } elseif (!in_array($path, $this->input->includes, true)) {
+                            $this->input->includes[] = $path;
+                        }
+                    } elseif ($option === 'E') {
+                        $path = $inherited ? str_replace('$$', '$', $path) : $path;
+                        if (!$inherited || !in_array($path, $this->input->evaluations, true)) {
+                            $this->input->evaluations[] = $path;
+                        }
+                    } elseif (!$inherited) {
                         if ($option === 'f') {
-                            $this->makefiles[] = $path;
+                            $this->input->makefiles[] = $path;
                         } else {
-                            $this->directories[] = $path;
+                            $this->input->directories[] = $path;
                         }
                     }
                     return;
@@ -303,5 +337,10 @@ final class CommandLine implements Configuration
                     throw new MakefileErrorException("Option `$argument' is not supported");
             }
         }
+    }
+
+    public function __clone(): void
+    {
+        $this->input = clone $this->input;
     }
 }
