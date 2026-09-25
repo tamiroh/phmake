@@ -42,6 +42,19 @@ jobs:
       - name: Build and verify GNU make with phmake
         run: docker run --rm --platform linux/amd64 phmake-make-build
 
+  build-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare Linux build environment
+        run: docker build --platform linux/amd64 -f e2e/linux/Dockerfile -t phmake-linux-build .
+
+      - name: Build and boot Linux with phmake
+        run: docker run --rm --platform linux/amd64 --network none phmake-linux-build
+
   test-gnu-make:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

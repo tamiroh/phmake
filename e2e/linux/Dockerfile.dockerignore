@@ -1,0 +1,12 @@
+**
+!composer.json
+!composer.lock
+!phmake
+!src/
+!src/**
+!e2e/
+!e2e/linux/
+!e2e/linux/verify.sh
+!e2e/linux/init.c
+!e2e/linux/initramfs.list
+!e2e/linux/kernel.config
