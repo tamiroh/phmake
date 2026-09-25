@@ -17,6 +17,7 @@ lint:
 
 .PHONY: format
 format:
+	$(PHP_CS_FIXER) fix --using-cache=no --sequential
 	$(MAGO) --colors always fmt
 
 .PHONY: format-check
