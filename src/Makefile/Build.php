@@ -24,13 +24,16 @@ final class Build
     private array $completedRecipes = [];
     /** @var array<string, Target|null> */
     private array $resolved = [];
+    private VariableScope $scope;
 
     public function __construct(
         private readonly Makefile $makefile,
         private readonly Shell $shell,
         private readonly Filesystem $filesystem,
         private readonly Output $output,
-    ) {}
+    ) {
+        $this->scope = new VariableScope($makefile->context ?? new EvaluationContext($makefile->variables));
+    }
 
     /** @param list<string> $names
      * @throws MakefileErrorException
@@ -61,12 +64,23 @@ final class Build
     /** @throws MakefileErrorException
      * @throws CommandFailedException
      */
-    private function buildRule(Target $target, BuildRule $rule, ?int $modifiedAt, bool &$executed): bool
-    {
+    private function buildRule(
+        Target $target,
+        BuildRule $rule,
+        ?int $modifiedAt,
+        bool &$executed,
+        VariableScope $parent,
+    ): bool {
         $key = $rule->recipe === null ? '' : spl_object_id($rule->recipe) . ':' . implode("\0", $rule->group);
         if ($rule->group !== [] && isset($this->completedRecipes[$key])) {
             return $this->completedRecipes[$key];
         }
+        $rule = SecondaryExpansion::explicit(
+            $target->name,
+            $rule,
+            new VariableExpander($this->scope->context, $this->output, scope: $this->scope),
+            $this->filesystem,
+        );
         [$prerequisites, $changed] = $this->dependencies($target->name, $rule->prerequisites, $executed);
         $rule = new BuildRule(
             $prerequisites,
@@ -75,10 +89,13 @@ final class Build
             $rule->stem,
             $rule->group,
             $rule->firstPrerequisite,
+            $rule->implicit,
         );
         $peers = $this->groupMembers($target, $rule);
+        $peerChanged = $this->groupPrerequisites($target, $rule, $peers, $executed, $parent);
         $rebuild =
             $target->isPhony
+            || $peerChanged
             || $changed !== []
             || $rule->doubleColon && $prerequisites->normal === [] && $prerequisites->orderOnly === [];
         foreach ($peers as $peer) {
@@ -98,6 +115,9 @@ final class Build
         if ($rule->group !== []) {
             $this->completedRecipes[$key] = $updated;
             foreach ($peers as $peer) {
+                if ($rule->implicit && !isset($this->resolved[$peer])) {
+                    $this->resolved[$peer] = new Target($peer, [$rule]);
+                }
                 if (count($this->resolve($peer)->rules ?? []) === 1) {
                     $this->results[$peer] = $updated;
                 }
@@ -115,7 +135,7 @@ final class Build
         $normal = [];
         $orderOnly = [];
         $changed = [];
-        foreach (array_unique([...$prerequisites->normal, ...$prerequisites->orderOnly]) as $dependency) {
+        foreach (array_unique($prerequisites->sequence) as $dependency) {
             if (isset($this->visiting[$dependency])) {
                 $this->output->writeWarning("Circular $name <- $dependency dependency dropped.");
                 continue;
@@ -134,7 +154,10 @@ final class Build
                 $normal[] = $dependency;
             }
         }
-        return [new Prerequisites($normal, $orderOnly, $prerequisites->expressions), $changed];
+        return [
+            new Prerequisites($normal, $orderOnly, $prerequisites->expressions, $prerequisites->sequence),
+            $changed,
+        ];
     }
 
     /** @param list<string> $changed
@@ -144,8 +167,9 @@ final class Build
     private function execute(Target $target, BuildRule $rule, ?int $modifiedAt, array $changed): bool
     {
         $expander = new VariableExpander(
-            $this->makefile->context ?? $this->makefile->variables,
+            $this->scope->context,
             $this->output,
+            scope: $this->scope,
         )->withVariables(AutomaticVariables::forRule($target->name, $rule, $modifiedAt, $changed, $this->filesystem));
         $commands = [];
         foreach ($rule->recipe->commands ?? [] as $command) {
@@ -163,12 +187,18 @@ final class Build
         return $ran;
     }
 
-    /** @return list<string> */
+    /** @return list<string>
+     * @throws MakefileErrorException
+     */
     private function groupMembers(Target $target, BuildRule $rule): array
     {
         $members = [$target->name];
         foreach ($rule->group as $peer) {
             if ($peer === $target->name) {
+                continue;
+            }
+            if ($rule->implicit && ($this->makefile->targetsByName[$peer]->rules[0]->recipe ?? null) === null) {
+                $members[] = $peer;
                 continue;
             }
             foreach ($this->resolve($peer)->rules ?? [] as $other) {
@@ -179,6 +209,55 @@ final class Build
             }
         }
         return $members;
+    }
+
+    /** @param list<string> $peers
+     * @throws MakefileErrorException
+     * @throws CommandFailedException
+     */
+    private function groupPrerequisites(
+        Target $target,
+        BuildRule $rule,
+        array $peers,
+        bool &$executed,
+        VariableScope $inherited,
+    ): bool {
+        if ($rule->implicit) {
+            return false;
+        }
+        $changed = false;
+        foreach ($peers as $peer) {
+            if ($peer === $target->name || isset($this->results[$peer])) {
+                continue;
+            }
+            $parent = $this->scope;
+            $this->scope = $this->makefile->scopes->scope($peer, $inherited->inherit(), $this->output);
+            $this->visiting[$peer] = true;
+            try {
+                $rules = [];
+                foreach ($this->resolve($peer)->rules ?? [] as $other) {
+                    if ($other->recipe === $rule->recipe && $other->group === $rule->group) {
+                        $other = SecondaryExpansion::explicit(
+                            $peer,
+                            $other,
+                            new VariableExpander($this->scope->context, $this->output, scope: $this->scope),
+                            $this->filesystem,
+                        );
+                        [, $updated] = $this->dependencies($peer, $other->prerequisites, $executed);
+                        $changed =
+                            $changed
+                            || $updated !== []
+                            || $this->needsRebuild($other, $this->filesystem->lastModified($peer));
+                    }
+                    $rules[] = $other;
+                }
+                $this->resolved[$peer] = new Target($peer, $rules, $this->resolve($peer)->isPhony ?? false);
+            } finally {
+                unset($this->visiting[$peer]);
+                $this->scope = $parent;
+            }
+        }
+        return $changed;
     }
 
     private function needsRebuild(BuildRule $rule, ?int $modifiedAt): bool
@@ -195,10 +274,15 @@ final class Build
         return false;
     }
 
+    /** @throws MakefileErrorException */
     private function resolve(string $name): ?Target
     {
         if (!array_key_exists($name, $this->resolved)) {
-            $this->resolved[$name] = $this->makefile->resolveTarget($name, $this->filesystem);
+            $this->resolved[$name] = $this->makefile->resolveTarget(
+                $name,
+                $this->filesystem,
+                expander: new VariableExpander($this->scope->context, $this->output, scope: $this->scope),
+            );
         }
         return $this->resolved[$name];
     }
@@ -211,26 +295,32 @@ final class Build
         if (array_key_exists($name, $this->results)) {
             return $this->results[$name];
         }
-        $target = $this->resolve($name);
-        if ($target === null) {
-            if ($this->filesystem->exists($name)) {
-                return $this->results[$name] = false;
-            }
-            throw new MakefileErrorException(
-                "No rule to make target '$name'" . ($neededBy === null ? '' : ", needed by '$neededBy'"),
-            );
-        }
-        $modifiedAt = $this->filesystem->lastModified($name);
-        $this->visiting[$name] = true;
+        $parent = $this->scope;
+        $this->scope = $this->makefile->scopes->scope($name, $parent->inherit(), $this->output);
         try {
-            $changed = false;
-            foreach ($target->rules as $rule) {
-                $updated = $this->buildRule($target, $rule, $modifiedAt, $executed);
-                $changed = $changed || $updated;
+            $target = $this->resolve($name);
+            if ($target === null) {
+                if ($this->filesystem->exists($name)) {
+                    return $this->results[$name] = false;
+                }
+                throw new MakefileErrorException(
+                    "No rule to make target '$name'" . ($neededBy === null ? '' : ", needed by '$neededBy'"),
+                );
             }
-            return $this->results[$name] = $changed;
+            $modifiedAt = $this->filesystem->lastModified($name);
+            $this->visiting[$name] = true;
+            try {
+                $changed = false;
+                foreach ($target->rules as $rule) {
+                    $updated = $this->buildRule($target, $rule, $modifiedAt, $executed, $parent);
+                    $changed = $changed || $updated;
+                }
+                return $this->results[$name] = $changed;
+            } finally {
+                unset($this->visiting[$name]);
+            }
         } finally {
-            unset($this->visiting[$name]);
+            $this->scope = $parent;
         }
     }
 }

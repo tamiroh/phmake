@@ -154,7 +154,9 @@ final readonly class MakefileParser
                 $context->inheritedEnvironment[$variable->name] = $variable->expression;
             }
         }
-        $variables = [...$variables, ...$this->overrides];
+        foreach ($this->overrides as $variable) {
+            $variables[$variable->name] = $variable;
+        }
         $inherited = ['MAKEFLAGS'];
         foreach ($variables as $variable) {
             if (in_array($variable->origin, ['environment', 'environment override', 'command line'], true)) {
@@ -323,13 +325,18 @@ final readonly class MakefileParser
             $matches = [];
             $export = null;
             $origin = 'file';
-            while (preg_match('/^\s*(override|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1) {
-                /** @var array{string, 'override'|'export'|'unexport', string} $matches */
+            $private = false;
+            while (
+                preg_match('/^\s*(override|private|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1
+            ) {
+                /** @var array{string, 'override'|'private'|'export'|'unexport', string} $matches */
                 if (preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[2])) === 1) {
                     break;
                 }
                 if ($matches[1] === 'override') {
                     $origin = 'override';
+                } elseif ($matches[1] === 'private') {
+                    $private = true;
                 } else {
                     $export = $matches[1] === 'export';
                 }
@@ -362,6 +369,7 @@ final readonly class MakefileParser
                     $this->output,
                     $location,
                     $expander,
+                    $private,
                 );
                 if ($header->name === 'MAKEFLAGS') {
                     $this->configuration?->updateMakeflags($variables, $expander);
@@ -401,7 +409,7 @@ final readonly class MakefileParser
                 if ($export !== null) {
                     $exports->set([$assignment->name], $export);
                 }
-                $assignment->apply($variables, $origin, $this->output, $location, $expander);
+                $assignment->apply($variables, $origin, $this->output, $location, $expander, $private);
                 if ($assignment->name === 'MAKEFLAGS') {
                     $this->configuration?->updateMakeflags($variables, $expander);
                 }
@@ -436,6 +444,10 @@ final readonly class MakefileParser
                         );
                     }
                 }
+                continue;
+            }
+
+            if (ScopedAssignment::read($uncommented, $builder->scopes, $expander, $this->output)) {
                 continue;
             }
 

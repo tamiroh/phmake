@@ -1,0 +1,6 @@
+$ ./phmake
+prior:all/first/first second/first second
+first
+second
+prepare
+result:first second|prepare

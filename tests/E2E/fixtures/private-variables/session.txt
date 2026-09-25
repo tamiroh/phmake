@@ -1,0 +1,9 @@
+$ ./phmake
+leaf:parent 
+middle:local secret
+all:parent 
+$ ./phmake middle
+leaf:global 
+middle:local secret
+$ ./phmake -f definitions.mk
+visible while reading| first; second

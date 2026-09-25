@@ -93,6 +93,7 @@ final readonly class Assignment
         ?Output $output = null,
         ?string $source = null,
         ?VariableExpander $expander = null,
+        bool $private = false,
     ): void {
         $shellValue = null;
         if ($this->operator === '!=') {
@@ -136,7 +137,7 @@ final readonly class Assignment
             $before = $separator === false ? $previous->expression : substr($previous->expression, 0, $separator);
             $value = ($before === '' ? '' : $before . ' ') . $value;
         }
-        $variables[$this->name] = new Variable($this->name, $value, $recursive, $origin, $source);
+        $variables[$this->name] = new Variable($this->name, $value, $recursive, $origin, $source, $private);
     }
 
     /** @throws MakefileErrorException */

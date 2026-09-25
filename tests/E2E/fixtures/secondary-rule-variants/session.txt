@@ -1,0 +1,11 @@
+$ ./phmake
+source
+obj/a.out:obj/a:source
+a.static:a:source
+first report has []
+first-report
+second report has []
+second-report
+expanding left
+expanding right
+group:left

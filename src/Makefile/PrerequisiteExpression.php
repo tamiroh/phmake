@@ -12,5 +12,7 @@ final readonly class PrerequisiteExpression
         public ?string $stem = null,
         public bool $hasRecipe = false,
         public ?string $source = null,
+        public bool $secondary = false,
+        public ?Prerequisites $initial = null,
     ) {}
 }

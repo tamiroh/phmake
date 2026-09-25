@@ -15,6 +15,7 @@ use Tamiroh\Phmake\Makefile\PrerequisiteExpression;
 use Tamiroh\Phmake\Makefile\Prerequisites;
 use Tamiroh\Phmake\Makefile\Recipe;
 use Tamiroh\Phmake\Makefile\Target;
+use Tamiroh\Phmake\Makefile\TargetVariables;
 use Tamiroh\Phmake\Makefile\Variable;
 
 use function array_map;
@@ -37,15 +38,22 @@ final class MakefileBuilder
     private ?string $defaultGoal = null;
     /** @var list<string> */
     private array $suffixes = [];
+    private bool $secondary = false;
+    public readonly TargetVariables $scopes;
 
     public function __construct(
         private bool $builtinSuffixes = true,
         private ?Output $output = null,
-    ) {}
+    ) {
+        $this->scopes = new TargetVariables();
+    }
 
     /** @throws ParseException */
     public function addRule(Rule $rule): void
     {
+        if (in_array('.SECONDEXPANSION', $rule->targetNames, true)) {
+            $this->secondary = true;
+        }
         if ($rule->targetNames === []) {
             return;
         }
@@ -56,7 +64,24 @@ final class MakefileBuilder
         if ($rule->targetPattern === null && new Pattern($rule->targetNames[0])->hasWildcard()) {
             $this->patterns[] = new PatternRule(
                 $rule->targetNames,
-                new BuildRule($rule->prerequisites, $recipe, $rule->doubleColon),
+                new BuildRule(
+                    new Prerequisites(
+                        $rule->prerequisites->normal,
+                        $rule->prerequisites->orderOnly,
+                        array_map(
+                            fn(PrerequisiteExpression $expression): PrerequisiteExpression => new PrerequisiteExpression(
+                                $expression->text,
+                                null,
+                                $rule->hasRecipe,
+                                $expression->source,
+                                $this->secondary,
+                            ),
+                            $rule->prerequisites->expressions,
+                        ),
+                    ),
+                    $recipe,
+                    $rule->doubleColon,
+                ),
             );
             return;
         }
@@ -96,11 +121,13 @@ final class MakefileBuilder
                 $prerequisites->normal,
                 $prerequisites->orderOnly,
                 array_map(
-                    static fn(PrerequisiteExpression $expression): PrerequisiteExpression => new PrerequisiteExpression(
+                    fn(PrerequisiteExpression $expression): PrerequisiteExpression => new PrerequisiteExpression(
                         $expression->text,
                         $rule->targetPattern === null ? null : $stem,
                         $rule->hasRecipe,
                         $expression->source,
+                        $this->secondary,
+                        new Prerequisites($prerequisites->normal, $prerequisites->orderOnly),
                     ),
                     $prerequisites->expressions,
                 ),
@@ -173,6 +200,7 @@ final class MakefileBuilder
             $patterns,
             $exports,
             $context,
+            $this->scopes,
         );
     }
 

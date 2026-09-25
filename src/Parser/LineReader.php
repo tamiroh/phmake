@@ -69,6 +69,10 @@ final class LineReader
             } elseif ($line[$index] === '#') {
                 return false;
             } elseif ($line[$index] === ':') {
+                $value = substr($line, $index + 1);
+                if (ScopedAssignment::parse($value) !== null) {
+                    return false;
+                }
                 $hasColon = true;
             } elseif ($line[$index] === ';') {
                 return $hasColon;

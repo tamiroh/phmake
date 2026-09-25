@@ -12,5 +12,9 @@ final readonly class Variable
         public bool $recursive = true,
         public string $origin = 'file',
         public ?string $source = null,
+        public bool $private = false,
+        public ?bool $export = null,
+        public bool $append = false,
+        public bool $conditional = false,
     ) {}
 }

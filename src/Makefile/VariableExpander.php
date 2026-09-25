@@ -32,12 +32,13 @@ final readonly class VariableExpander
      */
     public function __construct(
         array|EvaluationContext $variables,
-        private ?Output $output = null,
+        public ?Output $output = null,
         public int $callParameters = 0,
         public ?string $source = null,
         private array $locals = [],
         public ?string $definitionSource = null,
         private array $expanding = [],
+        public ?VariableScope $scope = null,
     ) {
         $this->context = $variables instanceof EvaluationContext ? $variables : new EvaluationContext($variables);
     }
@@ -52,6 +53,7 @@ final readonly class VariableExpander
             $this->locals,
             $this->definitionSource,
             $this->expanding,
+            $this->scope,
         );
     }
 
@@ -184,13 +186,23 @@ final readonly class VariableExpander
 
     public function variable(string $name): ?Variable
     {
-        return $this->locals[$name] ?? $this->context->variables[$name] ?? null;
+        return (
+            $this->locals[$name]
+            ?? ($this->scope === null ? $this->context->variables[$name] ?? null : $this->scope->variable($name))
+        );
     }
 
     /** @return list<Variable> */
     public function variables(): array
     {
-        return array_values([...$this->context->variables, ...$this->locals]);
+        $variables = $this->context->variables;
+        if ($this->scope !== null) {
+            $variables = [];
+            foreach ($this->scope->variables() as $variable) {
+                $variables[$variable->name] = $variable;
+            }
+        }
+        return array_values([...$variables, ...$this->locals]);
     }
 
     /** @param list<Variable> $variables */
@@ -208,6 +220,7 @@ final readonly class VariableExpander
             $locals,
             $this->definitionSource,
             $this->expanding,
+            $this->scope,
         );
     }
 
@@ -222,6 +235,7 @@ final readonly class VariableExpander
             $this->locals,
             $this->definitionSource,
             $expanding,
+            $this->scope,
         );
     }
 
@@ -307,6 +321,7 @@ final readonly class VariableExpander
             $this->locals,
             $variable->source ?? $this->definitionSource,
             $this->expanding,
+            $this->scope,
         )->expand($variable->expression, [...$expanding, $name]);
     }
 }

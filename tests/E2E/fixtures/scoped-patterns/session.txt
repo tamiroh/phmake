@@ -1,0 +1,9 @@
+$ ./phmake
+first.x:exact:root exact exact
+first-special.x:specific:root specific 
+$ ./phmake WORD=cli
+first.x:exact:root exact exact
+first-special.x:cli:root cli 
+$ ./phmake -f immediate.mk a test.x X=cli
+cli:cli
+early late:simple

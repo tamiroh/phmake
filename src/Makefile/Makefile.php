@@ -28,6 +28,7 @@ final readonly class Makefile
         private array $patterns = [],
         public Exports $exports = new Exports(),
         public ?EvaluationContext $context = null,
+        public TargetVariables $scopes = new TargetVariables(),
     ) {
         $indexed = [];
         foreach ($targets as $target) {
@@ -36,9 +37,16 @@ final readonly class Makefile
         $this->targetsByName = $indexed;
     }
 
-    /** @param array<int, true> $usedPatterns */
-    public function resolveTarget(string $name, Filesystem $filesystem, array $usedPatterns = []): ?Target
-    {
+    /** @param array<int, true> $usedPatterns
+     * @throws MakefileErrorException
+     */
+    public function resolveTarget(
+        string $name,
+        Filesystem $filesystem,
+        array $usedPatterns = [],
+        ?VariableExpander $expander = null,
+    ): ?Target {
+        $expander ??= new VariableExpander($this->context ?? $this->variables);
         $explicit = $this->targetsByName[$name] ?? null;
         if ($explicit !== null) {
             if ($explicit->isPhony) {
@@ -46,13 +54,15 @@ final readonly class Makefile
             }
             $rules = [];
             foreach ($explicit->rules as $rule) {
-                $rules[] = $rule->recipe !== null
-                    ? $rule
-                    : $this->resolveImplicit($name, $filesystem, $rule, $usedPatterns) ?? $rule;
+                if ($rule->recipe === null) {
+                    $rule = SecondaryExpansion::explicit($name, $rule, $expander, $filesystem);
+                    $rule = $this->resolveImplicit($name, $filesystem, $rule, $usedPatterns, $expander) ?? $rule;
+                }
+                $rules[] = $rule;
             }
             return new Target($name, $rules);
         }
-        $implicit = $this->resolveImplicit($name, $filesystem, null, $usedPatterns);
+        $implicit = $this->resolveImplicit($name, $filesystem, null, $usedPatterns, $expander);
         if ($implicit !== null) {
             return new Target($name, [$implicit]);
         }
@@ -74,12 +84,15 @@ final readonly class Makefile
         new Build($this, $shell, $filesystem, $output)->run($targets);
     }
 
-    /** @param array<int, true> $usedPatterns */
+    /** @param array<int, true> $usedPatterns
+     * @throws MakefileErrorException
+     */
     private function resolveImplicit(
         string $name,
         Filesystem $filesystem,
         ?BuildRule $explicit,
         array $usedPatterns,
+        VariableExpander $expander,
     ): ?BuildRule {
         $candidates = [];
         foreach ($this->patterns as $index => $pattern) {
@@ -93,25 +106,61 @@ final readonly class Makefile
                     continue;
                 }
                 $directory = $hasDirectory ? '' : substr($name, 0, strlen($name) - strlen(basename($name)));
+                $prerequisites = new Prerequisites(
+                    $this->substitute($pattern->rule->prerequisites->normal, $stem, $directory),
+                    $this->substitute($pattern->rule->prerequisites->orderOnly, $stem, $directory),
+                );
                 $candidates[] = [
                     new BuildRule(
-                        new Prerequisites(
-                            $this->substitute($pattern->rule->prerequisites->normal, $stem, $directory),
-                            $this->substitute($pattern->rule->prerequisites->orderOnly, $stem, $directory),
-                            $pattern->rule->prerequisites->expressions,
-                        ),
+                        $prerequisites,
                         $pattern->rule->recipe,
                         $pattern->rule->doubleColon,
                         $directory . $stem,
                         count($pattern->names) > 1 ? $this->substitute($pattern->names, $stem, $directory) : [],
                     ),
                     $index,
+                    $stem,
+                    $directory,
                 ];
             }
         }
         usort($candidates, static fn(array $a, array $b): int => strlen($a[0]->stem) <=> strlen($b[0]->stem));
+        $expanded = [];
         foreach ([false, true] as $allowChaining) {
-            foreach ($candidates as [$candidate, $index]) {
+            foreach ($candidates as [$candidate, $index, $stem, $directory]) {
+                $key = $index . ':' . $stem . ':' . $directory;
+                if (!isset($expanded[$key])) {
+                    $prerequisites = $candidate->prerequisites;
+                    foreach ($this->patterns[$index]->rule->prerequisites->expressions as $expression) {
+                        if ($expression->secondary) {
+                            $prerequisites = SecondaryExpansion::expand(
+                                $name,
+                                new PrerequisiteExpression(
+                                    $expression->text,
+                                    $stem,
+                                    $expression->hasRecipe,
+                                    $expression->source,
+                                    true,
+                                ),
+                                $explicit->prerequisites ?? new Prerequisites(),
+                                $expander,
+                                $filesystem,
+                                $directory,
+                                true,
+                            );
+                        }
+                    }
+                    $candidate = new BuildRule(
+                        $prerequisites,
+                        $candidate->recipe,
+                        $candidate->doubleColon,
+                        $candidate->stem,
+                        $candidate->group,
+                    );
+
+                    $expanded[$key] = $candidate;
+                }
+                $candidate = $expanded[$key];
                 foreach ([
                     ...$candidate->prerequisites->normal,
                     ...$candidate->prerequisites->orderOnly,
@@ -123,8 +172,20 @@ final readonly class Makefile
                             || !isset($this->targetsByName[$dependency])
                             && (
                                 !$allowChaining
-                                || $this->resolveTarget($dependency, $filesystem, $usedPatterns + [$index => true])
-                                === null
+                                || $this->resolveTarget(
+                                    $dependency,
+                                    $filesystem,
+                                    $usedPatterns + [$index => true],
+                                    new VariableExpander(
+                                        $expander->context,
+                                        $expander->output,
+                                        scope: $this->scopes->scope(
+                                            $dependency,
+                                            $expander->scope?->inherit() ?? new VariableScope($expander->context),
+                                            $expander->output,
+                                        ),
+                                    ),
+                                ) === null
                             )
                         )
                     ) {
@@ -138,6 +199,7 @@ final readonly class Makefile
                     $explicit->doubleColon ?? false,
                     $candidate->stem,
                     $candidate->group,
+                    implicit: true,
                 );
             }
         }

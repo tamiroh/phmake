@@ -12,17 +12,22 @@ final readonly class Prerequisites
 {
     /** @var list<string> */
     public array $orderOnly;
+    /** @var list<string> */
+    public array $sequence;
 
     /**
      * @param list<string> $normal
      * @param list<string> $orderOnly
      * @param list<PrerequisiteExpression> $expressions
+     * @param list<string>|null $sequence
      */
     public function __construct(
         public array $normal = [],
         array $orderOnly = [],
         public array $expressions = [],
+        ?array $sequence = null,
     ) {
+        $this->sequence = $sequence ?? [...$normal, ...$orderOnly];
         $this->orderOnly = array_values(array_unique(array_diff($orderOnly, $normal)));
     }
 
@@ -32,6 +37,7 @@ final readonly class Prerequisites
             [...$this->normal, ...$other->normal],
             [...$this->orderOnly, ...$other->orderOnly],
             [...$this->expressions, ...$other->expressions],
+            [...$this->sequence, ...$other->sequence],
         );
     }
 }

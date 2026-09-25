@@ -1,0 +1,20 @@
+$ ./phmake
+shared:first:base first
+a:first:base first
+b:second:base
+all:parent:base
+$ ./phmake X=cli
+shared:cli:base cli
+a:cli:base cli
+b:cli:base
+all:cli:base
+$ ./phmake b a
+shared:second:base
+b:second:base
+a:first:base first
+$ ./phmake -f numeric.mk 1 2
+local:local
+global
+$ ./phmake -f numeric.mk 1 2 2=cli
+cli:cli
+cli

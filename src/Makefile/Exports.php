@@ -35,19 +35,33 @@ final class Exports
         }
         $expander = $variables instanceof VariableExpander ? $variables : new VariableExpander($variables, $output);
         foreach ($expander->variables() as $variable) {
+            if ($variable->export === false) {
+                $environment[$variable->name] = false;
+                continue;
+            }
             $export =
-                $this->directives[$variable->name]
+                $variable->export
+                ?? (
+                    $expander->scope !== null && ($expander->context->variables[$variable->name]->private ?? false)
+                        ? false
+                        : null
+                )
+                ?? $this->directives[$variable->name]
                 ?? !in_array($variable->origin, ['default', 'automatic'], true)
                     && (
                         in_array($variable->origin, ['environment', 'environment override', 'command line'], true)
                         || ($this->all ?? in_array($variable->name, $this->inherited, true))
                     );
+            if (!$export) {
+                if (in_array($variable->name, $this->inherited, true)) {
+                    $environment[$variable->name] = false;
+                }
+                continue;
+            }
             if (
-                $export
-                && (
-                    isset($this->directives[$variable->name])
-                    || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $variable->name) === 1
-                )
+                $variable->export !== null
+                || isset($this->directives[$variable->name])
+                || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $variable->name) === 1
             ) {
                 $environment[$variable->name] = in_array(
                     $variable->origin,

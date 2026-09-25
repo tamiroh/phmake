@@ -14,5 +14,6 @@ final readonly class BuildRule
         public string $stem = '',
         public array $group = [],
         public ?string $firstPrerequisite = null,
+        public bool $implicit = false,
     ) {}
 }
