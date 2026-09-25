@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
-use Tamiroh\Phmake\Makefile\Assignment;
+use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 
 use function explode;
 use function ltrim;

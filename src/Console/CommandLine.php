@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Override;
-use Tamiroh\Phmake\Makefile\Assignment;
-use Tamiroh\Phmake\Makefile\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
+use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\Variable;
-use Tamiroh\Phmake\Makefile\VariableExpander;
 use Tamiroh\Phmake\Parser\Configuration;
 
 use function array_values;

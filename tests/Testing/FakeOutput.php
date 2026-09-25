@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Tests\Testing;
 
 use Override;
-use Tamiroh\Phmake\Makefile\Output;
+use Tamiroh\Phmake\Makefile\IO\Output;
 
 final class FakeOutput implements Output
 {

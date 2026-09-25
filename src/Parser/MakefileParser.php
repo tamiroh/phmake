@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser;
 
 use LogicException;
-use Tamiroh\Phmake\Makefile\Assignment;
-use Tamiroh\Phmake\Makefile\EvaluationContext;
-use Tamiroh\Phmake\Makefile\Exports;
-use Tamiroh\Phmake\Makefile\Filesystem;
+use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
+use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Evaluation\Exports;
+use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\IO\Filesystem;
+use Tamiroh\Phmake\Makefile\IO\Output;
+use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\Output;
-use Tamiroh\Phmake\Makefile\PatternRule;
-use Tamiroh\Phmake\Makefile\Shell;
-use Tamiroh\Phmake\Makefile\Variable;
-use Tamiroh\Phmake\Makefile\VariableExpander;
+use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 
 use function array_keys;
 use function array_slice;

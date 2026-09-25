@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\VariableExpander;
 
 use function array_key_last;
 use function array_pop;

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Tamiroh\Phmake\Makefile\Builtins;
-use Tamiroh\Phmake\Makefile\CommandFailedException;
+use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\Execution\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\Variable;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
 

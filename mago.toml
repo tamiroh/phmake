@@ -20,7 +20,7 @@ integrations = ["phpunit"]
 ambiguous-function-call = { enabled = true }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }
-too-many-methods = { exclude = ["tests/**", "src/Makefile/Functions.php"] }
+too-many-methods = { exclude = ["tests/**", "src/Makefile/Evaluation/Functions.php"] }
 excessive-parameter-list = { enabled = false }
 no-error-control-operator = { enabled = false }
 halstead = { effort-threshold = 7000 }
@@ -52,7 +52,7 @@ permit = ["@native", 'Tamiroh\Phmake\Console\Application']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Makefile\'
-permit = ["@self", "@native"]
+permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Parser\'

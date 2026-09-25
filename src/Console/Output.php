@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Override;
-use Tamiroh\Phmake\Makefile\Output as OutputInterface;
+use Tamiroh\Phmake\Makefile\IO\Output as OutputInterface;
 
 use function fwrite;
 

@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
-use Tamiroh\Phmake\Makefile\BuildRule;
-use Tamiroh\Phmake\Makefile\EvaluationContext;
-use Tamiroh\Phmake\Makefile\Exports;
+use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Evaluation\Exports;
+use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;
+use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Makefile;
-use Tamiroh\Phmake\Makefile\Output;
-use Tamiroh\Phmake\Makefile\Pattern;
-use Tamiroh\Phmake\Makefile\PatternRule;
-use Tamiroh\Phmake\Makefile\PrerequisiteExpression;
-use Tamiroh\Phmake\Makefile\Prerequisites;
-use Tamiroh\Phmake\Makefile\Recipe;
-use Tamiroh\Phmake\Makefile\SearchPaths;
-use Tamiroh\Phmake\Makefile\Target;
-use Tamiroh\Phmake\Makefile\TargetVariables;
-use Tamiroh\Phmake\Makefile\Variable;
+use Tamiroh\Phmake\Makefile\Rule\BuildRule;
+use Tamiroh\Phmake\Makefile\Rule\Pattern;
+use Tamiroh\Phmake\Makefile\Rule\PatternRule;
+use Tamiroh\Phmake\Makefile\Rule\PrerequisiteExpression;
+use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
+use Tamiroh\Phmake\Makefile\Rule\Recipe;
+use Tamiroh\Phmake\Makefile\Rule\Target;
+use Tamiroh\Phmake\Makefile\Search\SearchPaths;
 
 use function array_filter;
 use function array_map;

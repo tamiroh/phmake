@@ -9,8 +9,8 @@ use Override;
 use Symfony\Component\Process\Exception\ProcessSignaledException;
 use Symfony\Component\Process\Exception\RuntimeException;
 use Symfony\Component\Process\Process as SymfonyProcess;
-use Tamiroh\Phmake\Makefile\Shell as ShellInterface;
-use Tamiroh\Phmake\Makefile\ShellResult;
+use Tamiroh\Phmake\Makefile\IO\Shell as ShellInterface;
+use Tamiroh\Phmake\Makefile\IO\ShellResult;
 
 use function defined;
 use function escapeshellarg;

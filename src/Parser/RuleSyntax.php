@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
-use Tamiroh\Phmake\Makefile\DependencySyntax;
-use Tamiroh\Phmake\Makefile\Pattern;
-use Tamiroh\Phmake\Makefile\PrerequisiteExpression;
-use Tamiroh\Phmake\Makefile\Prerequisites;
+use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
+use Tamiroh\Phmake\Makefile\Rule\Pattern;
+use Tamiroh\Phmake\Makefile\Rule\PrerequisiteExpression;
+use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 
 use function count;
 use function ltrim;

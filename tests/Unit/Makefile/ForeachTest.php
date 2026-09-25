@@ -7,9 +7,9 @@ namespace Tamiroh\Phmake\Tests\Unit\Makefile;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\Variable;
-use Tamiroh\Phmake\Makefile\VariableExpander;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
 
 final class ForeachTest extends TestCase
