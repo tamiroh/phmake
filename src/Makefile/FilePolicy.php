@@ -14,7 +14,9 @@ final readonly class FilePolicy
     /** @var array<string, list<string>> */
     private array $special;
 
-    /** @param array<string, Target> $targets
+    /**
+     * @param array<string, Target> $targets
+     *
      * @throws MakefileErrorException
      */
     public function __construct(array $targets)

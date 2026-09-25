@@ -31,7 +31,9 @@ final readonly class Makefile
         $this->targetsByName = $indexed;
     }
 
-    /** @param list<string> $targets
+    /**
+     * @param list<string> $targets
+     *
      * @throws MakefileErrorException
      * @throws CommandFailedException
      */

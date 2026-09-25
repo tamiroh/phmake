@@ -103,7 +103,9 @@ final class RuleSearch
         return $this->state->targets[$name] = $rules === [] ? null : new Target($name, $rules);
     }
 
-    /** @param array<int, true> $used
+    /**
+     * @param array<int, true> $used
+     *
      * @throws MakefileErrorException
      */
     private function accept(
@@ -155,7 +157,9 @@ final class RuleSearch
         return true;
     }
 
-    /** @param array<int, true> $used
+    /**
+     * @param array<int, true> $used
+     *
      * @return list<ImplicitCandidate>
      */
     private function candidates(string $name, array $used): array
@@ -205,7 +209,9 @@ final class RuleSearch
         return $candidates;
     }
 
-    /** @param array<int, true> $used
+    /**
+     * @param array<int, true> $used
+     *
      * @throws MakefileErrorException
      */
     private function implicit(

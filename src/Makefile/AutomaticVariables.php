@@ -12,7 +12,9 @@ use function in_array;
 
 final class AutomaticVariables
 {
-    /** @param list<string> $changed
+    /**
+     * @param list<string> $changed
+     *
      * @return list<Variable>
      */
     public static function forRule(

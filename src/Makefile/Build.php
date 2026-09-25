@@ -48,7 +48,9 @@ final class Build
         $this->scope = new VariableScope($makefile->context ?? new EvaluationContext($makefile->variables));
     }
 
-    /** @param list<string> $names
+    /**
+     * @param list<string> $names
+     *
      * @throws MakefileErrorException
      * @throws CommandFailedException
      */
@@ -79,7 +81,8 @@ final class Build
         }
     }
 
-    /** @throws MakefileErrorException
+    /**
+     * @throws MakefileErrorException
      * @throws CommandFailedException
      */
     private function buildRule(
@@ -203,7 +206,9 @@ final class Build
         ];
     }
 
-    /** @param list<string> $changed
+    /**
+     * @param list<string> $changed
+     *
      * @throws MakefileErrorException
      * @throws CommandFailedException
      */
@@ -262,7 +267,9 @@ final class Build
         return $members;
     }
 
-    /** @param list<string> $peers
+    /**
+     * @param list<string> $peers
+     *
      * @throws MakefileErrorException
      * @throws CommandFailedException
      */
@@ -323,7 +330,8 @@ final class Build
         return $this->search->resolve($name, $this->scope);
     }
 
-    /** @throws MakefileErrorException
+    /**
+     * @throws MakefileErrorException
      * @throws CommandFailedException
      */
     private function update(string $name, bool &$executed, ?string $neededBy = null, ?int $threshold = null): bool

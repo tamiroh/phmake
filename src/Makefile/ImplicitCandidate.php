@@ -23,7 +23,8 @@ final readonly class ImplicitCandidate
         public bool $matchAnything,
     ) {}
 
-    /** @param Closure(Prerequisites): bool $accept
+    /**
+     * @param Closure(Prerequisites): bool $accept
      * @param array<int, array<int, string>> $expanded
      *
      * @throws MakefileErrorException
@@ -86,7 +87,9 @@ final readonly class ImplicitCandidate
         );
     }
 
-    /** @param list<string> $names
+    /**
+     * @param list<string> $names
+     *
      * @return list<string>
      */
     private function substitute(array $names): array

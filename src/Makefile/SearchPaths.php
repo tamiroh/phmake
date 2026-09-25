@@ -50,7 +50,9 @@ final class SearchPaths
         }
     }
 
-    /** @param array<string, Target> $targets
+    /**
+     * @param array<string, Target> $targets
+     *
      * @throws MakefileErrorException
      */
     public function find(string $name, Filesystem $filesystem, VariableExpander $expander, array $targets): ?string
@@ -91,7 +93,8 @@ final class SearchPaths
         return false;
     }
 
-    /** @param list<string> $names
+    /**
+     * @param list<string> $names
      * @param array<string, Target> $targets
      *
      * @throws MakefileErrorException

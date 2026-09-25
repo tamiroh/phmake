@@ -289,7 +289,9 @@ final class MakefileBuilder
         return $rule;
     }
 
-    /** @param list<string> $names
+    /**
+     * @param list<string> $names
+     *
      * @return list<string>
      */
     private function substitute(array $names, string $stem): array

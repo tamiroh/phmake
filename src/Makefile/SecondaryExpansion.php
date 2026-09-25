@@ -76,7 +76,9 @@ final class SecondaryExpansion
         );
     }
 
-    /** Expand only the words reached by the current search pass, reusing earlier word expansions.
+    /**
+     * Expand only the words reached by the current search pass, reusing earlier word expansions.
+     *
      * @param array<int, string> $expanded
      *
      * @throws MakefileErrorException

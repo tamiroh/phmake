@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 use PhpCsFixer\Config;
 use PhpCsFixer\Finder;
+use PhpCsFixerCustomFixers\Fixer\MultilineCommentOpeningClosingAloneFixer;
 
 return (new Config())
     ->setRiskyAllowed(true)
+    ->registerCustomFixers([new MultilineCommentOpeningClosingAloneFixer()])
     ->setRules([
         // Expand compatible rules explicitly; do not enable the entire PSR-12 preset.
         // Mago owns conflicting spacing, parentheses, import and class member ordering.
         // Keep all built-in PHPDoc rules from the reference configuration.
+        MultilineCommentOpeningClosingAloneFixer::name() => true,
         'align_multiline_comment' => true,
         'array_indentation' => true,
         'array_syntax' => ['syntax' => 'short'],
