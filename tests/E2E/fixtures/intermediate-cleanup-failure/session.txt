@@ -1,0 +1,5 @@
+$ touch item.in
+$ ./phmake -rR item.out 2>/dev/null
+rm item.mid
+[exit 2]
+$ test ! -e item.mid

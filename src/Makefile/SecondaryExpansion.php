@@ -17,34 +17,8 @@ final class SecondaryExpansion
         Prerequisites $previous,
         VariableExpander $expander,
         Filesystem $filesystem,
-        string $directory = '',
-        bool $implicit = false,
     ): Prerequisites {
-        $variables = AutomaticVariables::forRule(
-            $name,
-            new BuildRule($previous, stem: $expression->stem === null ? '' : $directory . $expression->stem),
-            null,
-            [],
-            $filesystem,
-        );
-        foreach (['?', '?D', '?F'] as $variable) {
-            $variables[] = new Variable($variable, '', false, 'automatic');
-        }
-        $expander = $expander->withVariables($variables)->atSource($expression->source);
-        if ($implicit) {
-            $prerequisites = new Prerequisites();
-            $orderOnly = false;
-            foreach (DependencySyntax::expressions($expression->text) as $word) {
-                $text = $expander->expand(self::substitute($word, $directory === '' ? '$*' : '$(*F)'));
-                $prerequisites = $prerequisites->merge(DependencySyntax::parse(
-                    ($orderOnly ? '| ' : '') . $text,
-                    $filesystem,
-                    new Pattern($word)->hasWildcard() ? $directory : '',
-                ));
-                $orderOnly = $orderOnly || DependencySyntax::delimiter($text, '|') !== null;
-            }
-            return $prerequisites;
-        }
+        $expander = self::automatic($name, $expression, $previous, $expander, $filesystem);
         $text = $expression->stem === null ? $expression->text : self::substitute($expression->text, '$*');
         return DependencySyntax::parse(
             $expression->secondary ? $expander->expand(str_replace('\\:', ':', $text)) : $text,
@@ -96,6 +70,60 @@ final class SecondaryExpansion
             $rule->group,
             $rule->firstPrerequisite,
         );
+    }
+
+    /** Expand only the words reached by the current search pass, reusing earlier word expansions.
+     * @param array<int, string> $expanded
+     * @return iterable<Prerequisites>
+     * @throws MakefileErrorException
+     */
+    public static function implicitParts(
+        string $name,
+        PrerequisiteExpression $expression,
+        Prerequisites $previous,
+        VariableExpander $expander,
+        Filesystem $filesystem,
+        string $directory,
+        array &$expanded,
+    ): iterable {
+        $expander = self::automatic($name, $expression, $previous, $expander, $filesystem, $directory);
+        $orderOnly = false;
+        foreach (DependencySyntax::expressions($expression->text) as $index => $word) {
+            $text =
+                $expanded[$index] ??= $expander->expand(self::substitute($word, $directory === '' ? '$*' : '$(*F)'));
+            $part = DependencySyntax::parse(
+                ($orderOnly ? '| ' : '') . $text,
+                $filesystem,
+                new Pattern($word)->hasWildcard() ? $directory : '',
+            );
+            yield new Prerequisites(
+                $part->normal,
+                $part->orderOnly,
+                literal: new Pattern($word)->hasWildcard() ? [] : $part->sequence,
+            );
+            $orderOnly = $orderOnly || DependencySyntax::delimiter($text, '|') !== null;
+        }
+    }
+
+    private static function automatic(
+        string $name,
+        PrerequisiteExpression $expression,
+        Prerequisites $previous,
+        VariableExpander $expander,
+        Filesystem $filesystem,
+        string $directory = '',
+    ): VariableExpander {
+        $variables = AutomaticVariables::forRule(
+            $name,
+            new BuildRule($previous, stem: $expression->stem === null ? '' : $directory . $expression->stem),
+            null,
+            [],
+            $filesystem,
+        );
+        foreach (['?', '?D', '?F'] as $variable) {
+            $variables[] = new Variable($variable, '', false, 'automatic');
+        }
+        return $expander->withVariables($variables)->atSource($expression->source);
     }
 
     private static function substitute(string $text, string $stem): string

@@ -18,6 +18,8 @@ interface Filesystem
 
     public function realpath(string $path): ?string;
 
+    public function remove(string $path): bool;
+
     public function workingDirectory(): string;
 
     /** @throws MakefileErrorException */

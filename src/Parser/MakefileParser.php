@@ -447,6 +447,11 @@ final readonly class MakefileParser
                 continue;
             }
 
+            if (preg_match('/^vpath(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
+                $builder->paths->define(self::words($expander->expand($matches[1] ?? '')));
+                continue;
+            }
+
             if (ScopedAssignment::read($uncommented, $builder->scopes, $expander, $this->output)) {
                 continue;
             }

@@ -1,0 +1,14 @@
+$ touch -t 202001010000 item.in
+$ ./phmake -rR item.out
+intermediate
+output
+$ test -f item.mid && rm item.mid
+$ ./phmake -rR item.out
+phmake: 'item.out' is up to date.
+$ ./phmake -rR item.out POLICY=.NOTINTERMEDIATE FILES=%.mid
+intermediate
+$ test -f item.mid && rm item.mid item.out
+$ ./phmake -rR item.out POLICY=.PRECIOUS FILES=%.mid
+intermediate
+output
+$ test -f item.mid

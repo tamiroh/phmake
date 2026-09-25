@@ -41,6 +41,8 @@ final class DependencySyntax
         for ($index = 0; $index < strlen($text); $index++) {
             if ($text[$index] === '\\') {
                 $index++;
+            } elseif ($text[$index] === '$' && isset($text[$index + 1]) && !str_contains('({', $text[$index + 1])) {
+                $index++;
             } elseif (
                 ($text[$index] === '(' || $text[$index] === '{')
                 && ($depth > 0 || $index > 0 && $text[$index - 1] === '$')

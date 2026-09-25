@@ -1,0 +1,9 @@
+$ mkdir source && touch -t 202001010000 source/item && touch -t 202001020000 input && touch -t 202001030000 source/input
+$ ./phmake -rR
+update:item:input
+output:item:item
+$ test -f item && rm item result
+$ ./phmake -rR KEEP=source
+update:source/item:input
+output:source/item:source/item
+$ test ! -e item && test -f source/item

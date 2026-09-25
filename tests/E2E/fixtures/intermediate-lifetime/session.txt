@@ -1,0 +1,16 @@
+$ touch -t 202001010000 item.in
+$ ./phmake -rR item.out
+intermediate:item.in
+output:item.mid
+rm item.mid
+$ test -f item.out && test ! -e item.mid
+$ ./phmake -rR item.out
+phmake: 'item.out' is up to date.
+$ touch -t 202001020000 item.in
+$ ./phmake -rR item.out
+intermediate:item.in
+output:item.mid
+rm item.mid
+$ ./phmake -rR item.mid
+intermediate:item.in
+$ test -f item.mid

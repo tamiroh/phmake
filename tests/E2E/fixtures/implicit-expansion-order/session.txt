@@ -1,0 +1,5 @@
+$ ./phmake -rR
+child item.in
+parent item.out
+input:item.in
+output:item.in

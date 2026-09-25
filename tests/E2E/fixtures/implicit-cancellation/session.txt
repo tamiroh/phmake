@@ -1,0 +1,4 @@
+$ touch item.src item.bad
+$ ./phmake -rR
+replacement:item.out
+explicit

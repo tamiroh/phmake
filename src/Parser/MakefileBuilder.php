@@ -14,10 +14,12 @@ use Tamiroh\Phmake\Makefile\PatternRule;
 use Tamiroh\Phmake\Makefile\PrerequisiteExpression;
 use Tamiroh\Phmake\Makefile\Prerequisites;
 use Tamiroh\Phmake\Makefile\Recipe;
+use Tamiroh\Phmake\Makefile\SearchPaths;
 use Tamiroh\Phmake\Makefile\Target;
 use Tamiroh\Phmake\Makefile\TargetVariables;
 use Tamiroh\Phmake\Makefile\Variable;
 
+use function array_filter;
 use function array_map;
 use function array_values;
 use function in_array;
@@ -40,12 +42,14 @@ final class MakefileBuilder
     private array $suffixes = [];
     private bool $secondary = false;
     public readonly TargetVariables $scopes;
+    public readonly SearchPaths $paths;
 
     public function __construct(
         private bool $builtinSuffixes = true,
         private ?Output $output = null,
     ) {
         $this->scopes = new TargetVariables();
+        $this->paths = new SearchPaths();
     }
 
     /** @throws ParseException */
@@ -62,6 +66,14 @@ final class MakefileBuilder
         }
         $recipe = $rule->hasRecipe ? new Recipe($rule->commands, $rule->commands[0]->source ?? $rule->source) : null;
         if ($rule->targetPattern === null && new Pattern($rule->targetNames[0])->hasWildcard()) {
+            $this->patterns = array_values(array_filter(
+                $this->patterns,
+                static fn(PatternRule $pattern): bool => (
+                    $pattern->names !== $rule->targetNames
+                    || $pattern->rule->prerequisites->normal !== $rule->prerequisites->normal
+                    || $pattern->rule->prerequisites->orderOnly !== $rule->prerequisites->orderOnly
+                ),
+            ));
             $this->patterns[] = new PatternRule(
                 $rule->targetNames,
                 new BuildRule(
@@ -161,7 +173,7 @@ final class MakefileBuilder
         ?EvaluationContext $context = null,
     ): Makefile {
         if ($builtinSuffixes && $this->builtinSuffixes) {
-            $this->suffixes = ['.c', '.o', ...$this->suffixes];
+            $this->suffixes = ['.o', '.c', '.f', ...$this->suffixes];
         }
         foreach ($this->phonyNames as $name) {
             $this->targets[$name] = new Target($name, $this->targets[$name]->rules ?? [new BuildRule()], true);
@@ -180,8 +192,8 @@ final class MakefileBuilder
                 $patterns[] = $pattern;
             }
         }
-        if (in_array('.c', $this->suffixes, true) && in_array('.o', $this->suffixes, true)) {
-            foreach ($builtinRules as $builtin) {
+        foreach ($builtinRules as $builtin) {
+            if ($this->builtinEnabled($builtin)) {
                 foreach ($patterns as $pattern) {
                     if (
                         $pattern->names === $builtin->names
@@ -201,6 +213,7 @@ final class MakefileBuilder
             $exports,
             $context,
             $this->scopes,
+            $this->paths,
         );
     }
 
@@ -228,6 +241,17 @@ final class MakefileBuilder
             $declaration->targetPattern === null ? $previous->stem : $rule->stem,
             $rule->recipe === null ? $previous->group : $rule->group,
         )]);
+    }
+
+    private function builtinEnabled(PatternRule $pattern): bool
+    {
+        foreach ([...$pattern->names, ...$pattern->rule->prerequisites->normal] as $name) {
+            $suffix = substr($name, 1);
+            if ($suffix !== '' && !in_array($suffix, $this->suffixes, true)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private function explicitStem(string $name, BuildRule $rule): BuildRule
@@ -272,12 +296,7 @@ final class MakefileBuilder
     private function suffixPattern(Target $target): ?PatternRule
     {
         $rule = $target->rules[0] ?? null;
-        if (
-            $rule === null
-            || $rule->prerequisites->normal !== []
-            || $rule->prerequisites->orderOnly !== []
-            || $target->isPhony
-        ) {
+        if ($rule === null || $target->isPhony) {
             return null;
         }
         foreach ($this->suffixes as $source) {
@@ -286,6 +305,15 @@ final class MakefileBuilder
             }
             $destination = substr($target->name, strlen($source));
             if ($destination === '' || in_array($destination, $this->suffixes, true)) {
+                if ($rule->prerequisites->sequence !== []) {
+                    if (isset($this->targets['.POSIX'])) {
+                        return null;
+                    }
+                    $this->output?->writeWarning(
+                        'warning: ignoring prerequisites on suffix rule definition',
+                        $rule->recipe?->source,
+                    );
+                }
                 return new PatternRule(
                     ['%' . $destination],
                     new BuildRule(new Prerequisites(['%' . $source]), $rule->recipe),

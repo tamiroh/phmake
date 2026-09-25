@@ -1,0 +1,5 @@
+$ touch first.src shared.src
+$ ./phmake -rR
+output:first.src
+intermediate:accepted
+$ test -f shared.mid

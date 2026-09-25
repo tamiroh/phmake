@@ -71,6 +71,18 @@ final class TargetVariables
         }
     }
 
+    /** @return list<string> */
+    public function mentioned(): array
+    {
+        $names = [];
+        foreach ($this->definitions as $name => $_) {
+            if (!new Pattern((string) $name)->hasWildcard()) {
+                $names[] = (string) $name;
+            }
+        }
+        return $names;
+    }
+
     /** @throws MakefileErrorException */
     public function scope(string $name, VariableScope $parent, ?Output $output = null): VariableScope
     {

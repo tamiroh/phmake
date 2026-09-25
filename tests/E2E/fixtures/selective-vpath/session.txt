@@ -1,0 +1,5 @@
+$ mkdir source archive shared wrong alternate fallback && touch source/item.txt archive/libfirst.a shared/libfirst.so libsecond.a shared/libsecond.so alternate/libthird.a fallback/libthird.so
+$ ./phmake -rR
+source/item.txt archive/libfirst.a libsecond.a alternate/libthird.a
+$ ./phmake -rR '.LIBPATTERNS=invalid lib%.so lib%.a' 2>/dev/null
+source/item.txt archive/libfirst.a libsecond.a alternate/libthird.a

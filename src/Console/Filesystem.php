@@ -20,6 +20,7 @@ use function preg_replace;
 use function realpath;
 use function str_starts_with;
 use function ucfirst;
+use function unlink;
 
 final class Filesystem implements FilesystemInterface
 {
@@ -70,6 +71,12 @@ final class Filesystem implements FilesystemInterface
         clearstatcache(true, $path);
         $resolved = realpath($path);
         return $resolved === false ? null : $resolved;
+    }
+
+    #[\Override]
+    public function remove(string $path): bool
+    {
+        return @unlink($path);
     }
 
     #[\Override]

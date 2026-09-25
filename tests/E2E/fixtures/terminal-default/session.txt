@@ -1,0 +1,6 @@
+$ touch item.in
+$ ./phmake -rR
+default:item.out
+$ touch item.mid
+$ ./phmake -rR
+terminal:item.mid
