@@ -14,7 +14,9 @@ use Tamiroh\Phmake\Tests\Testing\FakeOutput;
 
 final class DiagnosticsTest extends TestCase
 {
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function directErrorCallsDoNotRequireASourceLocation(): void
     {
@@ -22,7 +24,9 @@ final class DiagnosticsTest extends TestCase
         Functions::error('stopped');
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function errorStopsExpansionBeforeLaterSideEffects(): void
     {
@@ -37,7 +41,9 @@ final class DiagnosticsTest extends TestCase
         }
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function warningsReturnAnEmptyValueAndPreserveTheExpansionLocation(): void
     {

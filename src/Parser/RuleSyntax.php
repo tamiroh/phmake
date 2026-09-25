@@ -18,7 +18,9 @@ use function substr;
 
 final class RuleSyntax
 {
-    /** @throws ParseException */
+    /**
+     * @throws ParseException
+     */
     public static function parse(string $header, int $line, ?string $source, ?SourceFiles $files): Rule
     {
         $colon = DependencySyntax::delimiter($header, ':');
@@ -64,7 +66,9 @@ final class RuleSyntax
         );
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private static function paths(string $text, ?SourceFiles $files): array
     {
         $result = [];

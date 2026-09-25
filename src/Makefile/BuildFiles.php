@@ -10,7 +10,9 @@ use function in_array;
 use function sort;
 use function str_starts_with;
 
-/** File names, timestamps, and intermediate lifetime for one build invocation. */
+/**
+ * File names, timestamps, and intermediate lifetime for one build invocation.
+ */
 final class BuildFiles
 {
     /** @var list<string> */
@@ -21,7 +23,9 @@ final class BuildFiles
 
     private readonly FilePolicy $policy;
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function __construct(
         private readonly Makefile $makefile,
         private readonly RuleSearch $search,
@@ -89,7 +93,9 @@ final class BuildFiles
         return $this->search->state->paths[$name] ?? $name;
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function prepare(string $name, VariableExpander $expander): void
     {
         $path = $this->path($name);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
+use Override;
 use Tamiroh\Phmake\Makefile\Filesystem as FilesystemInterface;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
@@ -22,15 +23,17 @@ use function str_starts_with;
 use function ucfirst;
 use function unlink;
 
+use const FILE_APPEND;
+
 final class Filesystem implements FilesystemInterface
 {
-    #[\Override]
+    #[Override]
     public function exists(string $path): bool
     {
         return file_exists($path);
     }
 
-    #[\Override]
+    #[Override]
     public function lastModified(string $path): ?int
     {
         clearstatcache(true, $path);
@@ -39,16 +42,20 @@ final class Filesystem implements FilesystemInterface
         return $result === false ? null : $result;
     }
 
-    /** @return list<string> */
-    #[\Override]
+    /**
+     * @return list<string>
+     */
+    #[Override]
     public function matching(string $pattern): array
     {
         $paths = glob($pattern);
         return $paths === false ? [] : $paths;
     }
 
-    /** @throws MakefileErrorException */
-    #[\Override]
+    /**
+     * @throws MakefileErrorException
+     */
+    #[Override]
     public function read(string $path): ?string
     {
         clearstatcache(true, $path);
@@ -65,7 +72,7 @@ final class Filesystem implements FilesystemInterface
         return $text;
     }
 
-    #[\Override]
+    #[Override]
     public function realpath(string $path): ?string
     {
         clearstatcache(true, $path);
@@ -73,20 +80,22 @@ final class Filesystem implements FilesystemInterface
         return $resolved === false ? null : $resolved;
     }
 
-    #[\Override]
+    #[Override]
     public function remove(string $path): bool
     {
         return @unlink($path);
     }
 
-    #[\Override]
+    #[Override]
     public function workingDirectory(): string
     {
         return (string) getcwd();
     }
 
-    /** @throws MakefileErrorException */
-    #[\Override]
+    /**
+     * @throws MakefileErrorException
+     */
+    #[Override]
     public function write(string $path, string $text, bool $append): void
     {
         if (

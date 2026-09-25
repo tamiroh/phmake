@@ -6,7 +6,9 @@ namespace Tamiroh\Phmake\Makefile;
 
 final readonly class Target
 {
-    /** @param list<BuildRule> $rules */
+    /**
+     * @param list<BuildRule> $rules
+     */
     public function __construct(
         public string $name,
         public array $rules = [],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Tests\Testing;
 
+use Override;
 use Tamiroh\Phmake\Makefile\Output;
 
 final class FakeOutput implements Output
@@ -23,25 +24,25 @@ final class FakeOutput implements Output
     /** @var list<?string> */
     public private(set) array $warningSources = [];
 
-    #[\Override]
+    #[Override]
     public function write(string $text): void
     {
         $this->writes[] = $text;
     }
 
-    #[\Override]
+    #[Override]
     public function writeInfo(string $message): void
     {
         $this->infos[] = $message;
     }
 
-    #[\Override]
+    #[Override]
     public function writeLine(string $line): void
     {
         $this->lines[] = $line;
     }
 
-    #[\Override]
+    #[Override]
     public function writeWarning(string $message, ?string $source = null): void
     {
         $this->warnings[] = $message;

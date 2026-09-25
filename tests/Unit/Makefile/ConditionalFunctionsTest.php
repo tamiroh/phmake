@@ -14,7 +14,9 @@ use Tamiroh\Phmake\Tests\Testing\FakeOutput;
 
 final class ConditionalFunctionsTest extends TestCase
 {
-    /** @return iterable<string, array{string, string}> */
+    /**
+     * @return iterable<string, array{string, string}>
+     */
     public static function expressions(): iterable
     {
         yield 'true branch skips recursion' => ['$(if yes,result,$(CYCLE))', 'result'];
@@ -33,7 +35,9 @@ final class ConditionalFunctionsTest extends TestCase
         yield 'dynamic variable name is not a function' => ['$($(NAME) ,yes,no)', ''];
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function expandsAllCallArgumentsBeforeInvokingLazyBuiltins(): void
     {
@@ -41,7 +45,9 @@ final class ConditionalFunctionsTest extends TestCase
         new VariableExpander([new Variable('CYCLE', '$(CYCLE)')])->expand('$(call if,yes,result,$(CYCLE))');
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function expandsCallArgumentsOnceAndLetsBuiltinsTakePrecedence(): void
     {
@@ -53,7 +59,9 @@ final class ConditionalFunctionsTest extends TestCase
         );
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     #[DataProvider('expressions')]
     public function expandsOnlyNeededArguments(string $expression, string $expected): void
@@ -68,7 +76,9 @@ final class ConditionalFunctionsTest extends TestCase
         );
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function preservesEvaluationOrderAndSkipsSideEffects(): void
     {
@@ -82,7 +92,9 @@ final class ConditionalFunctionsTest extends TestCase
         self::assertSame(["condition\n", "first\n", "second\n"], $output->writes);
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function rejectsMissingIfArguments(): void
     {
@@ -90,7 +102,9 @@ final class ConditionalFunctionsTest extends TestCase
         new VariableExpander([])->expand('$(if yes)');
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function restoresCallParametersAndMasksOuterArguments(): void
     {

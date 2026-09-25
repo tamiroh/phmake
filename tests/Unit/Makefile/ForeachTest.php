@@ -14,7 +14,9 @@ use Tamiroh\Phmake\Tests\Testing\FakeOutput;
 
 final class ForeachTest extends TestCase
 {
-    /** @return iterable<string, array{string, string}> */
+    /**
+     * @return iterable<string, array{string, string}>
+     */
     public static function expressions(): iterable
     {
         yield 'words' => ["$(foreach x, a\tb\nc ,[\$x])", '[a] [b] [c]'];
@@ -35,7 +37,9 @@ final class ForeachTest extends TestCase
         yield 'nested call keeps parameter masking' => ['$(call relay,one,two)', 'inner:'];
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function expandsNameAndListOnceBeforeBody(): void
     {
@@ -47,7 +51,9 @@ final class ForeachTest extends TestCase
         self::assertSame(["name\n", "list\n", "a\n", "b\n"], $output->writes);
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     #[DataProvider('expressions')]
     public function expandsWithTemporaryScope(string $expression, string $expected): void
@@ -65,7 +71,9 @@ final class ForeachTest extends TestCase
         );
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function rejectsMissingArgumentsEvenForEmptyList(): void
     {

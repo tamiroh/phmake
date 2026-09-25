@@ -10,7 +10,9 @@ use function array_filter;
 use function array_values;
 use function count;
 
-/** A matched pattern retains the unexpanded rule until its prerequisites are tested. */
+/**
+ * A matched pattern retains the unexpanded rule until its prerequisites are tested.
+ */
 final readonly class ImplicitCandidate
 {
     public function __construct(
@@ -23,6 +25,7 @@ final readonly class ImplicitCandidate
 
     /** @param Closure(Prerequisites): bool $accept
      * @param array<int, array<int, string>> $expanded
+     *
      * @throws MakefileErrorException
      */
     public function expand(

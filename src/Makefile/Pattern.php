@@ -22,7 +22,9 @@ final readonly class Pattern
         [$this->prefix, $this->suffix] = self::parts($expression);
     }
 
-    /** @return array{string, ?string} */
+    /**
+     * @return array{string, ?string}
+     */
     private static function parts(string $expression): array
     {
         $prefix = '';

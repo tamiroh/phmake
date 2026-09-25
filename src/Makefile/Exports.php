@@ -15,15 +15,19 @@ final class Exports
 
     private ?bool $all = null;
 
-    /** @param list<string> $inherited */
+    /**
+     * @param list<string> $inherited
+     */
     public function __construct(
         private readonly array $inherited = [],
     ) {}
 
     /**
      * @param list<Variable>|VariableExpander $variables
-     * @return array<string, string|false>
+     *
      * @throws MakefileErrorException
+     *
+     * @return array<string, string|false>
      */
     public function environment(array|VariableExpander $variables, ?Output $output): array
     {
@@ -81,7 +85,9 @@ final class Exports
         return $environment;
     }
 
-    /** @param list<string> $names */
+    /**
+     * @param list<string> $names
+     */
     public function set(array $names, bool $export): void
     {
         if ($names === []) {

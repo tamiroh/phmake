@@ -15,7 +15,9 @@ use function strlen;
 use function substr;
 use function usort;
 
-/** Candidate branches are isolated: rejected chains cannot install rules or file paths. */
+/**
+ * Candidate branches are isolated: rejected chains cannot install rules or file paths.
+ */
 final class RuleSearch
 {
     public SearchState $state;
@@ -41,7 +43,9 @@ final class RuleSearch
         }
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function resolve(string $name, VariableScope $scope): ?Target
     {
         if (array_key_exists($name, $this->state->targets)) {
@@ -271,7 +275,9 @@ final class RuleSearch
         return null;
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     private function locate(string $name, VariableExpander $expander, SearchState $state): bool
     {
         $path = $this->makefile->paths->find($name, $this->filesystem, $expander, $this->makefile->targetsByName);

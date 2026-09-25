@@ -20,8 +20,8 @@ final readonly class Prerequisites
      * @param list<string> $normal
      * @param list<string> $orderOnly
      * @param list<PrerequisiteExpression> $expressions
-     * @param list<string> $literal Names produced without stem substitution during implicit expansion.
      * @param list<string>|null $sequence
+     * @param list<string> $literal names produced without stem substitution during implicit expansion
      */
     public function __construct(
         public array $normal = [],

@@ -61,7 +61,9 @@ final readonly class Assignment
         return null;
     }
 
-    /** @param array<string, Variable> $variables */
+    /**
+     * @param array<string, Variable> $variables
+     */
     public static function undefine(array &$variables, string $name, string $origin): void
     {
         if (isset($variables[$name]) && self::priority($variables[$name]->origin) <= self::priority($origin)) {
@@ -85,6 +87,7 @@ final readonly class Assignment
 
     /**
      * @param array<string, Variable> $variables
+     *
      * @throws MakefileErrorException
      */
     public function apply(
@@ -140,7 +143,9 @@ final readonly class Assignment
         $variables[$this->name] = new Variable($this->name, $value, $recursive, $origin, $source, $private);
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function resolveName(VariableExpander $expander): self
     {
         $name = trim($expander->expand($this->name));

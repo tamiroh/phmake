@@ -32,6 +32,10 @@ use function strrpos;
 use function substr;
 use function trim;
 
+use const PHP_INT_MAX;
+use const PREG_SPLIT_NO_EMPTY;
+use const SORT_STRING;
+
 final class Functions
 {
     /**
@@ -93,6 +97,7 @@ final class Functions
      * $ ./phmake
      * /example
      * ```
+     *
      * @throws MakefileErrorException
      */
     public static function abspath(Filesystem $files, ?string $paths = null): string
@@ -183,6 +188,7 @@ final class Functions
      *
      * @param list<string> $arguments
      * @param Closure(string): string $expand
+     *
      * @throws MakefileErrorException
      */
     public static function and(array $arguments, Closure $expand): string
@@ -243,6 +249,7 @@ final class Functions
      *
      * @param list<string> $arguments
      * @param list<string> $expanding
+     *
      * @throws MakefileErrorException
      */
     public static function call(array $arguments, VariableExpander $expander, array $expanding): string
@@ -334,7 +341,8 @@ final class Functions
      * hello world
      * ```
      *
-     * @param null|Closure(string, VariableExpander): void $evaluate
+     * @param Closure(string, VariableExpander): void|null $evaluate
+     *
      * @throws MakefileErrorException
      */
     public static function eval(string $text, ?Closure $evaluate, VariableExpander $expander): string
@@ -359,6 +367,7 @@ final class Functions
      * $ ./phmake
      * hello
      * ```
+     *
      * @throws MakefileErrorException
      */
     public static function file(
@@ -528,6 +537,7 @@ final class Functions
      * ```
      *
      * @param list<string> $expanding
+     *
      * @throws MakefileErrorException
      */
     public static function foreach(
@@ -571,6 +581,7 @@ final class Functions
      * ```
      *
      * @param Closure(string): string $expand
+     *
      * @throws MakefileErrorException
      */
     public static function if(
@@ -618,8 +629,10 @@ final class Functions
      * $ ./phmake
      * less
      * ```
+     *
      * @param Closure(string): string $expand
      * @param list<string> $arguments
+     *
      * @throws MakefileErrorException
      */
     public static function intcmp(Closure $expand, array $arguments, ?string $source = null): string
@@ -714,6 +727,7 @@ final class Functions
      * ```
      *
      * @param list<string> $expanding
+     *
      * @throws MakefileErrorException
      */
     public static function let(
@@ -791,6 +805,7 @@ final class Functions
      *
      * @param list<string> $arguments
      * @param Closure(string): string $expand
+     *
      * @throws MakefileErrorException
      */
     public static function or(array $arguments, Closure $expand): string
@@ -886,6 +901,7 @@ final class Functions
      * $ ./phmake
      * Makefile
      * ```
+     *
      * @throws MakefileErrorException
      */
     public static function realpath(Filesystem $files, ?string $paths = null): string
@@ -915,6 +931,7 @@ final class Functions
      * $ ./phmake
      * one two
      * ```
+     *
      * @throws MakefileErrorException
      */
     public static function shell(
@@ -1108,6 +1125,7 @@ final class Functions
      * $ ./phmake
      * Makefile
      * ```
+     *
      * @throws MakefileErrorException
      */
     public static function wildcard(Filesystem $files, ?string $patterns = null): string
@@ -1212,7 +1230,9 @@ final class Functions
         }));
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     private static function index(string $value, string $function, string $position, int $minimum): int
     {
         if (preg_match('/^[0-9]+$/D', trim($value)) !== 1) {
@@ -1238,7 +1258,9 @@ final class Functions
         return (int) $digits;
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     private static function integer(string $text, string $position, ?string $source): string
     {
         $text = trim($text);
@@ -1252,7 +1274,9 @@ final class Functions
         return $digits === '' ? '0' : (str_starts_with($text, '-') ? '-' : '') . $digits;
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private static function splitWords(string $text): array
     {
         $words = preg_split('/\s+/', trim($text), -1, PREG_SPLIT_NO_EMPTY);

@@ -6,7 +6,9 @@ namespace Tamiroh\Phmake\Parser;
 
 interface SourceFiles
 {
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     public function matching(string $pattern): array;
 
     public function read(string $path): ?string;

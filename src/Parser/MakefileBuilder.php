@@ -59,7 +59,9 @@ final class MakefileBuilder
         $this->paths = new SearchPaths();
     }
 
-    /** @throws ParseException */
+    /**
+     * @throws ParseException
+     */
     public function addRule(Rule $rule): void
     {
         if (in_array('.SECONDEXPANSION', $rule->targetNames, true)) {
@@ -224,7 +226,9 @@ final class MakefileBuilder
         );
     }
 
-    /** @throws ParseException */
+    /**
+     * @throws ParseException
+     */
     private function addTarget(string $name, BuildRule $rule, Rule $declaration): void
     {
         $previous = $this->targets[$name]->rules[0] ?? null;

@@ -21,6 +21,8 @@ use function strpos;
 use function substr;
 use function trim;
 
+use const PREG_SPLIT_NO_EMPTY;
+
 final readonly class VariableExpander
 {
     public EvaluationContext $context;
@@ -59,6 +61,7 @@ final readonly class VariableExpander
 
     /**
      * @param list<string>|null $expanding
+     *
      * @throws MakefileErrorException
      */
     public function expand(string $expression, ?array $expanding = null): string
@@ -85,6 +88,7 @@ final readonly class VariableExpander
     /**
      * @param list<string> $arguments
      * @param list<string> $expanding
+     *
      * @throws MakefileErrorException
      */
     public function invokeFunction(
@@ -192,7 +196,9 @@ final readonly class VariableExpander
         );
     }
 
-    /** @return list<Variable> */
+    /**
+     * @return list<Variable>
+     */
     public function variables(): array
     {
         $variables = $this->context->variables;
@@ -205,7 +211,9 @@ final readonly class VariableExpander
         return array_values([...$variables, ...$this->locals]);
     }
 
-    /** @param list<Variable> $variables */
+    /**
+     * @param list<Variable> $variables
+     */
     public function withVariables(array $variables, ?int $callParameters = null): self
     {
         $locals = $this->locals;
@@ -224,7 +232,9 @@ final readonly class VariableExpander
         );
     }
 
-    /** @param list<string> $expanding */
+    /**
+     * @param list<string> $expanding
+     */
     private function inExpansion(array $expanding): self
     {
         return new self(
@@ -241,6 +251,7 @@ final readonly class VariableExpander
 
     /**
      * @param list<string> $expanding
+     *
      * @throws MakefileErrorException
      */
     private function reference(string $reference, array $expanding, string $opening): string
@@ -296,6 +307,7 @@ final readonly class VariableExpander
 
     /**
      * @param list<string> $expanding
+     *
      * @throws MakefileErrorException
      */
     private function value(string $name, array $expanding): string

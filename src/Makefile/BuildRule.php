@@ -6,7 +6,9 @@ namespace Tamiroh\Phmake\Makefile;
 
 final readonly class BuildRule
 {
-    /** @param list<string> $group */
+    /**
+     * @param list<string> $group
+     */
     public function __construct(
         public Prerequisites $prerequisites = new Prerequisites(),
         public ?Recipe $recipe = null,

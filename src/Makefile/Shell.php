@@ -8,6 +8,7 @@ interface Shell
 {
     /**
      * @param array<string, string|false> $environment
+     *
      * @throws MakefileErrorException
      */
     public function capture(
@@ -19,6 +20,7 @@ interface Shell
 
     /**
      * @param array<string, string|false> $environment
+     *
      * @throws MakefileErrorException
      */
     public function exec(

@@ -36,7 +36,9 @@ final class Conditionals
         }
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function read(string $line, VariableExpander $expander, int $lineNumber): bool
     {
         $matches = [];
@@ -89,7 +91,9 @@ final class Conditionals
         return true;
     }
 
-    /** @return array{string, string} */
+    /**
+     * @return array{string, string}
+     */
     private function comparison(string $argument, int $lineNumber): array
     {
         if (($argument[0] ?? '') === '(') {
@@ -129,7 +133,9 @@ final class Conditionals
         throw new ParseException($lineNumber, 'invalid syntax in conditional');
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     private function evaluate(string $directive, string $argument, VariableExpander $expander, int $lineNumber): bool
     {
         if ($directive === 'ifdef' || $directive === 'ifndef') {

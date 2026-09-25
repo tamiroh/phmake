@@ -10,10 +10,14 @@ interface Filesystem
 
     public function lastModified(string $path): ?int;
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     public function matching(string $pattern): array;
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function read(string $path): ?string;
 
     public function realpath(string $path): ?string;
@@ -22,6 +26,8 @@ interface Filesystem
 
     public function workingDirectory(): string;
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function write(string $path, string $text, bool $append): void;
 }

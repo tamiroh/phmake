@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Closure;
+use Override;
 use Symfony\Component\Process\Exception\ProcessSignaledException;
 use Symfony\Component\Process\Exception\RuntimeException;
 use Symfony\Component\Process\Process as SymfonyProcess;
@@ -16,15 +17,22 @@ use function escapeshellarg;
 use function fwrite;
 use function stream_isatty;
 
+use const STDERR;
+use const STDOUT;
+
 final class Shell implements ShellInterface
 {
-    /** @param array<string, string|false> $environment */
+    /**
+     * @param array<string, string|false> $environment
+     */
     public function __construct(
         private readonly array $environment = [],
     ) {}
 
-    /** @param array<string, string|false> $environment */
-    #[\Override]
+    /**
+     * @param array<string, string|false> $environment
+     */
+    #[Override]
     public function capture(
         string $command,
         array $environment = [],
@@ -40,8 +48,10 @@ final class Shell implements ShellInterface
         return new ShellResult($process->getOutput(), $status);
     }
 
-    /** @param array<string, string|false> $environment */
-    #[\Override]
+    /**
+     * @param array<string, string|false> $environment
+     */
+    #[Override]
     public function exec(string $command, array $environment = [], string $shell = '/bin/sh', string $flags = '-c'): int
     {
         $process = $this->process($command, $environment, $shell, $flags);
@@ -57,7 +67,7 @@ final class Shell implements ShellInterface
             if ($type === SymfonyProcess::ERR) {
                 fwrite(STDERR, $buffer);
             } else {
-                print $buffer;
+                echo $buffer;
             }
         });
     }
@@ -67,7 +77,9 @@ final class Shell implements ShellInterface
         return defined('STDOUT') && stream_isatty(STDOUT);
     }
 
-    /** @param array<string, string|false> $environment */
+    /**
+     * @param array<string, string|false> $environment
+     */
     private function process(string $command, array $environment, string $shell, string $flags): SymfonyProcess
     {
         $process = SymfonyProcess::fromShellCommandline(
@@ -78,7 +90,9 @@ final class Shell implements ShellInterface
         return $process;
     }
 
-    /** @param Closure(string, string): void $callback */
+    /**
+     * @param Closure(string, string): void $callback
+     */
     private function run(SymfonyProcess $process, Closure $callback): int
     {
         try {

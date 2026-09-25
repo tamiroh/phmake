@@ -9,7 +9,9 @@ use function in_array;
 use function strlen;
 use function usort;
 
-/** Definitions are evaluated while reading; matching and inheritance happen while building. */
+/**
+ * Definitions are evaluated while reading; matching and inheritance happen while building.
+ */
 final class TargetVariables
 {
     /** @var array<array-key, array<string, Variable>> */
@@ -18,7 +20,9 @@ final class TargetVariables
     /** @var list<array{string, Variable}> */
     private array $patterns = [];
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function define(
         string $target,
         Assignment $assignment,
@@ -72,7 +76,9 @@ final class TargetVariables
         }
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     public function mentioned(): array
     {
         $names = [];
@@ -84,7 +90,9 @@ final class TargetVariables
         return $names;
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function scope(string $name, VariableScope $parent, ?Output $output = null): VariableScope
     {
         $patterns = [];
@@ -120,7 +128,9 @@ final class TargetVariables
         return $parent->with($exact);
     }
 
-    /** @param array<string, Variable> $variables */
+    /**
+     * @param array<string, Variable> $variables
+     */
     private function definitionScope(array $variables, VariableExpander $expander): VariableExpander
     {
         foreach ($variables as $variable) {

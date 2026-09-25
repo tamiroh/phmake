@@ -26,9 +26,13 @@ use function max;
 use function scandir;
 use function substr_count;
 
+use const PHP_BINARY;
+
 final readonly class Application
 {
-    /** @param list<string> $arguments */
+    /**
+     * @param list<string> $arguments
+     */
     public function run(array $arguments): void
     {
         try {
@@ -79,9 +83,10 @@ final readonly class Application
     }
 
     /**
+     * @param array<string, Variable> $defaults
+     *
      * @throws MakefileErrorException
      * @throws ParseException
-     * @param array<string, Variable> $defaults
      */
     private function createMakefile(CommandLine $commandLine, Output $output, array $defaults, int $level): Makefile
     {
@@ -142,7 +147,9 @@ final readonly class Application
         )->parse();
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private function defaultMakefiles(): array
     {
         $entries = scandir('.');
@@ -157,7 +164,9 @@ final readonly class Application
         return [];
     }
 
-    /** @return array<string, Variable> */
+    /**
+     * @return array<string, Variable>
+     */
     private function initialVariables(): array
     {
         $variables = [];

@@ -19,7 +19,9 @@ final readonly class ExpandedCommand
         private string $prefix = '',
     ) {}
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function run(Shell $shell, Output $output): int
     {
         $pending = '';
@@ -38,7 +40,9 @@ final readonly class ExpandedCommand
         return $pending === '' ? 0 : $this->runLine($pending, $shell, $output);
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     private function runLine(string $line, Shell $shell, Output $output): int
     {
         $expanded = ltrim($line);

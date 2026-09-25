@@ -9,10 +9,14 @@ use function array_replace;
 use function in_array;
 use function str_replace;
 
-/** Target-local layers over live global definitions. */
+/**
+ * Target-local layers over live global definitions.
+ */
 final readonly class VariableScope
 {
-    /** @param list<array<string, Variable>> $layers */
+    /**
+     * @param list<array<string, Variable>> $layers
+     */
     public function __construct(
         public EvaluationContext $context,
         private array $layers = [],
@@ -65,7 +69,9 @@ final readonly class VariableScope
         return $value;
     }
 
-    /** @return list<Variable> */
+    /**
+     * @return list<Variable>
+     */
     public function variables(): array
     {
         $names = $this->context->variables;
@@ -82,7 +88,9 @@ final readonly class VariableScope
         return $result;
     }
 
-    /** @param array<string, Variable> $variables */
+    /**
+     * @param array<string, Variable> $variables
+     */
     public function with(array $variables): self
     {
         return new self($this->context, [...$this->layers, $variables]);

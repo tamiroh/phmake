@@ -16,7 +16,9 @@ final class Rule
 
     public private(set) bool $hasRecipe = false;
 
-    /** @param list<string> $targetNames */
+    /**
+     * @param list<string> $targetNames
+     */
     public function __construct(
         public readonly array $targetNames,
         public readonly Prerequisites $prerequisites,

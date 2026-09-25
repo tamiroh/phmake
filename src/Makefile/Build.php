@@ -14,7 +14,9 @@ use function ltrim;
 use function spl_object_id;
 use function trim;
 
-/** Execution state belongs to one invocation, independently of the parsed rules. */
+/**
+ * Execution state belongs to one invocation, independently of the parsed rules.
+ */
 final class Build
 {
     /** @var array<string, bool> */
@@ -32,7 +34,9 @@ final class Build
 
     private readonly BuildFiles $files;
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function __construct(
         private readonly Makefile $makefile,
         private readonly Shell $shell,
@@ -151,9 +155,11 @@ final class Build
         return $updated;
     }
 
-    /** @return array{Prerequisites, list<string>}
+    /**
      * @throws MakefileErrorException
      * @throws CommandFailedException
+     *
+     * /** @return array{Prerequisites, list<string>}
      */
     private function dependencies(
         string $name,
@@ -230,8 +236,10 @@ final class Build
         return $ran;
     }
 
-    /** @return list<string>
+    /**
      * @throws MakefileErrorException
+     *
+     * /** @return list<string>
      */
     private function groupMembers(Target $target, BuildRule $rule): array
     {
@@ -307,7 +315,9 @@ final class Build
         return $changed;
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     private function resolve(string $name): ?Target
     {
         return $this->search->resolve($name, $this->scope);

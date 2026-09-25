@@ -6,7 +6,9 @@ namespace Tamiroh\Phmake\Makefile;
 
 use function in_array;
 
-/** Special targets govern intermediate lifetime independently of recipe selection. */
+/**
+ * Special targets govern intermediate lifetime independently of recipe selection.
+ */
 final readonly class FilePolicy
 {
     /** @var array<string, list<string>> */

@@ -50,7 +50,9 @@ final readonly class ScopedAssignment
         return new self($assignment, $origin, $private, $export);
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public static function read(
         string $line,
         TargetVariables $variables,

@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
+use Override;
 use Tamiroh\Phmake\Makefile\Output as OutputInterface;
 
 use function fwrite;
+
+use const PHP_EOL;
+use const STDERR;
 
 final class Output implements OutputInterface
 {
@@ -15,7 +19,7 @@ final class Output implements OutputInterface
         private readonly int $level = 0,
     ) {}
 
-    #[\Override]
+    #[Override]
     public function write(string $text): void
     {
         echo $text;
@@ -26,13 +30,13 @@ final class Output implements OutputInterface
         echo $this->prefix() . ': ' . ($entering ? 'Entering' : 'Leaving') . " directory '$directory'" . PHP_EOL;
     }
 
-    #[\Override]
+    #[Override]
     public function writeInfo(string $message): void
     {
         $this->writeLine($this->prefix() . ": $message");
     }
 
-    #[\Override]
+    #[Override]
     public function writeLine(string $line): void
     {
         if (!$this->silent) {
@@ -40,7 +44,7 @@ final class Output implements OutputInterface
         }
     }
 
-    #[\Override]
+    #[Override]
     public function writeWarning(string $message, ?string $source = null): void
     {
         fwrite(STDERR, ($source ?? 'phmake') . ": $message" . PHP_EOL);

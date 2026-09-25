@@ -17,6 +17,7 @@ final readonly class Command
 
     /**
      * @param list<Variable>|VariableExpander $variables
+     *
      * @throws MakefileErrorException
      */
     public function expand(array|VariableExpander $variables, Output $output): ExpandedCommand
@@ -31,6 +32,7 @@ final readonly class Command
 
     /**
      * @param list<Variable>|VariableExpander $variables
+     *
      * @throws MakefileErrorException
      */
     public function run(Shell $shell, Output $output, array|VariableExpander $variables = []): int

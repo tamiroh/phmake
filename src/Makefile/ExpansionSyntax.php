@@ -12,7 +12,9 @@ use function substr;
 
 final class ExpansionSyntax
 {
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     public static function arguments(string $text, int $limit, string $opening): array
     {
         $arguments = [];
@@ -33,7 +35,9 @@ final class ExpansionSyntax
         return $arguments;
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public static function readReference(string $expression, int &$index): string
     {
         $opening = $expression[$index];

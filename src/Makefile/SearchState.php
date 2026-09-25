@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-/** Candidate searches clone this state; only an accepted branch is committed. */
+/**
+ * Candidate searches clone this state; only an accepted branch is committed.
+ */
 final class SearchState
 {
     /** @var array<string, Target|null> */

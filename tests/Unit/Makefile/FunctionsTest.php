@@ -14,7 +14,9 @@ use Tamiroh\Phmake\Makefile\VariableExpander;
 
 final class FunctionsTest extends TestCase
 {
-    /** @return iterable<string, array{string, string}> */
+    /**
+     * @return iterable<string, array{string, string}>
+     */
     public static function expressions(): iterable
     {
         yield 'last argument retains commas' => ['$(subst a,b,a,a)', 'b,b'];
@@ -38,7 +40,9 @@ final class FunctionsTest extends TestCase
         yield 'literal replacement keeps percent' => ['$(patsubst a,%,a a b)', '% % b'];
     }
 
-    /** @return iterable<string, array{string}> */
+    /**
+     * @return iterable<string, array{string}>
+     */
     public static function invalidExpressions(): iterable
     {
         yield 'missing argument' => ['$(subst a,b)'];
@@ -54,7 +58,9 @@ final class FunctionsTest extends TestCase
         yield 'negative range end' => ['$(wordlist 1,-1,a)'];
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function directCallsDistinguishEmptyAndMissingArguments(): void
     {
@@ -64,7 +70,9 @@ final class FunctionsTest extends TestCase
         Functions::subst('', '');
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function directForeachRejectsMissingBodyEvenWithEmptyList(): void
     {
@@ -74,7 +82,9 @@ final class FunctionsTest extends TestCase
         Functions::foreach(new VariableExpander([]), [], 'x', '');
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     public function directIfRejectsMissingBranchBeforeExpanding(): void
     {
@@ -85,7 +95,9 @@ final class FunctionsTest extends TestCase
         }, 'yes');
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     #[DataProvider('expressions')]
     public function expandsFunctions(string $expression, string $expected): void
@@ -100,7 +112,9 @@ final class FunctionsTest extends TestCase
         );
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     #[Test]
     #[DataProvider('invalidExpressions')]
     public function rejectsInvalidArguments(string $expression): void

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-/** Preserve each declaration's first expansion and static stem for later secondary expansion. */
+/**
+ * Preserve each declaration's first expansion and static stem for later secondary expansion.
+ */
 final readonly class PrerequisiteExpression
 {
     public function __construct(

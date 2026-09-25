@@ -8,13 +8,15 @@ use Closure;
 
 use function in_array;
 
-/** Mutable global definitions shared by parsing, expansion, and recipe execution. */
+/**
+ * Mutable global definitions shared by parsing, expansion, and recipe execution.
+ */
 final class EvaluationContext
 {
     /** @var array<string, Variable> */
     public array $variables = [];
 
-    /** @var null|Closure(string, VariableExpander): void */
+    /** @var Closure(string, VariableExpander): void|null */
     public ?Closure $evaluate = null;
 
     public bool $reading = true;
@@ -30,7 +32,9 @@ final class EvaluationContext
     /** @var array<string, string> */
     public array $inheritedEnvironment = [];
 
-    /** @param list<Variable> $variables */
+    /**
+     * @param list<Variable> $variables
+     */
     public function __construct(array $variables = [])
     {
         $this->exports = new Exports();

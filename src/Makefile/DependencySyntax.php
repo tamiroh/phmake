@@ -9,7 +9,9 @@ use function strlen;
 use function strpbrk;
 use function substr;
 
-/** Tokenization shared by first and secondary prerequisite expansion. */
+/**
+ * Tokenization shared by first and secondary prerequisite expansion.
+ */
 final class DependencySyntax
 {
     public static function delimiter(string $text, string $delimiter): ?int
@@ -32,7 +34,9 @@ final class DependencySyntax
         return null;
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     public static function expressions(string $text): array
     {
         $result = [];
@@ -75,7 +79,9 @@ final class DependencySyntax
         );
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     public static function words(string $text): array
     {
         $result = [];
@@ -98,7 +104,9 @@ final class DependencySyntax
         return $result;
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private static function paths(string $text, ?Filesystem $filesystem, string $directory): array
     {
         $result = [];

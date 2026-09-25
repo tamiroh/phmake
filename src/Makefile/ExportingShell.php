@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
+use Override;
+
 final readonly class ExportingShell implements Shell
 {
     public function __construct(
@@ -15,9 +17,10 @@ final readonly class ExportingShell implements Shell
 
     /**
      * @param array<string, string|false> $environment
+     *
      * @throws MakefileErrorException
      */
-    #[\Override]
+    #[Override]
     public function capture(
         string $command,
         array $environment = [],
@@ -41,9 +44,10 @@ final readonly class ExportingShell implements Shell
 
     /**
      * @param array<string, string|false> $environment
+     *
      * @throws MakefileErrorException
      */
-    #[\Override]
+    #[Override]
     public function exec(string $command, array $environment = [], string $shell = '/bin/sh', string $flags = '-c'): int
     {
         return $this->shell->exec(
@@ -57,7 +61,9 @@ final readonly class ExportingShell implements Shell
         );
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     private function shellName(string $fallback): string
     {
         $name = $this->variables->expand('$(SHELL)');

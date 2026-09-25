@@ -8,6 +8,9 @@ use function fwrite;
 use function str_ends_with;
 use function trim;
 
+use const PHP_EOL;
+use const STDERR;
+
 final class Process
 {
     private const string MESSAGE_PREMIX = 'phmake: ';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
+use Override;
 use Tamiroh\Phmake\Makefile\Assignment;
 use Tamiroh\Phmake\Makefile\EvaluationContext;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
@@ -49,6 +50,7 @@ final class CommandLine implements Configuration
     /**
      * @param list<string> $arguments
      * @param array<string, Variable> $defaults
+     *
      * @throws MakefileErrorException
      */
     public function __construct(
@@ -62,7 +64,9 @@ final class CommandLine implements Configuration
         $this->readArguments($arguments, false, $defaults);
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private static function splitFlags(string $flags): array
     {
         $words = [];
@@ -112,9 +116,10 @@ final class CommandLine implements Configuration
 
     /**
      * @param array<string, Variable> $variables
+     *
      * @throws MakefileErrorException
      */
-    #[\Override]
+    #[Override]
     public function updateMakeflags(array &$variables, ?VariableExpander $expander = null): void
     {
         $this->readFlags(
@@ -154,6 +159,7 @@ final class CommandLine implements Configuration
 
     /**
      * @param array<string, Variable> $defaults
+     *
      * @throws MakefileErrorException
      */
     private function assign(string $argument, array $defaults): bool
@@ -181,6 +187,7 @@ final class CommandLine implements Configuration
     /**
      * @param list<string> $arguments
      * @param array<string, Variable> $defaults
+     *
      * @throws MakefileErrorException
      */
     private function readArguments(array $arguments, bool $inherited, array $defaults): void
@@ -202,6 +209,7 @@ final class CommandLine implements Configuration
 
     /**
      * @param array<string, Variable> $defaults
+     *
      * @throws MakefileErrorException
      */
     private function readFlags(string $flags, array $defaults): void
@@ -215,6 +223,7 @@ final class CommandLine implements Configuration
 
     /**
      * @param list<string> $arguments
+     *
      * @throws MakefileErrorException
      */
     private function readOption(string $argument, array $arguments, int &$index, bool $inherited): void

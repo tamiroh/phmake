@@ -34,6 +34,8 @@ use function strlen;
 use function substr;
 use function trim;
 
+use const PREG_SPLIT_NO_EMPTY;
+
 final readonly class MakefileParser
 {
     /**
@@ -70,9 +72,12 @@ final readonly class MakefileParser
                     throw new LogicException('Backslash count must be non-negative');
                 }
                 if (($line[$index] ?? '') === '#') {
-                    // Dividing a non-negative count by 2 yields a non-negative result.
-                    // Dividing by 2 cannot cause division by zero or integer overflow.
-                    // @mago-expect analysis:unhandled-thrown-type,unhandled-thrown-type,possibly-invalid-argument
+                    /**
+                     * Dividing a non-negative count by 2 yields a non-negative result.
+                     * Dividing by 2 cannot cause division by zero or integer overflow.
+                     *
+                     * @mago-expect analysis:unhandled-thrown-type,unhandled-thrown-type,possibly-invalid-argument
+                     */
                     $result .= str_repeat('\\', intdiv($count, num2: 2));
                     if (($count % 2) === 0) {
                         break;
@@ -115,7 +120,9 @@ final readonly class MakefileParser
         return $location;
     }
 
-    /** @return array{string, ?string} */
+    /**
+     * @return array{string, ?string}
+     */
     private static function splitRecipe(string $line): array
     {
         for ($index = 0; $index < strlen($line); $index++) {
@@ -133,14 +140,18 @@ final readonly class MakefileParser
         return [self::removeComment($line), null];
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private static function words(string $text): array
     {
         $words = preg_split('/\s+/', trim($text), -1, PREG_SPLIT_NO_EMPTY);
         return $words === false ? [] : $words;
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function parse(): Makefile
     {
         $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false), $this->output);
@@ -215,7 +226,9 @@ final readonly class MakefileParser
         );
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private function matchingPaths(string $pattern): array
     {
         $paths = $this->files?->matching($pattern) ?? [];
@@ -262,6 +275,7 @@ final readonly class MakefileParser
      * @param array<string, Variable> $variables
      * @param list<string> $included
      * @param array<int, string> $sources
+     *
      * @throws ParseException
      * @throws MakefileErrorException
      */
@@ -480,6 +494,7 @@ final readonly class MakefileParser
      * @param array<string, Variable> $variables
      * @param list<string> $included
      * @param array<int, string> $sources
+     *
      * @throws MakefileErrorException
      * @throws ParseException
      */

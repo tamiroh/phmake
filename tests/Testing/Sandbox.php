@@ -24,6 +24,9 @@ use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
 
+use const PATH_SEPARATOR;
+use const PHP_BINARY;
+
 final readonly class Sandbox
 {
     private function __construct(

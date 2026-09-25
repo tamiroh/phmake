@@ -14,20 +14,28 @@ use function rtrim;
 use function str_starts_with;
 use function substr;
 
-/** Selective vpath entries are read in order; VPATH and GPATH use final global values. */
+use const PREG_SPLIT_NO_EMPTY;
+
+/**
+ * Selective vpath entries are read in order; VPATH and GPATH use final global values.
+ */
 final class SearchPaths
 {
     /** @var list<array{string, list<string>}> */
     private array $selective = [];
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     */
     private static function directories(string $text): array
     {
         $paths = preg_split('/[\s:]+/', $text, -1, PREG_SPLIT_NO_EMPTY);
         return $paths === false ? [] : $paths;
     }
 
-    /** @param list<string> $words */
+    /**
+     * @param list<string> $words
+     */
     public function define(array $words): void
     {
         if ($words === []) {
@@ -70,7 +78,9 @@ final class SearchPaths
         return $this->search($names, $filesystem, $expander, $targets);
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public function retain(string $path, VariableExpander $expander): bool
     {
         foreach (self::directories($expander->expand('$(GPATH)')) as $directory) {
@@ -83,6 +93,7 @@ final class SearchPaths
 
     /** @param list<string> $names
      * @param array<string, Target> $targets
+     *
      * @throws MakefileErrorException
      */
     private function search(array $names, Filesystem $filesystem, VariableExpander $expander, array $targets): ?string

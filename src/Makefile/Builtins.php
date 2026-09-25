@@ -6,7 +6,9 @@ namespace Tamiroh\Phmake\Makefile;
 
 final class Builtins
 {
-    /** @return list<PatternRule> */
+    /**
+     * @return list<PatternRule>
+     */
     public static function rules(): array
     {
         return [
@@ -50,7 +52,9 @@ final class Builtins
         ];
     }
 
-    /** @return list<Variable> */
+    /**
+     * @return list<Variable>
+     */
     public static function variables(): array
     {
         return [

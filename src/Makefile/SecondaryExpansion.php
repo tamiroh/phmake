@@ -10,7 +10,9 @@ use function str_replace;
 
 final class SecondaryExpansion
 {
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public static function expand(
         string $name,
         PrerequisiteExpression $expression,
@@ -26,7 +28,9 @@ final class SecondaryExpansion
         );
     }
 
-    /** @throws MakefileErrorException */
+    /**
+     * @throws MakefileErrorException
+     */
     public static function explicit(
         string $name,
         BuildRule $rule,
@@ -74,8 +78,10 @@ final class SecondaryExpansion
 
     /** Expand only the words reached by the current search pass, reusing earlier word expansions.
      * @param array<int, string> $expanded
-     * @return iterable<Prerequisites>
+     *
      * @throws MakefileErrorException
+     *
+     * @return iterable<Prerequisites>
      */
     public static function implicitParts(
         string $name,
