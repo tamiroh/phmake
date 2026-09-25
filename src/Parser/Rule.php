@@ -13,6 +13,7 @@ final class Rule
 {
     /** @var list<Command> */
     public private(set) array $commands = [];
+
     public private(set) bool $hasRecipe = false;
 
     /** @param list<string> $targetNames */

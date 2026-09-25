@@ -14,6 +14,7 @@ final class TargetVariables
 {
     /** @var array<array-key, array<string, Variable>> */
     private array $definitions = [];
+
     /** @var list<array{string, Variable}> */
     private array $patterns = [];
 

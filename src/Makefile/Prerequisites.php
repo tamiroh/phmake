@@ -12,6 +12,7 @@ final readonly class Prerequisites
 {
     /** @var list<string> */
     public array $orderOnly;
+
     /** @var list<string> */
     public array $sequence;
 

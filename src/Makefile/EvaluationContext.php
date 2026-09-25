@@ -18,9 +18,13 @@ final class EvaluationContext
     public ?Closure $evaluate = null;
 
     public bool $reading = true;
+
     public ?Shell $shell = null;
+
     public ?Filesystem $filesystem = null;
+
     public Exports $exports;
+
     public bool $shellEnvironment = false;
 
     /** @var array<string, string> */

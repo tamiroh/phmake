@@ -33,15 +33,22 @@ final class MakefileBuilder
 {
     /** @var array<string, Target> */
     private array $targets = [];
+
     /** @var array<string, string> */
     private array $phonyNames = [];
+
     /** @var list<PatternRule> */
     private array $patterns = [];
+
     private ?string $defaultGoal = null;
+
     /** @var list<string> */
     private array $suffixes = [];
+
     private bool $secondary = false;
+
     public readonly TargetVariables $scopes;
+
     public readonly SearchPaths $paths;
 
     public function __construct(

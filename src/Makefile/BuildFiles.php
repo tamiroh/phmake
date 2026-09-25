@@ -15,8 +15,10 @@ final class BuildFiles
 {
     /** @var list<string> */
     public array $goals = [];
+
     /** @var array<string, string> */
     private array $created = [];
+
     private readonly FilePolicy $policy;
 
     /** @throws MakefileErrorException */

@@ -19,12 +19,17 @@ final class Build
 {
     /** @var array<string, bool> */
     private array $results = [];
+
     /** @var array<string, true> */
     private array $visiting = [];
+
     /** @var array<string, bool> */
     private array $completedRecipes = [];
+
     private readonly RuleSearch $search;
+
     private VariableScope $scope;
+
     private readonly BuildFiles $files;
 
     /** @throws MakefileErrorException */
