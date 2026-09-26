@@ -68,6 +68,19 @@ jobs:
       - name: Compare FFmpeg builds with GNU make and phmake
         run: python3 e2e/compare-builds.py ffmpeg
 
+  build-gcc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare GCC build environment
+        run: docker build --platform linux/amd64 -f e2e/gcc/Dockerfile -t phmake-gcc-build .
+
+      - name: Compare GCC builds with GNU make and phmake
+        run: python3 e2e/compare-builds.py gcc
+
   build-linux:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
