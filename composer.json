@@ -19,6 +19,9 @@
             "email": "tamiroh71@gmail.com"
         }
     ],
+    "require": {
+        "php": "^8.5"
+    },
     "require-dev": {
         "phpstan/phpstan": "^2.2.14",
         "phpunit/phpunit": "^13.3.4",
