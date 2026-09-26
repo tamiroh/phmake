@@ -58,5 +58,5 @@ def compare(project):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("project", choices=("php", "lua", "make", "git", "linux"))
+    parser.add_argument("project", choices=("php", "lua", "make", "git", "linux", "ffmpeg"))
     raise SystemExit(compare(parser.parse_args().project))

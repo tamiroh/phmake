@@ -1,6 +1,6 @@
 # Build comparisons
 
-CI builds PHP, Lua, GNU make, Git, and Linux with both GNU make and phmake.
+CI builds PHP, Lua, GNU make, Git, Linux, and FFmpeg with both GNU make and phmake.
 Each project uses one Docker image and the same verification script for both
 implementations. GNU make is the image's `/usr/bin/make`; its version is printed
 in the log. The GNU make compatibility suite separately uses its pinned 4.4.1
@@ -13,7 +13,7 @@ docker build --platform linux/amd64 -f e2e/lua/Dockerfile -t phmake-lua-build .
 python3 e2e/compare-builds.py lua
 ```
 
-Replace `lua` with `php`, `make`, `git`, or `linux` to run another project.
+Replace `lua` with `php`, `make`, `git`, `linux`, or `ffmpeg` to run another project.
 The comparison runner requires Python 3 and Docker on the host. It runs GNU make
 first and phmake second, sequentially on the same host, each in a fresh container
 with no network access. Build products are not shared. The container's `make`
@@ -47,3 +47,9 @@ docker run --rm --init --platform linux/amd64 --network none \
 `MAKE_IMPLEMENTATION` accepts `phmake` (the default) or `gnu`. Select it through
 the image's default command, which runs `e2e/run-build.sh` before the project
 verifier. Overriding the command to call a verifier directly bypasses selection.
+
+FFmpeg uses the upstream Makefiles with a limited codec configuration to keep
+CI build times manageable. Its smoke test installs the binaries, generates video
+and audio, encodes them as FFV1/PCM in Matroska, and verifies decoded video hashes and audio samples
+against the original sources. External codec libraries and network input are
+not part of this configuration.
