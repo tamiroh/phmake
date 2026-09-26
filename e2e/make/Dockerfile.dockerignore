@@ -9,3 +9,4 @@
 !e2e/make/verify.sh
 !e2e/make/run-tests.sh
 !e2e/make/test-runner.patch
+!e2e/make/verify-runner.pl

@@ -80,3 +80,28 @@
        $status = "N/A";
        --$categories_run;
  
+@@ -1145,15 +1152,20 @@
+
+   } else {
+     my $pid = fork();
++    defined $pid or die "fork: $!\n";
+     if (! $pid) {
++      # Isolate the test command and its descendants from the runner.
++      setpgrp(0, 0) or die "setpgrp: $!\n";
+       exec(@_) or die "exec: Cannot execute $_[0]: $!\n";
+     }
+     local $SIG{ALRM} = sub {
+-      my $e = $ERRSTACK[0];
++      my $e = $ERRSTACK[0] || \*STDERR;
+       print $e "\nTest timed out after $test_timeout seconds\n";
+-      # Resend the alarm to our process group to kill the children.
+-      $SIG{ALRM} = 'IGNORE';
+-      kill -14, $$;
++      # A timed-out command must not keep running during later tests.
++      # SIGKILL also handles children that ignore or defer other signals.
++      kill 'KILL', -$pid;
++      kill 'KILL', $pid;
++      waitpid($pid, 0);
+       die "timeout\n";
+     };
+     alarm $test_timeout;

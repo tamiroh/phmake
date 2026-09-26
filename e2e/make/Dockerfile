@@ -18,6 +18,12 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz -o /tmp/make.tar.g
 WORKDIR /opt/make
 RUN ./configure --without-guile --disable-nls
 
+# Keep a reference executable without prebuilding the phmake build smoke test.
+RUN /usr/bin/make -j2 \
+    && mkdir -p /usr/local/libexec \
+    && cp make /usr/local/libexec/gnu-make-4.4.1 \
+    && /usr/bin/make clean
+
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 
 WORKDIR /opt/phmake
@@ -33,8 +39,10 @@ WORKDIR /opt/make
 COPY e2e/make/verify.sh /usr/local/bin/verify-make-build
 COPY e2e/make/run-tests.sh /usr/local/bin/run-gnu-make-tests
 COPY e2e/make/test-runner.patch /tmp/test-runner.patch
+COPY e2e/make/verify-runner.pl /usr/local/bin/verify-gnu-test-runner
 RUN patch -d /opt/make -p1 < /tmp/test-runner.patch \
     && rm /tmp/test-runner.patch \
+    && perl /usr/local/bin/verify-gnu-test-runner \
     && chmod -R a+rwX /opt/make/tests
 
 CMD ["sh", "/usr/local/bin/verify-make-build"]
