@@ -1,0 +1,48 @@
+$ ./phmake -rR --no-print-directory --trace -f oneshell.mk
+oneshell.mk:3: update target 'all' due to: target does not exist
+echo one
+echo two
+one
+two
+$ ./phmake -rR --no-print-directory --debug=why
+Makefile:2: update target 'all' due to: target does not exist
+first
+second
+$ ./phmake -rR --no-print-directory -s --debug=print
+echo first
+first
+echo second
+second
+$ ./phmake -rR --no-print-directory --trace --debug=none
+first
+second
+$ ./phmake -rR --no-print-directory --debug=none --trace
+first
+second
+$ ./phmake -rR --no-print-directory --debug=print,none,why
+Makefile:2: update target 'all' due to: target does not exist
+first
+second
+$ ./phmake -rR --no-print-directory --debug="print why" silent
+Makefile:8: update target 'silent' due to: target does not exist
+echo silent
+silent
+$ ./phmake -rR --no-print-directory --trace -n
+Makefile:2: update target 'all' due to: target does not exist
+echo first
+echo second
+$ ./phmake -rR --no-print-directory --trace -q
+Makefile:2: update target 'all' due to: target does not exist
+[exit 1]
+$ ./phmake -rR --no-print-directory --trace -t
+touch all
+$ rm all; ./phmake -rR --no-print-directory --trace -t recursive
+Makefile:5: update target 'recursive' due to: target does not exist
+echo recursive
+recursive
+$ ./phmake -rR --no-print-directory --debug=why --debug=print --debug=why
+Makefile:2: update target 'all' due to: target does not exist
+echo first
+first
+echo second
+second

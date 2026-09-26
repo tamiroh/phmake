@@ -127,7 +127,7 @@ final class CommandLine implements Configuration
             . ($execution->question ? 'q' : '')
             . ($this->noBuiltinRules ? 'r' : '')
             . ($this->noBuiltinVariables ? 'R' : '')
-            . ($execution->silent ? 's' : '')
+            . ($execution->reporting->silent ? 's' : '')
             . ($execution->touch ? 't' : '')
             . ($this->printDirectory === true ? 'w' : '')
             . (
@@ -140,6 +140,11 @@ final class CommandLine implements Configuration
             . ($execution->parallel->mutex === null ? '' : ' --sync-mutex=' . $execution->parallel->mutex)
             . ($execution->parallel->load === null ? '' : ' -l' . $execution->parallel->load)
             . ($execution->parallel->shuffle === null ? '' : ' --shuffle=' . $execution->parallel->shuffle)
+            . implode('', array_map(
+                static fn(string $levels): string => ' --debug=' . str_replace(' ', '\\ ', $levels),
+                $execution->reporting->debugLevels,
+            ))
+            . ($execution->reporting->trace ? ' --trace' : '')
             . ($this->printDirectory === false ? ' --no-print-directory' : '')
             . implode('', array_map(
                 static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
@@ -294,6 +299,14 @@ final class CommandLine implements Configuration
             '--assume-old', '--old-file' => '-o',
             default => $argument,
         };
+        if ($argument === '--trace') {
+            $this->execution->reporting->trace = true;
+            return;
+        }
+        if (str_starts_with($argument, '--debug=')) {
+            $this->execution->reporting->addDebugFlags(substr($argument, 8));
+            return;
+        }
         if ($argument === '--shuffle' || str_starts_with($argument, '--shuffle=')) {
             $shuffle = $argument === '--shuffle' ? 'random' : substr($argument, 10);
             if ($shuffle === 'random') {
@@ -330,7 +343,7 @@ final class CommandLine implements Configuration
             return;
         }
         if ($argument === '--no-silent' || $argument === '--no-quiet') {
-            $this->execution->silent = false;
+            $this->execution->reporting->silent = false;
             return;
         }
         foreach ([
@@ -420,7 +433,7 @@ final class CommandLine implements Configuration
                     $this->execution->ignoreErrors = true;
                     break;
                 case 's':
-                    $this->execution->silent = true;
+                    $this->execution->reporting->silent = true;
                     break;
                 case 'v':
                     $this->version = true;

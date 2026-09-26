@@ -26,6 +26,8 @@ final class OutputGroup
 
     public bool $paused = false;
 
+    public bool $started = false;
+
     public readonly bool $combined;
 
     public function __construct()

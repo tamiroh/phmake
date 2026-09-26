@@ -75,9 +75,12 @@ final class OutputBuffer
         if ($group === null) {
             return;
         }
-        if ($begin && $this->options->sync === 'line') {
+        if ($begin && $group->started && $this->options->sync === 'line' && $this->options->jobs !== 1) {
             // Flush after the previous command's failure handling has joined its output.
             $this->flush($group);
+        }
+        if ($begin) {
+            $group->started = true;
         }
         if ($begin && $recursive && $this->options->sync !== 'recurse') {
             $this->flush($group);

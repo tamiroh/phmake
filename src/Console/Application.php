@@ -69,10 +69,10 @@ final readonly class Application
                     throw new MakefileErrorException("Cannot change directory to '$directory'");
                 }
             }
-            $output = new Output($commandLine->execution->silent, $level, $commandLine->execution->parallel);
+            $output = new Output($commandLine->execution->reporting->silent, $level, $commandLine->execution->parallel);
             $printDirectory =
                 $commandLine->printDirectory
-                ?? !$commandLine->execution->silent
+                ?? !$commandLine->execution->reporting->silent
                     && !$commandLine->execution->question
                     && ($level > 0 || $commandLine->input->directories !== []);
             if ($printDirectory) {

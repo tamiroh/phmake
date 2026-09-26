@@ -34,8 +34,17 @@ final readonly class Command
                 ? $variables->atSource($this->source)
                 : new VariableExpander($variables, $output, source: $this->source))->expand($this->expression),
             substr(ltrim($this->expression), 0, strspn(ltrim($this->expression), "@-+ \t")),
-            str_contains($this->expression, '$(MAKE)') || str_contains($this->expression, '${MAKE}'),
+            $this->isRecursive(),
             $this->source,
+        );
+    }
+
+    public function isRecursive(): bool
+    {
+        return (
+            str_contains($this->expression, '$(MAKE)')
+            || str_contains($this->expression, '${MAKE}')
+            || str_contains(substr(ltrim($this->expression), 0, strspn(ltrim($this->expression), "@-+ \t")), '+')
         );
     }
 

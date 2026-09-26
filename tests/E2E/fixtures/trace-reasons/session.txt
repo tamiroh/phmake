@@ -1,0 +1,43 @@
+$ ./phmake -rR --no-print-directory --trace
+Makefile:6: update target 'input' due to: target does not exist
+touch input
+Makefile:6: update target 'order' due to: target does not exist
+touch order
+Makefile:4: update target 'result' due to: target does not exist
+echo result; touch result
+result
+$ ./phmake -rR --no-print-directory --trace
+phmake: Nothing to be done for 'all'.
+$ touch -t 200001010000 result; ./phmake -rR --no-print-directory --trace
+Makefile:4: update target 'result' due to: input
+echo result; touch result
+result
+$ ./phmake -rR --no-print-directory --trace -s phony
+Makefile:8: update target 'phony' due to: target is .PHONY
+echo phony
+phony
+$ touch forced; ./phmake -rR --no-print-directory --trace -B forced
+Makefile:10: update target 'forced' due to: unknown reasons
+echo forced
+forced
+$ ./phmake -rR --no-print-directory --trace empty none
+Makefile:12: update target 'empty' due to: target does not exist
+phmake: 'empty' is up to date.
+phmake: 'none' is up to date.
+$ touch sample.in; ./phmake -rR --no-print-directory --trace -f implicit.mk sample.out
+implicit.mk:2: update target 'sample.out' due to: target does not exist
+echo implicit-sample.in; touch sample.out
+implicit-sample.in
+$ mkdir search; touch search/distant; ./phmake -rR --no-print-directory --trace -f vpath.mk
+vpath.mk:4: update target 'output' due to: target does not exist
+echo search/distant; touch output
+search/distant
+$ ./phmake -rR --no-print-directory --trace -f grouped.mk first second
+grouped.mk:2: update target 'first' due to: target does not exist
+echo first; touch first second
+first
+phmake: 'second' is up to date.
+$ touch sample.c; ./phmake --no-print-directory --trace -f builtin.mk sample.o
+<builtin>: update target 'sample.o' due to: target does not exist
+echo compile    -c  sample.c
+compile -c sample.c

@@ -92,7 +92,8 @@ final readonly class ExpandedCommand
             }
             if (
                 $options->dryRun && !$options->touch
-                || !$options->silent && !str_contains($prefix, '@') && (!$options->touch || $recursive)
+                || $options->reporting->print && (!$options->touch || $recursive)
+                || !$options->reporting->silent && !str_contains($prefix, '@') && (!$options->touch || $recursive)
             ) {
                 $output->write($expanded . "\n");
             }

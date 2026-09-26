@@ -1,0 +1,24 @@
+$ ./phmake -rR --no-print-directory --trace MAKE=./phmake
+Makefile:3: update target 'all' due to: target does not exist
+echo flags=rR --trace --no-print-directory -- MAKE=./phmake
+flags=rR --trace --no-print-directory -- MAKE=./phmake
+./phmake -f child.mk
+child.mk:2: update target 'all' due to: target does not exist
+echo child
+child
+$ GNUMAKEFLAGS=--trace ./phmake -rR --no-print-directory -f child.mk
+child.mk:2: update target 'all' due to: target does not exist
+echo child
+child
+$ ./phmake -rR --no-print-directory -f flags.mk
+flags.mk:3: update target 'all' due to: target does not exist
+echo flags=rR --trace --no-print-directory
+flags=rR --trace --no-print-directory
+$ ./phmake -rR --no-print-directory --debug=print --debug=why MAKE=./phmake
+Makefile:3: update target 'all' due to: target does not exist
+echo flags=rR --debug=print --debug=why --no-print-directory -- MAKE=./phmake
+flags=rR --debug=print --debug=why --no-print-directory -- MAKE=./phmake
+./phmake -f child.mk
+child.mk:2: update target 'all' due to: target does not exist
+echo child
+child

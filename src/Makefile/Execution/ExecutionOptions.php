@@ -8,14 +8,18 @@ final class ExecutionOptions
 {
     public ParallelOptions $parallel;
 
+    public ReportingOptions $reporting;
+
     public function __construct()
     {
         $this->parallel = new ParallelOptions();
+        $this->reporting = new ReportingOptions();
     }
 
     public function __clone(): void
     {
         $this->parallel = clone $this->parallel;
+        $this->reporting = clone $this->reporting;
     }
 
     public bool $dryRun = false;
@@ -30,8 +34,6 @@ final class ExecutionOptions
 
     public bool $ignoreErrors = false;
 
-    public bool $silent = false;
-
     /** @var list<string> */
     public array $oldFiles = [];
 
@@ -41,6 +43,7 @@ final class ExecutionOptions
     public function forMakefiles(int $restarts): self
     {
         $options = clone $this;
+        $options->reporting->remaking = true;
         $options->dryRun = false;
         $options->question = false;
         $options->touch = false;

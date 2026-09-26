@@ -1,0 +1,33 @@
+$ ./phmake -rR -w --trace -Otarget > output.txt 2>&1; sed "s|$PWD|WORK|g" output.txt
+phmake: Entering directory 'WORK'
+Makefile:2: update target 'all' due to: target does not exist
+echo first
+first
+echo second
+second
+phmake: Leaving directory 'WORK'
+$ ./phmake -rR -w --trace -j2 -Oline > output.txt 2>&1; sed "s|$PWD|WORK|g" output.txt
+phmake: Entering directory 'WORK'
+Makefile:2: update target 'all' due to: target does not exist
+echo first
+first
+phmake: Leaving directory 'WORK'
+phmake: Entering directory 'WORK'
+echo second
+second
+phmake: Leaving directory 'WORK'
+$ ./phmake -rR -w --trace -Oline > output.txt 2>&1; sed "s|$PWD|WORK|g" output.txt
+phmake: Entering directory 'WORK'
+Makefile:2: update target 'all' due to: target does not exist
+echo first
+first
+echo second
+second
+phmake: Leaving directory 'WORK'
+$ ./phmake -rR -w --trace -Oline -f failed.mk > output.txt 2>&1; status=$?; sed "s|$PWD|WORK|g" output.txt; test "$status" -eq 2
+phmake: Entering directory 'WORK'
+failed.mk:2: update target 'all' due to: target does not exist
+echo before; false
+before
+phmake: *** [failed.mk:2: all] Error 1
+phmake: Leaving directory 'WORK'

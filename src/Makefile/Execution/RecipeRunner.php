@@ -18,6 +18,7 @@ use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 
+use function array_any;
 use function array_map;
 use function array_unique;
 use function implode;
@@ -67,7 +68,7 @@ final readonly class RecipeRunner
                 $this->files->time(...),
             ));
             $options = clone $options;
-            $options->silent = $options->silent || $this->applies('.SILENT', $target->name);
+            $options->reporting->silent = $options->reporting->silent || $this->applies('.SILENT', $target->name);
             $options->ignoreErrors = $options->ignoreErrors || $this->applies('.IGNORE', $target->name);
             $oneShell = isset($this->makefile->targetsByName['.ONESHELL']);
             $commands = $rule->recipe->commands ?? [];
@@ -84,6 +85,16 @@ final readonly class RecipeRunner
             $expanded = [];
             foreach ($commands as $command) {
                 $expanded[] = $command->expand($expander, $this->output);
+            }
+            if (
+                $options->reporting->why
+                && $commands !== []
+                && (
+                    !$options->touch
+                    || array_any($commands, static fn(Command $command): bool => $command->isRecursive())
+                )
+            ) {
+                RecipeTrace::write($target, $rule, $modifiedAt, $expander, $this->files, $this->output);
             }
             $shell = new ExportingShell($this->shell, $this->makefile->exports, $expander, $this->output);
             $timestamps = [];
@@ -131,7 +142,7 @@ final readonly class RecipeRunner
                 && ($simulated || !$active && $commands !== [])
                 && !$target->isPhony
             ) {
-                if (!$options->silent) {
+                if (!$options->reporting->silent) {
                     $this->output->write('touch ' . $target->name . "\n");
                 }
                 if (!$options->dryRun) {

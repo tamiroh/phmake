@@ -177,7 +177,7 @@ final class Build
                             if ($result->blocked) {
                                 $this->output->writeWarning("Target '$name' not remade because of errors.");
                             }
-                        } elseif (!$executed && !$this->options->question && !$this->options->silent) {
+                        } elseif (!$executed && !$this->options->question && !$this->options->reporting->silent) {
                             $target = $this->search->resolve($name, $this->path->scope);
                             $this->output->writeInfo(
                                 $target === null || $target->isPhony || ($target->rules[0]->recipe ?? null) === null
