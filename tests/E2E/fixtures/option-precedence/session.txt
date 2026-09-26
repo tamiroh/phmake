@@ -1,0 +1,65 @@
+$ LOCAL_FLAGS=-s ./phmake -f silent.mk
+parse=s
+recipe=s
+$ LOCAL_FLAGS=-s ./phmake --no-silent -f silent.mk
+parse= --no-silent
+recipe= --no-silent
+phmake: 'all' is up to date.
+$ LOCAL_FLAGS=--no-silent MAKEFLAGS=-s ./phmake -f silent.mk
+parse=s
+recipe=s
+$ LOCAL_FLAGS=-s MAKEFLAGS=-s ./phmake --no-silent -f silent.mk
+parse= --no-silent
+recipe= --no-silent
+phmake: 'all' is up to date.
+$ ./phmake -s --no-silent -s -f silent.mk
+parse=s
+recipe=s
+$ ./phmake --no-silent -s --no-silent -f silent.mk
+parse= --no-silent
+recipe= --no-silent
+phmake: 'all' is up to date.
+$ LOCAL_FLAGS=-k ./phmake -S -f keep.mk
+parse=S
+phmake: *** [keep.mk:5: fail] Error 1
+[exit 2]
+$ LOCAL_FLAGS=-S MAKEFLAGS=-k ./phmake -f keep.mk
+parse=k
+phmake: *** [keep.mk:5: fail] Error 1
+after
+phmake: Target 'all' not remade because of errors.
+[exit 2]
+$ LOCAL_FLAGS=-k MAKEFLAGS=-k ./phmake -S -f keep.mk
+parse=S
+phmake: *** [keep.mk:5: fail] Error 1
+[exit 2]
+$ ./phmake -Sk -f keep.mk
+parse=k
+phmake: *** [keep.mk:5: fail] Error 1
+after
+phmake: Target 'all' not remade because of errors.
+[exit 2]
+$ ./phmake -kS -f keep.mk
+parse=S
+phmake: *** [keep.mk:5: fail] Error 1
+[exit 2]
+$ LOCAL_FLAGS=-w ./phmake -f directory.mk 2>&1 | sed "s|$PWD|WORK|g"
+phmake: Entering directory 'WORK'
+parse=w
+recipe=w
+phmake: 'all' is up to date.
+phmake: Leaving directory 'WORK'
+$ LOCAL_FLAGS=-w ./phmake --no-print-directory -f directory.mk
+parse= --no-print-directory
+recipe= --no-print-directory
+phmake: 'all' is up to date.
+$ LOCAL_FLAGS=--no-print-directory MAKEFLAGS=-w ./phmake -f directory.mk 2>&1 | sed "s|$PWD|WORK|g"
+phmake: Entering directory 'WORK'
+parse=w
+recipe=w
+phmake: 'all' is up to date.
+phmake: Leaving directory 'WORK'
+$ LOCAL_FLAGS=-w MAKEFLAGS=-w ./phmake --no-print-directory -f directory.mk
+parse= --no-print-directory
+recipe= --no-print-directory
+phmake: 'all' is up to date.

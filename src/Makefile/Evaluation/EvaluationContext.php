@@ -24,6 +24,8 @@ final class EvaluationContext
 
     public bool $reading = true;
 
+    public bool $posix = false;
+
     public ?Shell $shell = null;
 
     public ?Filesystem $filesystem = null;

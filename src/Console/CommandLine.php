@@ -16,10 +16,10 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\Configuration;
 
 use function array_map;
-use function array_reverse;
 use function array_values;
 use function count;
 use function ctype_digit;
+use function getcwd;
 use function implode;
 use function in_array;
 use function is_numeric;
@@ -52,7 +52,7 @@ final class CommandLine implements Configuration
 
     public private(set) bool $environmentOverrides = false;
 
-    public private(set) ?bool $printDirectory = null;
+    public readonly ReversibleOptions $switches;
 
     /** @var list<string> */
     #[Override]
@@ -73,13 +73,14 @@ final class CommandLine implements Configuration
         array $defaults = [],
     ) {
         $this->input = new InputOptions();
+        $this->switches = new ReversibleOptions();
         $this->execution = new ExecutionOptions();
-        $this->readFlags($gnumakeflags, $defaults);
+        $this->readFlags($gnumakeflags, $defaults, 'environment');
         if ($this->execution->reporting->warnUndefinedVariables && !isset($defaults['MAKEFLAGS'])) {
             new Output()->writeWarning("warning: undefined variable 'MAKEFLAGS'");
         }
-        $this->readFlags($makeflags, $defaults);
-        $this->readArguments($arguments, false, $defaults);
+        $this->readFlags($makeflags, $defaults, 'environment');
+        $this->readArguments($arguments, false, $defaults, 'command line');
     }
 
     /**
@@ -107,22 +108,16 @@ final class CommandLine implements Configuration
         return $words;
     }
 
-    public function makeflags(?int $makefileRestart = null, bool $legacy = false): string
-    {
+    /**
+     * @param array<string, Variable>|null $variables
+     */
+    public function makeflags(
+        ?int $makefileRestart = null,
+        bool $legacy = false,
+        ?array $variables = null,
+        bool $posix = false,
+    ): string {
         $execution = $makefileRestart === null ? $this->execution : $this->execution->forMakefiles($makefileRestart);
-        $assignments = [];
-        foreach (array_reverse($this->variables) as $variable) {
-            if ($variable->origin !== 'command line') {
-                continue;
-            }
-            $assignments[] = str_replace(
-                ['\\', '$', ' ', "\t", "\n"],
-                ['\\\\', '$$', '\\ ', "\\\t", "\\\n"],
-                $variable->name
-                . ($variable->recursive ? '=' : ':=')
-                . ($variable->recursive ? $variable->expression : str_replace('$', '$$', $variable->expression)),
-            );
-        }
         $flags =
             ($execution->alwaysMake ? 'B' : '')
             . ($this->environmentOverrides ? 'e' : '')
@@ -133,8 +128,9 @@ final class CommandLine implements Configuration
             . ($this->noBuiltinRules ? 'r' : '')
             . ($this->noBuiltinVariables ? 'R' : '')
             . ($execution->reporting->silent ? 's' : '')
+            . ($this->switches->value('keepGoing') === false ? 'S' : '')
             . ($execution->touch ? 't' : '')
-            . ($this->printDirectory === true ? 'w' : '')
+            . ($this->switches->value('printDirectory') === true ? 'w' : '')
             . implode('', array_map(
                 static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
                 $this->input->includes,
@@ -156,7 +152,8 @@ final class CommandLine implements Configuration
             ))
             . ($execution->parallel->auth === null ? '' : ' --jobserver-auth=' . $execution->parallel->auth)
             . ($execution->reporting->trace ? ' --trace' : '')
-            . ($this->printDirectory === false ? ' --no-print-directory' : '')
+            . ($this->switches->value('printDirectory') === false ? ' --no-print-directory' : '')
+            . ($this->switches->value('silent') === false ? ' --no-silent' : '')
             . ($execution->reporting->warnUndefinedVariables ? ' --warn-undefined-variables' : '')
             . ($execution->parallel->mutex === null ? '' : ' --sync-mutex=' . $execution->parallel->mutex)
             . implode('', array_map(
@@ -164,11 +161,16 @@ final class CommandLine implements Configuration
                 . str_replace(['\\', '$', ' ', "\t", "\n"], ['\\\\', '$$', '\\ ', "\\\t", "\\\n"], $text),
                 $this->input->evaluations,
             ))
-            . ($execution->parallel->shuffle === null ? '' : ' --shuffle=' . $execution->parallel->shuffle)
-            . ($legacy || $assignments === [] ? '' : ' -- ' . implode(' ', $assignments));
+            . ($execution->parallel->shuffle === null ? '' : ' --shuffle=' . $execution->parallel->shuffle);
         if ($legacy) {
             $flags = ltrim($flags);
             return $flags === '' || str_starts_with($flags, '-') ? $flags : '-' . $flags;
+        }
+        $reference = $posix ? CommandVariables::INTERNAL_NAME : 'MAKEOVERRIDES';
+        if ($variables === null ? $this->variables !== [] : ($variables[$reference]->expression ?? '') !== '') {
+            $flags = str_replace('$', '$$', $flags) . ' -- $(' . $reference . ')';
+        } else {
+            $flags = str_replace('$', '$$', $flags);
         }
         return $execution->parallel->jobs === 1 ? $flags : ltrim($flags);
     }
@@ -185,6 +187,15 @@ final class CommandLine implements Configuration
             ($expander ?? new VariableExpander(array_values($variables)))->expand('$(MAKEFLAGS)'),
             $variables,
         );
+        if ($expander?->output instanceof Output) {
+            $expander->output->silent = $this->execution->reporting->silent;
+            if ($this->switches->value('printDirectory') === true && $expander->output->directory === null) {
+                $expander->output->writeDirectory(true, (string) getcwd());
+            } elseif ($this->switches->value('printDirectory') === false) {
+                $expander->output->directory = null;
+                $expander->output->buffer->directory = null;
+            }
+        }
         foreach ($this->variables as $name => $variable) {
             if (($variables[$name]->origin ?? '') !== 'override') {
                 $variables[$name] = $variable;
@@ -206,11 +217,12 @@ final class CommandLine implements Configuration
                 );
             }
         }
+        $variables = CommandVariables::definitions($this->variables, $variables);
         $variables['MFLAGS'] = new Variable('MFLAGS', $this->makeflags(legacy: true), true, 'environment');
         $variables['MAKEFLAGS'] = new Variable(
             'MAKEFLAGS',
-            $this->makeflags(),
-            false,
+            $this->makeflags(variables: $variables, posix: $expander?->context->posix ?? false),
+            true,
             $variables['MAKEFLAGS']->origin ?? 'file',
         );
     }
@@ -249,7 +261,7 @@ final class CommandLine implements Configuration
      *
      * @throws MakefileErrorException
      */
-    private function readArguments(array $arguments, bool $inherited, array $defaults): void
+    private function readArguments(array $arguments, bool $inherited, array $defaults, string $origin): void
     {
         $options = true;
         for ($index = 0; $index < count($arguments); $index++) {
@@ -257,7 +269,7 @@ final class CommandLine implements Configuration
             if ($argument === '--' && $options) {
                 $options = false;
             } elseif ($options && str_starts_with($argument, '-') && $argument !== '-') {
-                $this->readOption($argument, $arguments, $index, $inherited);
+                $this->readOption($argument, $arguments, $index, $inherited, $origin);
             } elseif (
                 !$this->assign($inherited ? str_replace('$$', '$', $argument) : $argument, $defaults) && !$inherited
             ) {
@@ -271,13 +283,13 @@ final class CommandLine implements Configuration
      *
      * @throws MakefileErrorException
      */
-    private function readFlags(string $flags, array $defaults): void
+    private function readFlags(string $flags, array $defaults, string $origin = 'file'): void
     {
         $arguments = self::splitFlags($flags);
         if (isset($arguments[0]) && !str_starts_with($arguments[0], '-') && !str_contains($arguments[0], '=')) {
             $arguments[0] = '-' . $arguments[0];
         }
-        $this->readArguments($arguments, true, $defaults);
+        $this->readArguments($arguments, true, $defaults, $origin);
     }
 
     /**
@@ -285,7 +297,7 @@ final class CommandLine implements Configuration
      *
      * @throws MakefileErrorException
      */
-    private function readOption(string $argument, array $arguments, int &$index, bool $inherited): void
+    private function readOption(string $argument, array $arguments, int &$index, bool $inherited, string $origin): void
     {
         $argument = match ($argument) {
             '--jobs' => '-j',
@@ -356,11 +368,11 @@ final class CommandLine implements Configuration
             return;
         }
         if ($argument === '--no-print-directory') {
-            $this->printDirectory = false;
+            $this->switches->set('printDirectory', false, $origin);
             return;
         }
         if ($argument === '--no-silent' || $argument === '--no-quiet') {
-            $this->execution->reporting->silent = false;
+            $this->execution->reporting->silent = $this->switches->set('silent', false, $origin);
             return;
         }
         foreach ([
@@ -442,16 +454,16 @@ final class CommandLine implements Configuration
                     $this->execution->alwaysMake = true;
                     break;
                 case 'k':
-                    $this->execution->keepGoing = true;
+                    $this->execution->keepGoing = $this->switches->set('keepGoing', true, $origin);
                     break;
                 case 'S':
-                    $this->execution->keepGoing = false;
+                    $this->execution->keepGoing = $this->switches->set('keepGoing', false, $origin);
                     break;
                 case 'i':
                     $this->execution->ignoreErrors = true;
                     break;
                 case 's':
-                    $this->execution->reporting->silent = true;
+                    $this->execution->reporting->silent = $this->switches->set('silent', true, $origin);
                     break;
                 case 'v':
                     $this->version = true;
@@ -467,7 +479,7 @@ final class CommandLine implements Configuration
                     $this->environmentOverrides = true;
                     break;
                 case 'w':
-                    $this->printDirectory = true;
+                    $this->switches->set('printDirectory', true, $origin);
                     break;
                 case 'f':
                 case 'C':
@@ -517,6 +529,7 @@ final class CommandLine implements Configuration
     public function __clone(): void
     {
         $this->input = clone $this->input;
+        $this->switches = clone $this->switches;
         $this->execution = clone $this->execution;
     }
 }

@@ -18,6 +18,7 @@ final class Builtins
         'SHELL',
         'MAKE',
         'MAKE_COMMAND',
+        'MAKEOVERRIDES',
         'MAKECMDGOALS',
         'SUFFIXES',
         '.FEATURES',

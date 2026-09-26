@@ -1,0 +1,35 @@
+$ MODE=keep ./phmake --no-print-directory MAKE=./phmake VALUE=command
+flavor=recursive origin=default
+initial= --no-print-directory -- VALUE=command MAKE=./phmake
+parsed= --no-print-directory -- VALUE=command MAKE=./phmake
+built= --no-print-directory -- VALUE=command MAKE=./phmake
+child=command origin=command line extra=
+phmake[1]: 'all' is up to date.
+$ ./phmake --no-print-directory MAKE=./phmake VALUE=command
+flavor=recursive origin=default
+initial= --no-print-directory -- VALUE=command MAKE=./phmake
+parsed= --no-print-directory -- 
+built= --no-print-directory -- 
+child= origin=undefined extra=
+phmake[1]: 'all' is up to date.
+$ REPLACEMENT="VALUE=replaced EXTRA=added" ./phmake --no-print-directory MAKE=./phmake VALUE=command
+flavor=recursive origin=default
+initial= --no-print-directory -- VALUE=command MAKE=./phmake
+parsed= --no-print-directory -- VALUE=replaced EXTRA=added
+built= --no-print-directory -- VALUE=replaced EXTRA=added
+child=replaced origin=command line extra=added
+phmake[1]: 'all' is up to date.
+$ ./phmake --no-print-directory -f empty.mk VALUE=command
+parsed= --no-print-directory -- 
+built= --no-print-directory
+$ ./phmake --no-print-directory -f posix.mk MAKE=./phmake VALUE=command
+parsed= --no-print-directory -- 
+built= --no-print-directory -- VALUE=command MAKE=./phmake
+child=command origin=command line extra=
+phmake[1]: 'all' is up to date.
+$ ./phmake --no-print-directory -f literal.mk 'VALUE=a b $$HOME'
+overrides=VALUE=a\ b\ $$$$HOME
+value=a b $HOME
+$ ./phmake --no-print-directory -f literal.mk 'VALUE:=a b $$HOME'
+overrides=VALUE:=a\ b\ $$HOME
+value=a b $HOME

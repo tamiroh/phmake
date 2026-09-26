@@ -168,7 +168,7 @@ final readonly class MakefileParser
         }
         $inherited = ['MAKEFLAGS', 'MAKEFILES'];
         foreach ($variables as $variable) {
-            if (in_array($variable->origin, ['environment', 'environment override', 'command line'], true)) {
+            if (in_array($variable->origin, ['environment', 'environment override'], true)) {
                 $inherited[] = $variable->name;
             }
         }
@@ -516,6 +516,7 @@ final readonly class MakefileParser
             }
             $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->sources->files);
             if (in_array('.POSIX', $rule->targetNames, true)) {
+                $scope->context->posix = true;
                 foreach (Builtins::posixVariables() as $variable) {
                     if (($variables[$variable->name]->origin ?? 'default') === 'default') {
                         $variables[$variable->name] = $variable;

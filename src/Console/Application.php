@@ -51,7 +51,6 @@ final readonly class Application
     {
         $level = max(0, (int) getenv('MAKELEVEL'));
         $output = new Output(level: $level);
-        $printDirectory = false;
         try {
             $defaults = $this->initialVariables();
             $commandLine = new CommandLine(
@@ -71,7 +70,7 @@ final readonly class Application
             }
             $output = new Output($commandLine->execution->reporting->silent, $level, $commandLine->execution->parallel);
             $printDirectory =
-                $commandLine->printDirectory
+                $commandLine->switches->value('printDirectory')
                 ?? !$commandLine->execution->reporting->silent
                     && !$commandLine->execution->question
                     && ($level > 0 || $commandLine->input->directories !== []);
@@ -94,8 +93,8 @@ final readonly class Application
             );
             return 2;
         } finally {
-            if ($printDirectory) {
-                $output->writeDirectory(false, (string) getcwd());
+            if ($output->directory !== null) {
+                $output->writeDirectory(false, $output->directory);
             }
         }
     }

@@ -99,8 +99,12 @@ final readonly class MakefileLoader
                 );
                 $makefile->context->variables['MAKEFLAGS'] = new Variable(
                     'MAKEFLAGS',
-                    $configuration->makeflags($restarts),
-                    false,
+                    $configuration->makeflags(
+                        $restarts,
+                        variables: $makefile->context->variables,
+                        posix: $makefile->context->posix,
+                    ),
+                    true,
                 );
             }
             try {
@@ -122,8 +126,11 @@ final readonly class MakefileLoader
                     );
                     $makefile->context->variables['MAKEFLAGS'] = new Variable(
                         'MAKEFLAGS',
-                        $configuration->makeflags(),
-                        false,
+                        $configuration->makeflags(
+                            variables: $makefile->context->variables,
+                            posix: $makefile->context->posix,
+                        ),
+                        true,
                     );
                 }
             }
@@ -222,7 +229,7 @@ final readonly class MakefileLoader
      */
     private function variables(CommandLine $commandLine, int $restarts): array
     {
-        $defaults = $this->defaults;
+        $defaults = CommandVariables::definitions($commandLine->variables, $this->defaults);
         foreach ($defaults as $name => $variable) {
             if (
                 $commandLine->noBuiltinVariables
@@ -241,7 +248,7 @@ final readonly class MakefileLoader
         }
         return [
             ...array_values($defaults),
-            new Variable('MAKEFLAGS', $commandLine->makeflags(), false),
+            new Variable('MAKEFLAGS', $commandLine->makeflags(variables: $defaults), true),
             new Variable('.DEFAULT_GOAL', '', false),
             new Variable('MFLAGS', $commandLine->makeflags(legacy: true), true, 'environment'),
             ...(

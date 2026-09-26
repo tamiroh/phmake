@@ -14,8 +14,10 @@ final class Output implements RecipeOutput
 {
     public readonly OutputBuffer $buffer;
 
+    public ?string $directory = null;
+
     public function __construct(
-        private readonly bool $silent = false,
+        public bool $silent = false,
         private readonly int $level = 0,
         ParallelOptions $options = new ParallelOptions(),
     ) {
@@ -58,6 +60,7 @@ final class Output implements RecipeOutput
 
     public function writeDirectory(bool $entering, string $directory): void
     {
+        $this->directory = $entering ? $directory : null;
         if ($this->buffer->options->sync === 'line' || $this->buffer->options->sync === 'target') {
             $this->buffer->directory = $entering ? [$this->prefix, $directory] : null;
             return;
