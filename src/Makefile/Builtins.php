@@ -52,6 +52,10 @@ final class Builtins
     {
         return [
             new PatternRule(
+                ['(%)'],
+                new BuildRule(new Prerequisites(['%']), new Recipe([new Command('$(AR) $(ARFLAGS) $@ $<')])),
+            ),
+            new PatternRule(
                 ['%'],
                 new BuildRule(
                     new Prerequisites(['%.o']),
@@ -103,7 +107,7 @@ final class Builtins
             new Variable('GNUMAKEFLAGS', '', true, 'default'),
             new Variable('SUFFIXES', '.o .c .f', false, 'default'),
             new Variable('.LIBPATTERNS', 'lib%.so lib%.a', origin: 'default'),
-            new Variable('.FEATURES', 'jobserver jobserver-fifo output-sync', false, 'default'),
+            new Variable('.FEATURES', 'jobserver jobserver-fifo output-sync check-symlink archives', false, 'default'),
             new Variable('CC', 'cc', origin: 'default'),
             new Variable('FC', 'f77', origin: 'default'),
             new Variable('LEX', 'lex', origin: 'default'),
@@ -113,6 +117,7 @@ final class Builtins
             new Variable('LINK.f', '$(FC) $(FFLAGS) $(LDFLAGS) $(TARGET_ARCH)', origin: 'default'),
             new Variable('COMPILE.f', '$(FC) $(FFLAGS) $(TARGET_ARCH) -c', origin: 'default'),
             new Variable('AR', 'ar', origin: 'default'),
+            new Variable('ARFLAGS', '-rv', origin: 'default'),
             new Variable('SHELL', '/bin/sh', origin: 'default'),
             new Variable('.SHELLFLAGS', '-c', false, 'default'),
             new Variable('COMPILE.c', '$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c', origin: 'default'),

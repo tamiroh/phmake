@@ -1,0 +1,5 @@
+$ ./phmake -rR --no-print-directory all more
+one
+two
+first second selected
+value tail

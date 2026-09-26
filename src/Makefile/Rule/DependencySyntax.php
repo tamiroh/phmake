@@ -89,9 +89,25 @@ final class DependencySyntax
         $result = [];
         $word = '';
         for ($index = 0; $index < strlen($text); $index++) {
-            if ($text[$index] === '\\' && isset($text[$index + 1]) && str_contains(" \t\r\n:|#&", $text[$index + 1])) {
-                $word .= $text[++$index];
-            } elseif (str_contains(" \t\r\n", $text[$index])) {
+            if ($text[$index] === '\\') {
+                $start = $index;
+                while (($text[$index] ?? '') === '\\') {
+                    $index++;
+                }
+                $count = $index - $start;
+                $next = $text[$index] ?? '';
+                if ($next === '' || !str_contains(" \t\r\n:|#&", $next)) {
+                    $word .= substr($text, $start, $count);
+                    $index--;
+                    continue;
+                }
+                $word .= substr($text, $start, $count >> 1);
+                if (($count % 2) === 1) {
+                    $word .= $next;
+                    continue;
+                }
+            }
+            if (str_contains(" \t\r\n", $text[$index])) {
                 if ($word !== '') {
                     $result[] = $word;
                     $word = '';
@@ -112,8 +128,8 @@ final class DependencySyntax
     private static function paths(string $text, ?Filesystem $filesystem, string $directory): array
     {
         $result = [];
-        foreach (self::words($text) as $word) {
-            $word = $directory . $word;
+        foreach (self::words(ArchiveMember::expand($text)) as $word) {
+            $word = FileName::normalize($directory . $word);
             $paths = strpbrk($word, '*?[') === false ? [] : $filesystem?->matching($word) ?? [];
             $result = [...$result, ...($paths === [] ? [$word] : $paths)];
         }

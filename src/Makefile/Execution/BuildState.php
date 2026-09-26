@@ -19,6 +19,9 @@ final class BuildState
     /** @var array<string, true> */
     public array $simulated = [];
 
+    /** @var array<string, array<string, true>> */
+    public array $dropped = [];
+
     public bool $remaking = false;
 
     public bool $needsUpdate = false;

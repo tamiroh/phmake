@@ -15,10 +15,8 @@ use function fopen;
 use function fseek;
 use function fstat;
 use function ftruncate;
-use function fwrite;
 use function rewind;
 use function str_starts_with;
-use function stream_copy_to_stream;
 use function stream_get_meta_data;
 use function substr;
 use function sys_get_temp_dir;
@@ -151,12 +149,12 @@ final class OutputBuffer
     {
         $group = $this->current();
         if ($group === null || $group->paused) {
-            fwrite($error ? STDERR : STDOUT, $text);
+            StreamOutput::write($error ? STDERR : STDOUT, $text);
             return;
         }
         $stream = $error ? $group->err : $group->out;
         fseek($stream, 0, SEEK_END);
-        fwrite($stream, $text);
+        StreamOutput::write($stream, $text);
     }
 
     private function current(): ?OutputGroup
@@ -188,20 +186,26 @@ final class OutputBuffer
                 fseek(STDERR, 0, SEEK_END);
             }
             if ($this->directory !== null) {
-                fwrite(STDOUT, $this->directory[0] . ": Entering directory '" . $this->directory[1] . "'\n");
+                StreamOutput::write(
+                    STDOUT,
+                    $this->directory[0] . ": Entering directory '" . $this->directory[1] . "'\n",
+                );
             }
             rewind($group->out);
-            stream_copy_to_stream($group->out, STDOUT);
+            StreamOutput::copy($group->out, STDOUT);
             if (!$group->combined) {
                 rewind($group->err);
-                stream_copy_to_stream($group->err, STDERR);
+                StreamOutput::copy($group->err, STDERR);
                 ftruncate($group->err, 0);
                 rewind($group->err);
             }
             ftruncate($group->out, 0);
             rewind($group->out);
             if ($this->directory !== null) {
-                fwrite(STDOUT, $this->directory[0] . ": Leaving directory '" . $this->directory[1] . "'\n");
+                StreamOutput::write(
+                    STDOUT,
+                    $this->directory[0] . ": Leaving directory '" . $this->directory[1] . "'\n",
+                );
             }
         } finally {
             if ($this->lock !== null) {

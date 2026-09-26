@@ -56,9 +56,11 @@ final class MakeFlags
             : $commandLine->execution->forMakefiles($makefileRestart);
         $flags =
             ($execution->alwaysMake ? 'B' : '')
+            . ($execution->reporting->debugAll ? 'd' : '')
             . ($commandLine->environmentOverrides ? 'e' : '')
             . ($execution->ignoreErrors ? 'i' : '')
             . ($execution->keepGoing ? 'k' : '')
+            . ($execution->files->checkSymlinkTimes ? 'L' : '')
             . ($execution->dryRun ? 'n' : '')
             . ($execution->question ? 'q' : '')
             . ($commandLine->noBuiltinRules ? 'r' : '')

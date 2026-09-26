@@ -16,6 +16,7 @@ suite_dir=$(mktemp -d)
 trap 'rm -rf "$suite_dir"' EXIT
 cp -R /opt/make/tests/. "$suite_dir/"
 cd "$suite_dir"
+rm -rf work
 # Without -keep, upstream removes generated targets while retaining failed cases.
 if perl ./run_make_tests.pl -make "$test_make" -srcdir /opt/make $identity "$@"; then
     status=0

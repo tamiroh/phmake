@@ -61,21 +61,53 @@ docker run --rm --init --platform linux/amd64 --network none --user nobody \
 ```
 
 Inspect `run.log` and `work/` in that temporary directory after the command finishes.
-Use a fresh results directory for each run. To test local changes without rebuilding
-the image, first copy `src/` to a temporary directory and mount that fixed copy at
-`/opt/phmake/src:ro`. Do not edit the mounted copy during a run.
+Use a fresh results directory for each run. The image packages phmake and its runtime
+dependencies in a PHAR with `/usr/local/bin/php` as its interpreter. This lets tests
+copy the executable or change `PATH` without losing PHP or the autoloader.
+
+To test local changes without rebuilding the image, package a fixed source copy:
+
+```sh
+snapshot_dir=$(mktemp -d)
+cp -R src "$snapshot_dir/src"
+mkdir "$snapshot_dir/output"
+docker run --rm --platform linux/amd64 --network none \
+  -v "$snapshot_dir/src:/opt/phmake/src:ro" \
+  -v "$snapshot_dir/output:/output" phmake-make-build \
+  php -d phar.readonly=0 /opt/phmake/tools/build-phar.php \
+  /output/phmake.phar /usr/local/bin/php
+docker run --rm --init --platform linux/amd64 --network none --user nobody \
+  -v "$snapshot_dir/output/phmake.phar:/opt/phmake/phmake:ro" \
+  phmake-make-build sh /usr/local/bin/run-gnu-make-tests
+```
+
+Do not edit the source copy or PHAR during a run. Each invocation clears inherited
+test work files before starting, so selected categories cannot retain old failures.
 
 `test-runner.patch` adds an explicit `-phmake` mode to the upstream runner: it accepts
 phmake's version identity and retains the executable path supplied with `-make`,
-because phmake's `MAKE` variable is a shell command containing PHP and the script path.
+which also supports unpackaged phmake, whose `MAKE` variable contains PHP and the script path.
 It also adds summary counts, including skipped categories. On Unix, each test
 command starts in its own process group. A timeout kills that group and reaps the
 direct child before the runner continues, while preserving the upstream timeout
 failure status. `verify-runner.pl` checks this with a child and grandchild that ignore
 ordinary termination signals; image construction fails if the check fails. Test
-cases, expected outputs, and pass/fail comparisons are unchanged.
+cases, expected outputs, and pass/fail comparisons are unchanged except for the
+product-name assertion described below.
 
 In CI, `build-make` runs the build smoke test and `test-gnu-make` runs the full
 compatibility suite, first against the reference executable and then against phmake.
 Test failures fail the compatibility job. Output is available
 in the job log, and its job summary shows the counts even when tests fail.
+
+The `options/dash-d` banner assertion uses the anchored `phmake (development)`
+identity in phmake mode. The reference mode retains the original `GNU Make`
+assertion. This is a product-name adaptation; the debug option combination and
+requirement that its version banner be printed remain unchanged.
+
+The image builds the optional [native module host](../../native/README.md) so the
+upstream `features/load` and `features/loadapi` tests are enabled. The helper
+implements the C plugin ABI; all Makefile evaluation continues to run in PHP.
+
+Guile 3.0 is enabled in both executables. The `functions/guile` category runs in
+CI as well; only the VMS-specific category is outside this Linux environment.

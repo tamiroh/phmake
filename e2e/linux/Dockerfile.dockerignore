@@ -10,3 +10,6 @@
 !e2e/linux/init.c
 !e2e/linux/initramfs.list
 !e2e/linux/kernel.config
+
+!tools/
+!tools/build-phar.php

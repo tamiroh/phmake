@@ -33,12 +33,12 @@ final readonly class ExportingShell implements Shell
         string $shell = '/bin/sh',
         string $flags = '-c',
     ): ShellResult {
-        $previous = $this->variables->context->shellEnvironment;
-        $this->variables->context->shellEnvironment = true;
+        $previous = $this->variables->context->environment->expandingShell;
+        $this->variables->context->environment->expandingShell = true;
         try {
             $environment = [...$this->exports->environment($this->variables, $this->output), ...$environment];
         } finally {
-            $this->variables->context->shellEnvironment = $previous;
+            $this->variables->context->environment->expandingShell = $previous;
         }
         return $this->shell->capture(
             $command,

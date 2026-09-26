@@ -1,0 +1,11 @@
+$ ./phmake -rR --no-print-directory -f posix.mk
+left   right
+$ ./phmake -rR --no-print-directory -f chars.mk
+a
+b
+$ ./phmake -rR --no-print-directory -f eval.mk
+eval.mk:1: *** prerequisites cannot be defined in recipes.  Stop.
+[exit 2]
+$ ./phmake -rR --no-print-directory -f secondary.mk
+phmake: *** prerequisites cannot be defined in recipes.  Stop.
+[exit 2]

@@ -1,0 +1,13 @@
+$ printf 'int archive_value;\n' > input.c && cc -c input.c -o a.o && cp a.o b.o && touch -t 200001010000 a.o b.o
+$ ./phmake -rR --no-print-directory
+archive=lib.a member=a.o input=a.o
+archive=lib.a member=b.o input=b.o
+ready
+$ ./phmake -rR --no-print-directory
+ready
+$ ./phmake -rR --no-print-directory check
+members=a.o b.o first=lib.a(a.o) newer=a.o b.o
+$ ./phmake -rR --no-print-directory -Bt 'lib.a(a.o)'
+touch lib.a(a.o)
+$ ./phmake -rR --no-print-directory
+ready

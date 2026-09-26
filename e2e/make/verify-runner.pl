@@ -41,4 +41,17 @@ for my $pid (@pids) {
     ok($state eq '' || $state =~ /\) Z /, "process $pid cannot continue running");
 }
 is(_run_with_timeout($^X, '-e', 'exit 0'), 0, 'continue with the next command');
+for my $mode (0, 1) {
+    local $phmake = $mode;
+    local *run_make_test = sub {
+        my ($makefile, $flags, $expected) = @_;
+        is($flags, '-d --trace', 'retain the combined debug options');
+        my $pattern = substr($expected, 1, -1);
+        my $identity = $mode ? 'phmake (development)' : 'GNU Make 4.4.1';
+        like($identity, qr/$pattern/, 'accept the selected executable identity');
+        unlike('', qr/$pattern/, 'reject missing debug banner');
+        unlike('unrelated program', qr/$pattern/, 'reject unrelated program identity');
+    };
+    do '/opt/make/tests/scripts/options/dash-d' or die $@ || $!;
+}
 done_testing();

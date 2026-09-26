@@ -4,9 +4,15 @@
 !phmake
 !src/
 !src/**
+!tools/
+!tools/build-phar.php
 !e2e/
 !e2e/make/
 !e2e/make/verify.sh
 !e2e/make/run-tests.sh
 !e2e/make/test-runner.patch
 !e2e/make/verify-runner.pl
+!native/
+!native/module-host.c
+!native/guile.c
+!native/module-api.h

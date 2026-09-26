@@ -1,0 +1,9 @@
+$ mkdir temporary
+$ cat input.mk | TMPDIR=temporary ./phmake -rR --no-print-directory -f -
+same-process:generated:1
+$ test -z "$(ls -A temporary)" && echo temporary-cleaned
+temporary-cleaned
+$ ./phmake --version | sed -n '/^Built for /s/.*/platform shown/p'
+platform shown
+$ ./phmake --help | sed -n '/^Usage:/s/.*/help shown/p'
+help shown

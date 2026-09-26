@@ -1,0 +1,22 @@
+$ ./phmake -rR --no-print-directory
+yes; still yes
+done
+$ ./phmake -rR --no-print-directory -f bom.mk
+bom
+$ ./phmake -rR --no-print-directory -f bad.mk
+bad.mk:1: *** unterminated call to function 'firstword': missing ')'.  Stop.
+[exit 2]
+$ ./phmake -rR --no-print-directory -f implicit.mk
+phmake: *** unterminated call to function 'firstword': missing ')'.  Stop.
+[exit 2]
+$ printf 'all:; @echo stdin\n' | ./phmake -rR --no-print-directory -f -
+stdin
+$ printf 'all:; @echo stdin\n' | ./phmake -rR --no-print-directory -f - -f -
+phmake: *** Makefile from standard input specified twice.  Stop.
+[exit 2]
+$ ./phmake -rR --no-print-directory -f peer.mk
+touch generated.a
+peer.mk:3: warning: pattern recipe did not update peer target 'generated.b'.
+phmake: 'all' is up to date.
+$ ./phmake -rR --no-print-directory -f peer-existing.mk generated.a
+phmake: 'generated.a' is up to date.

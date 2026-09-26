@@ -10,6 +10,7 @@ use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
+use Tamiroh\Phmake\Makefile\Rule\FileName;
 
 use function ltrim;
 use function preg_match;
@@ -69,7 +70,7 @@ final readonly class ScopedAssignment
         }
         foreach (DependencySyntax::words($expander->expand(substr($line, 0, $colon))) as $target) {
             $variables->define(
-                $target,
+                FileName::normalize($target),
                 $declaration->assignment,
                 $expander,
                 $declaration->origin,

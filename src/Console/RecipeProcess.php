@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console;
 
+use Closure;
 use Fiber;
 use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
 use Tamiroh\Phmake\Makefile\Execution\Suspension;
@@ -26,13 +27,19 @@ final class RecipeProcess
     private static bool $inputBusy = false;
 
     /**
+     * @param non-empty-list<string>|string $command
      * @param array<string, string|false> $environment
      * @param array{1?: resource, 2?: resource, 3?: resource, 4?: resource} $descriptors
+     * @param Closure(int, ?int): void|null $observer
      *
      * @throws InterruptedException
      */
-    public static function run(string $command, array $environment, array $descriptors = []): int
-    {
+    public static function run(
+        array|string $command,
+        array $environment,
+        array $descriptors = [],
+        ?Closure $observer = null,
+    ): int {
         Signals::check();
         $ownsInput = !self::$inputBusy;
         self::$inputBusy = true;
@@ -45,6 +52,8 @@ final class RecipeProcess
             if (!is_resource($process)) {
                 return 127;
             }
+            $pid = proc_get_status($process)['pid'];
+            $observer?->__invoke($pid, null);
             $stopped = false;
             do {
                 if (Signals::$received !== 0 && !$stopped) {
@@ -59,7 +68,9 @@ final class RecipeProcess
                 $status = proc_get_status($process);
             } while ($status['running']);
             Signals::check();
-            return $status['signaled'] ? 128 + $status['termsig'] : $status['exitcode'];
+            $exitCode = $status['signaled'] ? 128 + $status['termsig'] : $status['exitcode'];
+            $observer?->__invoke($pid, $exitCode);
+            return $exitCode;
         } finally {
             if (isset($process) && is_resource($process)) {
                 proc_close($process);
@@ -77,12 +88,13 @@ final class RecipeProcess
      * Preserve empty environment values, which associative proc_open environments omit.
      * No fiber can run while the process environment is temporarily changed.
      *
+     * @param non-empty-list<string>|string $command
      * @param array<array-key, string|false> $environment
      * @param array{0?: resource, 1?: resource, 2?: resource, 3?: resource, 4?: resource} $descriptors
      *
      * @return resource|false
      */
-    private static function start(string $command, array $environment, array $descriptors = []): mixed
+    private static function start(array|string $command, array $environment, array $descriptors = []): mixed
     {
         $previous = [];
         try {

@@ -19,6 +19,8 @@ final class ReportingOptions
 
     public bool $trace = false;
 
+    public bool $debugAll = false;
+
     public bool $warnUndefinedVariables = false;
 
     public bool $remaking = false;
@@ -40,8 +42,8 @@ final class ReportingOptions
     public function addDebugFlags(string $levels): void
     {
         foreach (explode(',', str_replace(' ', ',', rtrim($levels, ', '))) as $level) {
-            if (!in_array(strtolower($level[0] ?? ''), ['p', 'w', 'n'], true)) {
-                throw new MakefileErrorException("Debug level '$level' is not supported");
+            if (!in_array(strtolower($level[0] ?? ''), ['a', 'b', 'i', 'j', 'm', 'n', 'p', 'v', 'w'], true)) {
+                throw new MakefileErrorException("unknown debug level specification '$level'");
             }
         }
         if (!in_array($levels, $this->debugLevels, true)) {
@@ -49,18 +51,22 @@ final class ReportingOptions
         }
     }
 
-    private function enabled(string $selected): bool
+    public function enabled(string $selected): bool
     {
-        if ($this->remaking) {
+        if ($this->remaking && $selected !== 'm' && !$this->enabled('m')) {
             return false;
         }
-        $enabled = $this->trace;
+        $enabled = $this->debugAll || $this->trace && in_array($selected, ['p', 'w'], true);
         foreach ($this->debugLevels as $levels) {
             foreach (explode(',', str_replace(' ', ',', $levels)) as $level) {
                 $initial = strtolower($level[0] ?? '');
                 if ($initial === 'n') {
                     $enabled = false;
-                } elseif ($initial === $selected) {
+                } elseif (
+                    $initial === 'a'
+                    || $initial === $selected
+                    || $selected === 'b' && in_array($initial, ['i', 'm', 'v'], true)
+                ) {
                     $enabled = true;
                 }
             }

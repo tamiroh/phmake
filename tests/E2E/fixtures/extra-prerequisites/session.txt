@@ -1,0 +1,15 @@
+$ ./phmake -rR --no-print-directory
+shared
+source
+hidden
+auto=source/source/source/source/
+$ ./phmake -rR --no-print-directory
+shared
+source
+hidden
+auto=source/source/source/source/
+$ ./phmake -krR --no-print-directory -f missing.mk
+phmake: *** No rule to make target 'missing-a', needed by 'all'.
+phmake: *** No rule to make target 'missing-b', needed by 'all'.
+phmake: Target 'all' not remade because of errors.
+[exit 2]

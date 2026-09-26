@@ -34,22 +34,23 @@ final class EvaluationContext
 
     public ReportingOptions $reporting;
 
-    public bool $shellEnvironment = false;
+    public EnvironmentState $environment;
 
-    /** @var array<string, string> */
-    public array $inheritedEnvironment = [];
+    public Modules $modules;
 
     /**
      * @param list<Variable> $variables
      */
     public function __construct(array $variables = [])
     {
+        $this->environment = new EnvironmentState();
+        $this->modules = new Modules();
         $this->exports = new Exports();
         $this->reporting = new ReportingOptions();
         foreach ($variables as $variable) {
             $this->variables[$variable->name] = $variable;
             if (in_array($variable->origin, ['environment', 'environment override'], true)) {
-                $this->inheritedEnvironment[$variable->name] = $variable->expression;
+                $this->environment->inherited[$variable->name] = $variable->expression;
             }
         }
     }

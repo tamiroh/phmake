@@ -4,7 +4,7 @@ FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential ca-certificates procps curl diffutils git patch perl unzip \
+        build-essential ca-certificates procps curl diffutils git patch perl unzip guile-3.0-dev pkg-config \
     && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-install pcntl
 
@@ -16,7 +16,7 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz -o /tmp/make.tar.g
     && rm /tmp/make.tar.gz
 
 WORKDIR /opt/make
-RUN ./configure --without-guile --disable-nls
+RUN ./configure --with-guile --disable-nls
 
 # Keep a reference executable without prebuilding the phmake build smoke test.
 RUN /usr/bin/make -j2 \
@@ -30,7 +30,17 @@ WORKDIR /opt/phmake
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
 COPY src/ src/
+COPY native/module-host.c native/guile.c native/module-api.h /tmp/
+RUN cc -std=c11 -O2 -Wall -Wextra -Werror -DPHMAKE_GUILE -Wl,--export-dynamic \
+    -o /usr/local/libexec/phmake-module-host /tmp/module-host.c /tmp/guile.c $(pkg-config --cflags --libs guile-3.0) -ldl \
+    && rm /tmp/module-host.c /tmp/guile.c /tmp/module-api.h
+ENV PHMAKE_MODULE_HOST=/usr/local/libexec/phmake-module-host
 COPY --chmod=755 phmake ./phmake
+COPY tools/build-phar.php tools/build-phar.php
+
+# A copied test executable must retain its dependencies and survive PATH changes.
+RUN php -d phar.readonly=0 tools/build-phar.php /tmp/phmake.phar /usr/local/bin/php \
+    && mv /tmp/phmake.phar /opt/phmake/phmake
 
 # Recursive make commands must use phmake as well.
 RUN ln -s /opt/phmake/phmake /usr/local/bin/make

@@ -104,7 +104,7 @@ final class SecondaryExpansion
         string $directory,
         array &$expanded,
     ): iterable {
-        $expander = self::automatic($name, $expression, $previous, $expander, $filesystem, $directory);
+        $expander = self::automatic($name, $expression, $previous, $expander, $filesystem, $directory)->atSource(null);
         $orderOnly = false;
         foreach (DependencySyntax::expressions($expression->text) as $index => $word) {
             $text =
@@ -142,7 +142,7 @@ final class SecondaryExpansion
         foreach (['?', '?D', '?F'] as $variable) {
             $variables[] = new Variable($variable, '', false, 'automatic');
         }
-        return $expander->withVariables($variables)->atSource($expression->source);
+        return $expander->withVariables($variables)->atSource($expression->source, true);
     }
 
     private static function substitute(string $text, string $stem): string

@@ -9,6 +9,17 @@ namespace Tamiroh\Phmake\Console;
  */
 final class InputOptions
 {
+    public bool $help = false;
+
+    /** @var list<string> */
+    public array $arguments = [];
+
+    public string $directory = '';
+
+    public int $restarts = 0;
+
+    public ?string $temporaryStdin = null;
+
     /** @var list<string> */
     public array $makefiles = [];
 

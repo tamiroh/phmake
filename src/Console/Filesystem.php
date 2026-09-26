@@ -5,18 +5,20 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Override;
+use Tamiroh\Phmake\Makefile\Execution\FileOptions;
 use Tamiroh\Phmake\Makefile\IO\Filesystem as FilesystemInterface;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 
 use function clearstatcache;
 use function error_get_last;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
-use function filemtime;
 use function getcwd;
 use function glob;
 use function is_dir;
+use function is_link;
 use function preg_replace;
 use function realpath;
 use function str_starts_with;
@@ -28,19 +30,24 @@ use const FILE_APPEND;
 
 final class Filesystem implements FilesystemInterface
 {
+    public ?FileOptions $options = null;
+
     #[Override]
     public function exists(string $path): bool
     {
-        return file_exists($path);
+        if (($member = ArchiveMember::parse($path)) !== null) {
+            return Archive::modified($member) !== null;
+        }
+        return file_exists($path) || ($this->options->checkSymlinkTimes ?? false) && is_link($path);
     }
 
     #[Override]
     public function lastModified(string $path): ?int
     {
-        clearstatcache(true, $path);
-        $result = @filemtime($path);
-
-        return $result === false ? null : $result;
+        if (($member = ArchiveMember::parse($path)) !== null) {
+            return Archive::modified($member);
+        }
+        return FileTimes::modified($path, $this->options->checkSymlinkTimes ?? false);
     }
 
     /**
@@ -49,6 +56,9 @@ final class Filesystem implements FilesystemInterface
     #[Override]
     public function matching(string $pattern): array
     {
+        if (($member = ArchiveMember::parse($pattern)) !== null) {
+            return Archive::matching($member);
+        }
         $paths = glob($pattern);
         return $paths === false ? [] : $paths;
     }
@@ -93,7 +103,8 @@ final class Filesystem implements FilesystemInterface
     #[Override]
     public function touch(string $path): void
     {
-        if (!@touch($path)) {
+        $member = ArchiveMember::parse($path);
+        if (!($member === null ? @touch($path) : Archive::touch($member))) {
             throw $this->failure('touch', $path);
         }
         clearstatcache(true, $path);

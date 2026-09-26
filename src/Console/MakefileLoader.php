@@ -5,20 +5,26 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Tamiroh\Phmake\Makefile\Builtins;
+use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\Diagnostics;
+use Tamiroh\Phmake\Makefile\Evaluation\Modules;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Execution\Build;
 use Tamiroh\Phmake\Makefile\Execution\CommandFailedException;
+use Tamiroh\Phmake\Makefile\Execution\UnremadeMakefileException;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\MakefileSources;
+use Tamiroh\Phmake\Parser\ReadFile;
 
 use function array_values;
-use function file_get_contents;
+use function function_exists;
 use function getcwd;
 use function implode;
 use function in_array;
 use function is_file;
+use function ltrim;
 use function scandir;
 
 /**
@@ -42,20 +48,26 @@ final readonly class MakefileLoader
      */
     public function load(): Build
     {
-        $stdin = in_array('-', $this->commandLine->input->makefiles, true) ? file_get_contents('php://stdin') : null;
-        $restarts = 0;
+        $stdin = in_array('-', $this->commandLine->input->makefiles, true)
+            ? new StdinMakefile($this->commandLine->input->temporaryStdin)
+            : null;
+        $restarts = (int) ltrim((string) $this->commandLine->input->restarts, '-');
         while (true) {
             Signals::check();
             $configuration = clone $this->commandLine;
+            $filesystem = new Filesystem();
+            $filesystem->options = $configuration->execution->files;
             $sources = new MakefileSources(
                 new SourceFiles(),
-                new Filesystem(),
+                $filesystem,
                 $configuration->input->makefiles === [] ? $this->defaultMakefiles() : $configuration->input->makefiles,
                 $configuration,
-                $stdin === false ? '' : $stdin,
+                $stdin === null ? null : new ReadFile($stdin->path, $stdin->text, null, rebuild: false),
                 $configuration->input->makefiles === [],
                 $configuration->input->evaluations,
+                $restarts > 0,
             );
+            DebugTrace::write($configuration->execution->reporting, $this->output, 'b', 'Reading makefiles...');
             $this->output->beginTarget();
             try {
                 $makefile = new MakefileParser(
@@ -65,9 +77,14 @@ final readonly class MakefileLoader
                     $configuration->noBuiltinRules ? [] : Builtins::rules(),
                     $this->output,
                     $configuration,
-                    new Shell(output: $this->output),
-                    new Filesystem(),
+                    new Shell(output: $this->output, reporting: $configuration->execution->reporting),
+                    $filesystem,
                     $configuration->execution->reporting,
+                    new Modules(
+                        ($moduleHost = ModuleHost::executable()) === null
+                            ? null
+                            : fn(): ModuleHost => new ModuleHost($moduleHost, $this->output),
+                    ),
                 )->parse();
             } catch (MakefileErrorException $error) {
                 Diagnostics::report($error, $this->output);
@@ -83,8 +100,8 @@ final readonly class MakefileLoader
             $slots = new Jobserver($configuration->execution->parallel, $this->output);
             $build = new Build(
                 $makefile,
-                new Shell(jobserver: $slots, output: $this->output),
-                new Filesystem(),
+                new Shell(jobserver: $slots, output: $this->output, reporting: $configuration->execution->reporting),
+                $filesystem,
                 $this->output,
                 $configuration->execution,
                 $restarts,
@@ -94,10 +111,9 @@ final readonly class MakefileLoader
                 MakeFlags::define($configuration, $makefile->context->variables, $makefile->context->posix, $restarts);
             }
             try {
-                if ($this->remake($sources, $build, $configuration->execution->keepGoing)) {
-                    $build->cleanup();
-                    $restarts++;
-                    continue;
+                $remade = $this->remake($sources, $build, $configuration->execution->keepGoing);
+                if (!$remade && $makefile->context !== null) {
+                    $makefile->context->modules->reload(new VariableExpander($makefile->context, $this->output));
                 }
             } catch (MakefileErrorException|CommandFailedException $error) {
                 $build->cleanup();
@@ -106,6 +122,15 @@ final readonly class MakefileLoader
                 if ($makefile->context !== null) {
                     MakeFlags::define($configuration, $makefile->context->variables, $makefile->context->posix);
                 }
+            }
+            if ($remade) {
+                $build->cleanup();
+                $restarts++;
+                if ($stdin !== null && function_exists('pcntl_exec')) {
+                    unset($build, $slots, $makefile);
+                    ProcessRestart::execute($configuration, $stdin->path, $restarts, $this->output);
+                }
+                continue;
             }
             if ($this->commandLine->targets === [] && $makefile->defaultGoal === null && !$this->hasMain($sources)) {
                 throw new MakefileErrorException('No targets specified and no makefile found');
@@ -133,7 +158,13 @@ final readonly class MakefileLoader
     private function hasMain(MakefileSources $sources): bool
     {
         foreach ($sources->read as $file) {
-            if ($file->text !== null && in_array($file->path, $sources->main, true)) {
+            if (
+                $file->text !== null
+                && (
+                    in_array($file->path, $sources->main, true)
+                    || !$file->rebuild && in_array('-', $sources->main, true)
+                )
+            ) {
                 return true;
             }
         }
@@ -181,11 +212,24 @@ final readonly class MakefileLoader
                 $errors[$file->path] = new MakefileErrorException("No rule to make target '{$file->path}'");
             }
             if (!$file->optional && isset($errors[$file->path])) {
+                if (
+                    $errors[$file->path] instanceof CommandFailedException
+                    && $errors[$file->path]->target !== $file->path
+                    && ($inputs[$errors[$file->path]->target]->optional ?? false)
+                ) {
+                    $this->output->writeWarning("Failed to remake makefile '$file->path'.", $file->source);
+                    $errors[$file->path]->reported = true;
+                    throw $errors[$file->path];
+                }
                 if ($file->text === null && $file->source !== null) {
                     $this->output->writeWarning(
                         $file->path . ': ' . ($file->error ?? 'No such file or directory'),
                         $file->source,
                     );
+                }
+                if ($errors[$file->path] instanceof UnremadeMakefileException) {
+                    $errors[$file->path]->reported = true;
+                    throw $errors[$file->path];
                 }
                 if ($keepGoing) {
                     Diagnostics::report($errors[$file->path], $this->output, false);
@@ -220,7 +264,8 @@ final readonly class MakefileLoader
                     $name,
                     $variable->expression,
                     $variable->recursive,
-                    'environment override',
+                    'environment',
+                    environmentOverrides: true,
                 );
             }
         }

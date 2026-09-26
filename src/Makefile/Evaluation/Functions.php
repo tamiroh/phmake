@@ -56,6 +56,7 @@ final class Functions
         'foreach' => 3,
         'let' => 3,
         'eval' => 1,
+        'guile' => 1,
         'shell' => 1,
         'file' => 2,
         'wildcard' => 1,
@@ -574,6 +575,24 @@ final class Functions
             )->expand($body, $expanding);
         }
         return implode(' ', $result);
+    }
+
+    /**
+     * Evaluate Scheme with GNU Guile and convert its result to make words.
+     *
+     * Makefile:
+     * ```makefile
+     * all:
+     *
+     * 	@echo $(guile (+ 2 3))
+     * ```
+     * Running `phmake` prints `5`.
+     *
+     * @throws MakefileErrorException
+     */
+    public static function guile(string $expression, VariableExpander $expander): string
+    {
+        return $expander->context->modules->guile($expression, $expander);
     }
 
     /**

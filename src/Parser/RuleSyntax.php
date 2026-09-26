@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
+use Tamiroh\Phmake\Makefile\Rule\FileName;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\PrerequisiteExpression;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
@@ -44,7 +46,7 @@ final class RuleSyntax
             if (count($patterns) !== 1) {
                 throw new ParseException($line, 'multiple target patterns');
             }
-            $pattern = $patterns[0];
+            $pattern = FileName::normalize($patterns[0]);
             if (!new Pattern($pattern)->hasWildcard()) {
                 throw new ParseException($line, "target pattern contains no '%'");
             }
@@ -52,7 +54,7 @@ final class RuleSyntax
         }
         $order = DependencySyntax::delimiter($dependencies, '|');
         return new Rule(
-            DependencySyntax::words($targets),
+            self::paths($targets, $files),
             new Prerequisites(
                 self::paths($order === null ? $dependencies : substr($dependencies, 0, $order), $files),
                 $order === null ? [] : self::paths(substr($dependencies, $order + 1), $files),
@@ -72,7 +74,8 @@ final class RuleSyntax
     private static function paths(string $text, ?SourceFiles $files): array
     {
         $result = [];
-        foreach (DependencySyntax::words($text) as $word) {
+        foreach (DependencySyntax::words(ArchiveMember::expand($text)) as $word) {
+            $word = FileName::normalize($word);
             $paths = strpbrk($word, '*?[') === false ? [] : $files?->matching($word) ?? [];
             $result = [...$result, ...($paths === [] ? [$word] : $paths)];
         }

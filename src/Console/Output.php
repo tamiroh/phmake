@@ -9,10 +9,11 @@ use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;
 use Tamiroh\Phmake\Makefile\IO\RecipeOutput;
 
 use const PHP_EOL;
+use const STDOUT;
 
 final class Output implements RecipeOutput
 {
-    public readonly OutputBuffer $buffer;
+    public OutputBuffer $buffer;
 
     public ?string $directory = null;
 
@@ -20,6 +21,7 @@ final class Output implements RecipeOutput
         public bool $silent = false,
         private readonly int $level = 0,
         ParallelOptions $options = new ParallelOptions(),
+        private readonly string $program = 'phmake',
     ) {
         $this->buffer = new OutputBuffer($options);
     }
@@ -49,7 +51,7 @@ final class Output implements RecipeOutput
     }
 
     public string $prefix {
-        get => 'phmake' . ($this->level === 0 ? '' : "[$this->level]");
+        get => $this->program . ($this->level === 0 ? '' : "[$this->level]");
     }
 
     #[Override]
@@ -65,7 +67,10 @@ final class Output implements RecipeOutput
             $this->buffer->directory = $entering ? [$this->prefix, $directory] : null;
             return;
         }
-        echo $this->prefix . ': ' . ($entering ? 'Entering' : 'Leaving') . " directory '$directory'" . PHP_EOL;
+        StreamOutput::write(
+            STDOUT,
+            $this->prefix . ': ' . ($entering ? 'Entering' : 'Leaving') . " directory '$directory'" . PHP_EOL,
+        );
     }
 
     #[Override]

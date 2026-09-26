@@ -105,3 +105,9 @@
        die "timeout\n";
      };
      alarm $test_timeout;
+--- a/tests/scripts/options/dash-d
++++ b/tests/scripts/options/dash-d
+@@ -7 +7,2 @@
+-run_make_test('all: ; :', '-d --trace', "/GNU Make/");
++my $debug_identity = $phmake ? '/^phmake \(development\)/' : '/GNU Make/';
++run_make_test('all: ; :', '-d --trace', $debug_identity);

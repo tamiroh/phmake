@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Search;
 
+use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\Evaluation\SecondaryExpansion;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
@@ -11,6 +12,7 @@ use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
@@ -20,6 +22,7 @@ use function array_filter;
 use function array_key_exists;
 use function array_values;
 use function basename;
+use function count;
 use function in_array;
 use function str_contains;
 use function str_starts_with;
@@ -58,6 +61,26 @@ final class RuleSearch
     /**
      * @throws MakefileErrorException
      */
+    public function refresh(Target $target, VariableScope $scope): void
+    {
+        if (isset($this->state->paths[$target->name])) {
+            return;
+        }
+        $this->locate($target->name, new VariableExpander($scope->context, $this->output, scope: $scope), $this->state);
+        $path = $this->state->paths[$target->name] ?? $target->name;
+        if ($path === $target->name || !isset($this->makefile->targetsByName[$path])) {
+            return;
+        }
+        $this->state->targets[$target->name] = TargetAlias::merge(
+            $target,
+            $this->makefile->targetsByName[$path],
+            $this->output,
+        );
+    }
+
+    /**
+     * @throws MakefileErrorException
+     */
     public function resolve(string $name, VariableScope $scope): ?Target
     {
         if (array_key_exists($name, $this->state->targets)) {
@@ -69,6 +92,18 @@ final class RuleSearch
             $this->makefile->targetsByName[$name]
             ?? $this->makefile->targetsByName[$this->state->paths[$name] ?? $name]
             ?? null;
+        if (
+            $explicit !== null
+            && isset($this->state->paths[$name])
+            && $this->state->paths[$name] !== $name
+            && isset($this->makefile->targetsByName[$name], $this->makefile->targetsByName[$this->state->paths[$name]])
+        ) {
+            $explicit = TargetAlias::merge(
+                $explicit,
+                $this->makefile->targetsByName[$this->state->paths[$name]],
+                $this->output,
+            );
+        }
         if ($explicit?->isPhony === true) {
             return $this->state->targets[$name] = $explicit;
         }
@@ -134,6 +169,9 @@ final class RuleSearch
             if ($dependency === '.WAIT') {
                 continue;
             }
+            if (!isset($branch->mentioned[$dependency]) && !in_array($dependency, $prerequisites->literal, true)) {
+                $branch->intermediates[$dependency] = true;
+            }
             $child = $this->makefile->scopes->scope($dependency, $scope->inherit(), $this->output);
             if (
                 isset($this->makefile->targetsByName[$dependency])
@@ -165,9 +203,6 @@ final class RuleSearch
                 return false;
             }
             $branch->targets[$dependency] = new Target($dependency, [$found]);
-            if (!isset($branch->mentioned[$dependency]) && !in_array($dependency, $prerequisites->literal, true)) {
-                $branch->intermediates[$dependency] = true;
-            }
         }
         return true;
     }
@@ -184,7 +219,9 @@ final class RuleSearch
         foreach ($this->makefile->patterns as $index => $pattern) {
             foreach ($pattern->names as $text) {
                 $hasDirectory = str_contains($text, '/');
-                $stem = new Pattern($text)->match($hasDirectory ? $name : basename($name));
+                $member = ArchiveMember::parse($name);
+                $matchName = $member !== null && str_starts_with($text, '(') ? '(' . $member->member . ')' : $name;
+                $stem = new Pattern($text)->match($hasDirectory ? $matchName : basename($matchName));
                 if ($stem === null || $stem === '') {
                     continue;
                 }
@@ -202,7 +239,7 @@ final class RuleSearch
                     $pattern,
                     $index,
                     $stem,
-                    $hasDirectory ? '' : substr($name, 0, strlen($name) - strlen(basename($name))),
+                    $hasDirectory ? '' : substr($matchName, 0, strlen($matchName) - strlen(basename($matchName))),
                     $text === '%',
                 );
             }
@@ -237,6 +274,13 @@ final class RuleSearch
         SearchState &$state,
         bool $compatibility,
     ): ?BuildRule {
+        DebugTrace::write(
+            $scope->context->reporting,
+            $this->output,
+            'i',
+            "Looking for an implicit rule for '$name'.",
+            count($used),
+        );
         $candidates = $this->candidates($name, $used);
         $expanded = [];
         foreach ([false, true] as $chain) {
@@ -244,6 +288,13 @@ final class RuleSearch
                 if ($chain && $candidate->pattern->rule->doubleColon) {
                     continue;
                 }
+                DebugTrace::write(
+                    $scope->context->reporting,
+                    $this->output,
+                    'i',
+                    "Trying pattern rule with stem '{$candidate->stem}'.",
+                    count($used),
+                );
                 $key = $candidate->index . ':' . $candidate->directory . ':' . $candidate->stem;
                 $branch = clone $state;
                 $expanded[$key] ??= [];
@@ -283,6 +334,13 @@ final class RuleSearch
                     unset($branch->intermediates[$literal]);
                 }
                 $state = $branch;
+                DebugTrace::write(
+                    $scope->context->reporting,
+                    $this->output,
+                    'i',
+                    "Found an implicit rule for '$name'.",
+                    count($used),
+                );
                 return new BuildRule(
                     $rule->prerequisites->merge($explicit->prerequisites ?? new Prerequisites()),
                     $rule->recipe,
@@ -301,6 +359,9 @@ final class RuleSearch
      */
     private function locate(string $name, VariableExpander $expander, SearchState $state): bool
     {
+        if (isset($state->discardedPaths[$name]) && !$this->filesystem->exists($name)) {
+            return false;
+        }
         $path = $this->makefile->paths->find($name, $this->filesystem, $expander, $this->makefile->targetsByName);
         $state->existed[$name] ??= $path !== null && $this->filesystem->exists($path);
         if ($path === null) {

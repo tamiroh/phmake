@@ -1,0 +1,9 @@
+$ mkdir out && touch out/thing.c
+$ ./phmake -rR --no-print-directory
+build:out/thing.s from:out/thing.c source
+single:single
+$ ./phmake -rR --no-print-directory ./single
+phmake: 'single' is up to date.
+$ touch input
+$ ./phmake -rR --no-print-directory ./static.out
+static:static.out stem:static.out from:input

@@ -68,6 +68,9 @@ final readonly class Assignment
      */
     public static function undefine(array &$variables, string $name, string $origin): void
     {
+        if (isset($variables[$name])) {
+            $variables[$name] = $variables[$name]->promoteEnvironment();
+        }
         if (isset($variables[$name]) && self::priority($variables[$name]->origin) <= self::priority($origin)) {
             unset($variables[$name]);
         }
@@ -112,6 +115,9 @@ final readonly class Assignment
             );
         }
         $previous = $variables[$this->name] ?? null;
+        if ($previous !== null && $this->operator !== '?=') {
+            $previous = $variables[$this->name] = $previous->promoteEnvironment();
+        }
         if (
             $previous !== null && self::priority($previous->origin) > self::priority($origin)
             || $this->operator === '?=' && $previous !== null

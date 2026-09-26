@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Makefile\Evaluation;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 use function count;
+use function preg_match;
 use function preg_quote;
 use function preg_replace;
 use function strlen;
@@ -40,7 +41,7 @@ final class ExpansionSyntax
     /**
      * @throws MakefileErrorException
      */
-    public static function readReference(string $expression, int &$index): string
+    public static function readReference(string $expression, int &$index, ?string $source = null): string
     {
         $opening = $expression[$index];
         $closing = $opening === '(' ? ')' : '}';
@@ -55,6 +56,16 @@ final class ExpansionSyntax
             }
             $index++;
         }
-        throw new MakefileErrorException('Unterminated variable reference');
+        $matches = [];
+        if (
+            preg_match('/^([a-z]+)(?:[ \t\r\n\v\f]|$)/', substr($expression, $start), $matches) === 1
+            && isset(Functions::ARGUMENT_COUNTS[$matches[1]])
+        ) {
+            throw new MakefileErrorException(
+                "unterminated call to function '{$matches[1]}': missing '$closing'",
+                $source,
+            );
+        }
+        throw new MakefileErrorException('unterminated variable reference', $source);
     }
 }

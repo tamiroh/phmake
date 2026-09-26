@@ -18,5 +18,6 @@ final readonly class ReadFile
         public ?string $source = null,
         public bool $rebuild = true,
         public ?string $error = null,
+        public ?string $displayPath = null,
     ) {}
 }

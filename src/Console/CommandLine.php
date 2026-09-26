@@ -19,8 +19,10 @@ use function array_values;
 use function count;
 use function ctype_digit;
 use function getcwd;
+use function getenv;
 use function in_array;
 use function is_numeric;
+use function putenv;
 use function random_int;
 use function str_contains;
 use function str_replace;
@@ -70,6 +72,10 @@ final class CommandLine implements Configuration
         array $defaults = [],
     ) {
         $this->input = new InputOptions();
+        $this->input->arguments = $arguments;
+        $this->input->directory = (string) getcwd();
+        $this->input->restarts = (int) getenv('MAKE_RESTARTS');
+        putenv('MAKE_RESTARTS');
         $this->switches = new ReversibleOptions();
         $this->execution = new ExecutionOptions();
         // Inherited flags have command-line priority, but actual arguments are read last.
@@ -167,7 +173,8 @@ final class CommandLine implements Configuration
                     $name,
                     $variable->expression,
                     $variable->recursive,
-                    'environment override',
+                    'environment',
+                    environmentOverrides: true,
                 );
             }
         }
@@ -263,6 +270,7 @@ final class CommandLine implements Configuration
             '--load-average', '--max-load' => '-l',
             '--silent', '--quiet' => '-s',
             '--version' => '-v',
+            '--help' => '-h',
             '--no-builtin-rules' => '-r',
             '--no-builtin-variables' => '-R',
             '--environment-overrides' => '-e',
@@ -280,14 +288,23 @@ final class CommandLine implements Configuration
             '--ignore-errors' => '-i',
             '--assume-new', '--new-file', '--what-if' => '-W',
             '--assume-old', '--old-file' => '-o',
+            '--check-symlink-times' => '-L',
             default => $argument,
         };
+        if (str_starts_with($argument, '--temp-stdin=')) {
+            $this->input->temporaryStdin = substr($argument, 13);
+            return;
+        }
         if ($argument === '--warn-undefined-variables') {
             $this->execution->reporting->warnUndefinedVariables = true;
             return;
         }
         if ($argument === '--trace') {
             $this->execution->reporting->trace = true;
+            return;
+        }
+        if ($argument === '--debug') {
+            $this->execution->reporting->addDebugFlags('basic');
             return;
         }
         if (str_starts_with($argument, '--debug=')) {
@@ -370,6 +387,12 @@ final class CommandLine implements Configuration
                     $this->execution->parallel->sync = $sync;
                     $this->execution->parallel->syncSpecified = true;
                     return;
+                case 'h':
+                    $this->input->help = true;
+                    break;
+                case 'L':
+                    $this->execution->files->checkSymlinkTimes = true;
+                    break;
                 case 'l':
                     $load = substr($argument, $offset + 1);
                     if ($load === '' && isset($arguments[$index + 1]) && is_numeric($arguments[$index + 1])) {
@@ -399,6 +422,9 @@ final class CommandLine implements Configuration
                         $this->execution->parallel->auth = null;
                     }
                     return;
+                case 'd':
+                    $this->execution->reporting->debugAll = true;
+                    break;
                 case 'n':
                     $this->execution->dryRun = true;
                     break;
@@ -451,7 +477,7 @@ final class CommandLine implements Configuration
                     }
                     if ($path === '') {
                         throw new MakefileErrorException(
-                            "Option -$option requires " . ($option === 'f' ? 'a file name' : 'a directory'),
+                            "Option -$option requires " . ($option === 'f' ? 'an argument' : 'a directory'),
                         );
                     }
                     if ($option === 'I') {
@@ -467,10 +493,13 @@ final class CommandLine implements Configuration
                         }
                     } elseif (!$inherited) {
                         if ($option === 'W') {
-                            $this->execution->newFiles[] = $path;
+                            $this->execution->files->newFiles[] = $path;
                         } elseif ($option === 'o') {
-                            $this->execution->oldFiles[] = $path;
+                            $this->execution->files->oldFiles[] = $path;
                         } elseif ($option === 'f') {
+                            if ($path === '-' && in_array('-', $this->input->makefiles, true)) {
+                                throw new MakefileErrorException('Makefile from standard input specified twice');
+                            }
                             $this->input->makefiles[] = $path;
                         } else {
                             $this->input->directories[] = $path;
@@ -478,7 +507,7 @@ final class CommandLine implements Configuration
                     }
                     return;
                 default:
-                    throw new MakefileErrorException("Option `$argument' is not supported");
+                    throw new UsageException("Option `$argument' is not supported");
             }
         }
     }

@@ -13,7 +13,6 @@ use function clearstatcache;
 use function error_get_last;
 use function file_get_contents;
 use function filemtime;
-use function glob;
 use function is_dir;
 use function preg_replace;
 use function trim;
@@ -31,8 +30,7 @@ final class SourceFiles implements SourceFilesInterface
     #[Override]
     public function matching(string $pattern): array
     {
-        $paths = glob($pattern);
-        return $paths === false ? [] : $paths;
+        return new Filesystem()->matching($pattern);
     }
 
     #[Override]

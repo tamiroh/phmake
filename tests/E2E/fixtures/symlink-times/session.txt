@@ -1,0 +1,13 @@
+$ touch -t 200001010000 dependency && touch -t 200001010001 target && ln -s dependency link
+$ ./phmake -rR --no-print-directory
+phmake: 'target' is up to date.
+$ ./phmake -LrR --no-print-directory
+rebuild target from link
+$ ./phmake -rR --no-print-directory -f late.mk
+late rebuild
+$ ln -s missing dangling
+$ ./phmake -rR --no-print-directory -f dangling.mk
+phmake: *** No rule to make target 'dangling', needed by 'target'.  Stop.
+[exit 2]
+$ ./phmake -LrR --no-print-directory -f dangling.mk
+dangling accepted

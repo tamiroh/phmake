@@ -80,11 +80,11 @@ final class SearchPaths
             $names[] = new Pattern($pattern)->substitute(substr($name, 2));
         }
         foreach ($names as $library) {
-            if ($filesystem->exists($library) || isset($targets[$library])) {
+            if ($filesystem->exists($library)) {
                 return $library;
             }
         }
-        return $this->search($names, $filesystem, $expander, $targets);
+        return $this->search($names, $filesystem, $expander, []);
     }
 
     /**

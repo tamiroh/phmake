@@ -28,4 +28,7 @@ final class SearchState
 
     /** @var array<string, bool> */
     public array $existed = [];
+
+    /** @var array<string, true> */
+    public array $discardedPaths = [];
 }

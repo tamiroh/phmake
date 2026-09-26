@@ -23,6 +23,9 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
 COPY src/ src/
 COPY --chmod=755 phmake ./phmake
+COPY tools/build-phar.php tools/build-phar.php
+RUN php -d phar.readonly=0 tools/build-phar.php /tmp/phmake.phar /usr/local/bin/php \
+    && mv /tmp/phmake.phar /opt/phmake/phmake
 
 # Recursive make commands must use phmake as well.
 RUN ln -s /opt/phmake/phmake /usr/local/bin/make

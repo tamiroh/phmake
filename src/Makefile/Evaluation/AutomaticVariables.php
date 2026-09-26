@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use Closure;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
+use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 
 use function array_unique;
@@ -42,18 +43,22 @@ final class AutomaticVariables
                 $newer[] = $dependency;
             }
         }
+        $member = ArchiveMember::parse($name);
         $values = [
-            '@' => [$name],
+            '@' => [$member->archive ?? $name],
             '<' => [$rule->firstPrerequisite ?? $rule->prerequisites->normal[0] ?? ''],
             '^' => array_unique($rule->prerequisites->normal),
             '+' => $rule->prerequisites->normal,
             '|' => $rule->prerequisites->orderOnly,
             '?' => $newer,
             '*' => [$rule->stem],
-            '%' => [],
+            '%' => $member === null ? [] : [$member->member],
         ];
         $variables = [];
         foreach ($values as $key => $words) {
+            if (in_array($key, ['^', '+', '|', '?'], true)) {
+                $words = array_map(ArchiveMember::prerequisite(...), $words);
+            }
             $variables[] = new Variable($key, implode(' ', $words), false, 'automatic');
             $directories = [];
             $files = [];

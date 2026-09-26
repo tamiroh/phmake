@@ -1,0 +1,22 @@
+$ mkdir source && touch source/item.c a.one a.two item.in
+$ ./phmake -rR --no-print-directory -f alias.mk
+alias.mk:4: Recipe was specified for file 'item.c' at alias.mk:4,
+alias.mk:4: but 'item.c' is now considered the same file as 'source/item.c'.
+alias.mk:4: Recipe for 'item.c' will be ignored in favor of the one for 'source/item.c'.
+real prerequisites
+alias prerequisites
+all=source/item.c
+$ ./phmake -rR --no-print-directory -f glob.mk
+a.one
+a.two
+item.out=item.in
+$ ./phmake -rR --no-print-directory -f library.mk
+ignored
+library.mk:3: Recipe was specified for file '-lapp' at library.mk:3,
+library.mk:3: but '-lapp' is now considered the same file as 'libapp.a'.
+library.mk:3: Recipe for '-lapp' will be ignored in favor of the one for 'libapp.a'.
+all=libapp.a
+$ ./phmake -rR --no-print-directory -f escaping.mk
+foo:bar
+foo\:bar
+\#literal\#

@@ -80,6 +80,14 @@ final class TargetVariables
     }
 
     /**
+     * @return array<string, Variable>|null
+     */
+    public function definitionsFor(string $name): ?array
+    {
+        return $this->definitions[$name] ?? null;
+    }
+
+    /**
      * @return list<string>
      */
     public function mentioned(): array

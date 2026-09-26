@@ -1,0 +1,14 @@
+$ SAMPLE=environment ./phmake -erR --no-print-directory
+before=environment:environment
+conditional=environment:environment
+target=file:target
+$ SAMPLE=environment ./phmake -erR --no-print-directory -f assigned.mk
+before=environment:environment
+assigned=environment override:environment
+target=environment override:environment
+$ SAMPLE=environment ./phmake -erR --no-print-directory -f undefined.mk
+kept=environment override:environment
+$ SAMPLE=environment ./phmake -rR --no-print-directory -f assigned.mk
+before=environment:environment
+assigned=file:file
+target=file:target

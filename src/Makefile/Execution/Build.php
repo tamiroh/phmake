@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
+use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Evaluation\ExtraPrerequisites;
 use Tamiroh\Phmake\Makefile\Evaluation\SecondaryExpansion;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
@@ -15,6 +17,7 @@ use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
+use Tamiroh\Phmake\Makefile\Rule\FileName;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 use Tamiroh\Phmake\Makefile\Search\RuleSearch;
@@ -84,21 +87,25 @@ final class Build
     public function remake(array $names, array $unreadable = []): array
     {
         $this->files->goals = $names;
+        DebugTrace::write($this->options->reporting, $this->output, 'b', 'Updating makefiles....');
         $this->state->remaking = true;
+        $this->options->reporting->remaking = true;
         $errors = [];
         $work = [];
         foreach (array_unique($names) as $name) {
+            $this->search->state->mentioned[$name] = true;
+            unset($this->search->state->intermediates[$name]);
             $target = $this->makefile->targetsByName[$name] ?? null;
             if ($target?->isPhony === true) {
                 if (!$this->filesystem->exists($name)) {
-                    $errors[$name] = new MakefileErrorException("No rule to make target '$name'");
+                    $errors[$name] = new UnremadeMakefileException("No rule to make target '$name'");
                 }
                 continue;
             }
             foreach ($target->rules ?? [] as $rule) {
                 if ($rule->doubleColon && $rule->prerequisites->sequence === [] && $rule->recipe !== null) {
                     if (!$this->filesystem->exists($name)) {
-                        $errors[$name] = new MakefileErrorException("No rule to make target '$name'");
+                        $errors[$name] = new UnremadeMakefileException("No rule to make target '$name'");
                     }
                     continue 2;
                 }
@@ -141,6 +148,7 @@ final class Build
             }
         }
         $this->state->remaking = false;
+        $this->options->reporting->remaking = false;
         $this->state->failed = false;
         return $errors;
     }
@@ -153,6 +161,7 @@ final class Build
      */
     public function run(array $names): int
     {
+        DebugTrace::write($this->options->reporting, $this->output, 'b', 'Updating goal targets....');
         try {
             if ($names === []) {
                 if ($this->makefile->defaultGoal === null) {
@@ -160,6 +169,7 @@ final class Build
                 }
                 $names = [$this->makefile->defaultGoal];
             }
+            $names = array_map(FileName::normalize(...), $names);
             $this->files->goals = $names;
             $names = DependencyOrder::arrange($names, $this->options->parallel, $this->makefile);
             $work = [];
@@ -213,12 +223,13 @@ final class Build
         VariableScope $parent,
         BuildPath $path,
         bool $grouped = false,
+        bool $checking = false,
     ): UpdateResult {
         $key = $rule->recipe === null ? '' : spl_object_id($rule->recipe) . ':' . implode("\0", $rule->group);
         if ($rule->group !== [] && isset($this->state->recipes[$key])) {
             return $this->state->recipes[$key];
         }
-        if ($rule->group !== [] && !$grouped && $this->parallel()) {
+        if (!$checking && $rule->group !== [] && !$grouped && $this->parallel()) {
             return $this->scheduler->await(
                 '@group:' . $key,
                 /**
@@ -238,13 +249,31 @@ final class Build
         );
         [$prerequisites, $changed, $failure] = $this->dependencies(
             $target->name,
-            $rule->prerequisites,
+            $rule->prerequisites->merge(ExtraPrerequisites::forTarget(
+                $target->name,
+                $this->makefile,
+                $this->filesystem,
+                $this->output,
+            )),
             $executed,
             $path,
             $modifiedAt,
         );
         if ($failure !== null) {
             return new UpdateResult(failure: $failure, blocked: true);
+        }
+        if ($checking) {
+            foreach ([...$prerequisites->normal, ...$prerequisites->extra] as $dependency) {
+                $time = $this->files->time($dependency);
+                if ($time !== null && ($modifiedAt === null || $time > $modifiedAt)) {
+                    return new UpdateResult(true);
+                }
+            }
+            return new UpdateResult(
+                $changed !== []
+                || $this->files->time($target->name) !== null
+                && ($modifiedAt === null || $this->files->time($target->name) > $modifiedAt),
+            );
         }
         $rule = new BuildRule(
             $prerequisites,
@@ -267,15 +296,27 @@ final class Build
             || $peerChanged->changed
             || $changed !== []
             || $rule->doubleColon && $prerequisites->normal === [] && $prerequisites->orderOnly === [];
-        foreach ($peers as $peer) {
+        foreach ($rule->implicit ? [$target->name] : $peers as $peer) {
             $rebuild =
                 $rebuild
                 || $this->files->needsRebuild($rule, $peer === $target->name ? $modifiedAt : $this->files->time($peer));
         }
         if (!$rebuild) {
+            DebugTrace::write(
+                $this->options->reporting,
+                $this->output,
+                'v',
+                "No need to remake target '{$target->name}'.",
+                count($path->visiting) - 1,
+            );
             return new UpdateResult();
         }
-        foreach (array_unique($prerequisites->sequence) as $dependency) {
+        foreach (array_unique(DependencyOrder::arrange(
+            $prerequisites->sequence,
+            $this->options->parallel,
+            $this->makefile,
+            $target->name,
+        )) as $dependency) {
             if (
                 $dependency !== '.WAIT'
                 && $this->files->intermediate($dependency)
@@ -293,17 +334,32 @@ final class Build
                 if ($result->failure !== null) {
                     return new UpdateResult(failure: $result->failure, blocked: true);
                 }
-                if ($result->changed && in_array($dependency, $prerequisites->normal, true)) {
+                if (
+                    $result->changed
+                    && in_array($dependency, [...$prerequisites->normal, ...$prerequisites->extra], true)
+                ) {
                     $changed[] = $dependency;
                 }
             }
         }
-        $this->files->prepare(
-            $target->name,
-            new VariableExpander($path->scope->context, $this->output, scope: $path->scope),
+        DebugTrace::write(
+            $this->options->reporting,
+            $this->output,
+            'b',
+            "Must remake target '{$target->name}'.",
+            count($path->visiting) - 1,
         );
+        foreach ($peers as $peer) {
+            $this->files->prepare(
+                $peer,
+                new VariableExpander($path->scope->context, $this->output, scope: $path->scope),
+            );
+        }
         $token = $this->parallel() ? $this->scheduler->acquire() : '';
         try {
+            if ($this->state->remaking) {
+                $this->makefile->context?->modules->unload($target->name);
+            }
             $ran = $this->runner->run(
                 $target,
                 $rule,
@@ -323,6 +379,14 @@ final class Build
                 $this->scheduler->release($token);
             }
         }
+        $this->search->refresh($target, $path->scope);
+        DebugTrace::write(
+            $this->options->reporting,
+            $this->output,
+            'b',
+            "Successfully remade target file '{$target->name}'.",
+            count($path->visiting) - 1,
+        );
         $executed = $executed || $ran->active;
         $this->state->needsUpdate = $this->state->needsUpdate || $ran->needsUpdate;
         if ($ran->simulated) {
@@ -334,6 +398,18 @@ final class Build
         if ($rule->group !== []) {
             $this->state->recipes[$key] = $updated;
             foreach ($peers as $peer) {
+                if (
+                    $rule->implicit
+                    && !$ran->simulated
+                    && $this->filesystem->lastModified($target->name) !== null
+                    && ($modifiedAt === null || $this->filesystem->lastModified($target->name) > $modifiedAt)
+                    && !$this->filesystem->exists($peer)
+                ) {
+                    $this->output->writeWarning(
+                        "warning: pattern recipe did not update peer target '$peer'.",
+                        $rule->recipe?->source,
+                    );
+                }
                 if ($rule->implicit && !isset($this->search->state->targets[$peer])) {
                     $this->search->state->targets[$peer] = new Target($peer, [$rule]);
                 }
@@ -378,8 +454,12 @@ final class Build
                 }
                 continue;
             }
+            if (isset($this->state->dropped[$name][$dependency])) {
+                continue;
+            }
             if (isset($path->visiting[$dependency])) {
                 $this->output->writeWarning("Circular $name <- $dependency dependency dropped.");
+                $this->state->dropped[$name][$dependency] = true;
                 continue;
             }
             $branch = clone $path;
@@ -389,7 +469,7 @@ final class Build
                  * @throws CommandFailedException
                  */
                 function () use ($dependency, &$executed, $branch, $name, $threshold): UpdateResult {
-                    return $this->update($dependency, $executed, $branch, $name, $threshold);
+                    return $this->update($dependency, $executed, $branch, $name, $threshold, checking: true);
                 };
             if ($serial) {
                 $updates[$dependency] = $this->parallel()
@@ -406,11 +486,12 @@ final class Build
                 continue;
             }
             $failure ??= $updated->failure;
-            if (in_array($dependency, $prerequisites->normal, true)) {
+            if (in_array($dependency, [...$prerequisites->normal, ...$prerequisites->extra], true)) {
                 if (
                     $updated->changed
                     && (
                         $threshold === null
+                        || $this->files->intermediate($dependency)
                         || $this->files->time($dependency) === null
                         || $this->files->time($dependency) > $threshold
                         || ($this->makefile->targetsByName[$dependency]->isPhony ?? false)
@@ -423,12 +504,22 @@ final class Build
             }
         }
         foreach ($prerequisites->normal as $dependency) {
-            if (!isset($path->visiting[$dependency]) && !($updates[$dependency]->circular ?? false)) {
+            if (
+                !isset($this->state->dropped[$name][$dependency])
+                && !isset($path->visiting[$dependency])
+                && !($updates[$dependency]->circular ?? false)
+            ) {
                 $normal[] = $dependency;
             }
         }
         return [
-            new Prerequisites($normal, $orderOnly, $prerequisites->expressions, $prerequisites->sequence),
+            new Prerequisites(
+                $normal,
+                $orderOnly,
+                $prerequisites->expressions,
+                $prerequisites->sequence,
+                extra: $prerequisites->extra,
+            ),
             $changed,
             $failure,
         ];
@@ -474,9 +565,6 @@ final class Build
         VariableScope $inherited,
         BuildPath $path,
     ): UpdateResult {
-        if ($rule->implicit) {
-            return new UpdateResult();
-        }
         $changed = false;
         foreach ($peers as $peer) {
             if ($peer === $target->name || isset($this->state->results[$peer])) {
@@ -487,8 +575,10 @@ final class Build
             $path->visiting[$peer] = true;
             try {
                 $rules = [];
-                foreach ($this->search->resolve($peer, $path->scope)->rules ?? [] as $other) {
-                    if ($other->recipe === $rule->recipe && $other->group === $rule->group) {
+                foreach ($rule->implicit
+                    ? $this->makefile->targetsByName[$peer]->rules ?? []
+                    : $this->search->resolve($peer, $path->scope)->rules ?? [] as $other) {
+                    if ($rule->implicit || $other->recipe === $rule->recipe && $other->group === $rule->group) {
                         $other = SecondaryExpansion::explicit(
                             $peer,
                             $other,
@@ -502,15 +592,17 @@ final class Build
                         $changed =
                             $changed
                             || $updated !== []
-                            || $this->files->needsRebuild($other, $this->files->time($peer));
+                            || !$rule->implicit && $this->files->needsRebuild($other, $this->files->time($peer));
                     }
                     $rules[] = $other;
                 }
-                $this->search->state->targets[$peer] = new Target(
-                    $peer,
-                    $rules,
-                    $this->search->resolve($peer, $path->scope)->isPhony ?? false,
-                );
+                if (!$rule->implicit) {
+                    $this->search->state->targets[$peer] = new Target(
+                        $peer,
+                        $rules,
+                        $this->search->resolve($peer, $path->scope)->isPhony ?? false,
+                    );
+                }
             } finally {
                 unset($path->visiting[$peer]);
                 $path->scope = $parent;
@@ -538,6 +630,7 @@ final class Build
         ?string $neededBy = null,
         ?int $threshold = null,
         bool $force = false,
+        bool $checking = false,
     ): UpdateResult {
         if (array_key_exists($name, $this->state->results)) {
             if (
@@ -548,6 +641,22 @@ final class Build
                 throw $this->state->results[$name]->failure;
             }
             return $this->state->results[$name];
+        }
+        DebugTrace::write(
+            $this->options->reporting,
+            $this->output,
+            'v',
+            "Considering target file '$name'.",
+            count($path->visiting),
+        );
+        if ($this->files->time($name) === null) {
+            DebugTrace::write(
+                $this->options->reporting,
+                $this->output,
+                'b',
+                " File '$name' does not exist.",
+                count($path->visiting),
+            );
         }
         $parent = $path->scope;
         $path->scope = $this->makefile->scopes->scope($name, $parent->inherit(), $this->output);
@@ -563,7 +672,7 @@ final class Build
                 throw new MissingTargetException($name, $neededBy);
             }
             $modifiedAt = $force ? null : $this->files->time($name);
-            $deferred = $modifiedAt === null && $threshold !== null && $this->files->intermediate($name);
+            $deferred = $checking && $this->files->intermediate($name);
             $path->visiting[$name] = true;
             try {
                 $changed = false;
@@ -577,6 +686,7 @@ final class Build
                             $executed,
                             $parent,
                             $path,
+                            checking: $deferred,
                         );
                     } catch (MissingTargetException|CommandFailedException $error) {
                         if (!$this->options->keepGoing && !$this->state->remaking) {
@@ -605,8 +715,8 @@ final class Build
                 if ($failure !== null) {
                     return $this->state->results[$name] = $failure;
                 }
-                if ($deferred && !$changed) {
-                    return new UpdateResult();
+                if ($deferred) {
+                    return new UpdateResult($changed);
                 }
                 return $this->state->results[$name] = new UpdateResult($changed);
             } finally {

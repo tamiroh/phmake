@@ -35,3 +35,7 @@ docker run --rm --platform linux/amd64 --network none phmake-linux-build \
 ```
 
 That reference run is a local environment check; CI always uses phmake.
+
+The image packages phmake as an executable PHAR with an absolute PHP interpreter
+path. Kbuild invokes `MAKE` from shell scripts as well as Makefile recipes, so
+`MAKE` must identify one executable that those scripts can invoke directly.

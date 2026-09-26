@@ -29,8 +29,12 @@ final class LineReader
         $this->lines = explode("\n", str_replace("\r\n", replace: "\n", subject: $source));
     }
 
-    public function next(string $recipePrefix = "\t", bool $definition = false): ?string
-    {
+    public function next(
+        string $recipePrefix = "\t",
+        bool $definition = false,
+        bool $posix = false,
+        bool $hasRule = true,
+    ): ?string {
         if (!isset($this->lines[$this->offset])) {
             return null;
         }
@@ -38,7 +42,7 @@ final class LineReader
         $this->lineNumber = $this->offset + 1;
         $line = $this->lines[$this->offset];
         $this->offset++;
-        $recipe = !$definition && $this->isRecipe($line, $recipePrefix);
+        $recipe = !$definition && $this->isRecipe($line, $recipePrefix, $hasRule);
         while (
             ((strlen($line) - strlen(rtrim($line, characters: '\\'))) % 2) === 1
             && isset($this->lines[$this->offset])
@@ -48,17 +52,17 @@ final class LineReader
             if ($recipe) {
                 $line .= "\n" . (str_starts_with($next, $recipePrefix) ? substr($next, offset: 1) : $next);
             } else {
-                $line = rtrim(substr($line, offset: 0, length: -1)) . ' ' . ltrim($next);
-                $recipe = !$definition && $this->isRecipe($line, $recipePrefix);
+                $line = ($posix ? substr($line, 0, -1) : rtrim(substr($line, 0, -1))) . ' ' . ltrim($next);
+                $recipe = !$definition && $this->isRecipe($line, $recipePrefix, $hasRule);
             }
         }
 
         return $line;
     }
 
-    private function isRecipe(string $line, string $recipePrefix): bool
+    private function isRecipe(string $line, string $recipePrefix, bool $hasRule): bool
     {
-        if (str_starts_with($line, $recipePrefix)) {
+        if ($hasRule && str_starts_with($line, $recipePrefix)) {
             return true;
         }
         if (Assignment::parse($line) !== null) {

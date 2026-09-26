@@ -16,5 +16,25 @@ final readonly class Variable
         public ?bool $export = null,
         public bool $append = false,
         public bool $conditional = false,
+        public bool $environmentOverrides = false,
     ) {}
+
+    public function promoteEnvironment(): self
+    {
+        if (!$this->environmentOverrides || $this->origin !== 'environment') {
+            return $this;
+        }
+        return new self(
+            $this->name,
+            $this->expression,
+            $this->recursive,
+            'environment override',
+            $this->source,
+            $this->private,
+            $this->export,
+            $this->append,
+            $this->conditional,
+            true,
+        );
+    }
 }

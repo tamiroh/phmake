@@ -304,6 +304,9 @@ final class MakefileBuilder
     private function builtinEnabled(PatternRule $pattern): bool
     {
         foreach ([...$pattern->names, ...$pattern->rule->prerequisites->normal] as $name) {
+            if (!str_starts_with($name, '%')) {
+                continue;
+            }
             $suffix = substr($name, 1);
             if ($suffix !== '' && !in_array($suffix, $this->suffixes, true)) {
                 return false;

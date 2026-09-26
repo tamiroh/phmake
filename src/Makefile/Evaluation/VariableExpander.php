@@ -25,6 +25,7 @@ use function strpos;
 use function substr;
 use function trim;
 
+use const PHP_INT_MAX;
 use const PREG_SPLIT_NO_EMPTY;
 
 final readonly class VariableExpander
@@ -45,11 +46,12 @@ final readonly class VariableExpander
         public ?string $definitionSource = null,
         private array $expanding = [],
         public ?VariableScope $scope = null,
+        public bool $secondary = false,
     ) {
         $this->context = $variables instanceof EvaluationContext ? $variables : new EvaluationContext($variables);
     }
 
-    public function atSource(?string $source): self
+    public function atSource(?string $source, ?bool $secondary = null): self
     {
         return new self(
             $this->context,
@@ -60,6 +62,7 @@ final readonly class VariableExpander
             $this->definitionSource,
             $this->expanding,
             $this->scope,
+            $secondary ?? $this->secondary,
         );
     }
 
@@ -81,7 +84,11 @@ final readonly class VariableExpander
             if ($next === '$') {
                 $result .= '$';
             } elseif ($next === '(' || $next === '{') {
-                $result .= $this->reference(ExpansionSyntax::readReference($expression, $index), $expanding, $next);
+                $result .= $this->reference(
+                    ExpansionSyntax::readReference($expression, $index, $this->definitionSource ?? $this->source),
+                    $expanding,
+                    $next,
+                );
             } elseif ($next !== '') {
                 $result .= $this->value($next, $expanding);
             }
@@ -103,7 +110,7 @@ final readonly class VariableExpander
     ): ?string {
         $maximum = Functions::ARGUMENT_COUNTS[$name] ?? null;
         if ($maximum === null) {
-            return null;
+            return $this->context->modules->invoke($name, $arguments, $this, $expanding, $argumentsExpanded);
         }
         $arguments = array_slice($arguments, 0, $maximum);
         if (in_array($name, ['if', 'and', 'or', 'intcmp'], true)) {
@@ -163,6 +170,7 @@ final readonly class VariableExpander
             ),
             'call' => Functions::call($arguments, $this, $expanding),
             'eval' => Functions::eval($first ?? '', $this->context->evaluate, $this->inExpansion($expanding)),
+            'guile' => Functions::guile($first ?? '', $this->inExpansion($expanding)),
             'info' => Functions::info($first ?? '', $this->output),
             'warning' => Functions::warning($first ?? '', $this->output, $this->source),
             'error' => Functions::error($first ?? '', $this->source),
@@ -236,6 +244,7 @@ final readonly class VariableExpander
             $this->definitionSource,
             $this->expanding,
             $this->scope,
+            $this->secondary,
         );
     }
 
@@ -253,6 +262,7 @@ final readonly class VariableExpander
             $this->definitionSource,
             $expanding,
             $this->scope,
+            $this->secondary,
         );
     }
 
@@ -264,9 +274,15 @@ final readonly class VariableExpander
     private function reference(string $reference, array $expanding, string $opening): string
     {
         $matches = [];
-        if (preg_match('/^([a-z-]+)[ \t\n]+/', $reference, $matches) === 1) {
+        if (preg_match('/^([A-Za-z0-9_.-]+)[ \t\r\n\v\f]+/', $reference, $matches) === 1) {
             /** @var array{non-falsy-string, non-empty-string} $matches */
-            $argumentCount = Functions::ARGUMENT_COUNTS[$matches[1]] ?? null;
+            $argumentCount =
+                Functions::ARGUMENT_COUNTS[$matches[1]]
+                ?? $this->context->modules->functions[$matches[1]]->maximum
+                ?? null;
+            if ($argumentCount === 0) {
+                $argumentCount = PHP_INT_MAX;
+            }
             if ($argumentCount !== null) {
                 try {
                     return (
@@ -281,6 +297,9 @@ final readonly class VariableExpander
                         ) ?? ''
                     );
                 } catch (MakefileErrorException $error) {
+                    if (!$error->contextual) {
+                        throw $error;
+                    }
                     throw new MakefileErrorException(
                         $error->getMessage(),
                         $error->source ?? $this->definitionSource ?? $this->source,
@@ -328,8 +347,8 @@ final readonly class VariableExpander
             return $variable->expression;
         }
         if (in_array($name, $expanding, true)) {
-            if ($this->context->shellEnvironment) {
-                return $this->context->inheritedEnvironment[$name] ?? '';
+            if ($this->context->environment->expandingShell) {
+                return $this->context->environment->inherited[$name] ?? '';
             }
             throw new MakefileErrorException("Recursive variable `{$name}'");
         }
@@ -342,6 +361,7 @@ final readonly class VariableExpander
             $variable->source ?? $this->definitionSource,
             $this->expanding,
             $this->scope,
+            $this->secondary,
         )->expand($variable->expression, [...$expanding, $name]);
     }
 }

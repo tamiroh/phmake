@@ -8,12 +8,14 @@ use Closure;
 use Override;
 use Symfony\Component\Process\Exception\ProcessSignaledException;
 use Symfony\Component\Process\Process as SymfonyProcess;
+use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\IO\Shell as ShellInterface;
 use Tamiroh\Phmake\Makefile\IO\ShellResult;
+use Tamiroh\Phmake\Makefile\ReportingOptions;
 
-use function escapeshellarg;
 use function explode;
 use function fwrite;
+use function is_array;
 use function preg_replace;
 
 use const STDERR;
@@ -27,6 +29,7 @@ final class Shell implements ShellInterface
         private readonly array $environment = [],
         private readonly ?Jobserver $jobserver = null,
         private readonly ?Output $output = null,
+        private readonly ?ReportingOptions $reporting = null,
     ) {}
 
     /**
@@ -59,7 +62,16 @@ final class Shell implements ShellInterface
         string $flags = '-c',
     ): ShellResult {
         $environment = self::withoutPipeJobserver($environment);
-        $process = $this->process($command, $environment, $shell, $flags);
+        $environment = [...$this->environment, ...$environment];
+        $invocation = CommandInvocation::parse($command, $shell, $flags);
+        if ($this->failed($invocation, $environment)) {
+            return new ShellResult('', 127);
+        }
+        $launch = $invocation->launch();
+        $process = is_array($launch)
+            ? new SymfonyProcess($launch, env: $environment)
+            : SymfonyProcess::fromShellCommandline($launch, env: $environment);
+        $process->setTimeout(null);
         $status = $this->run($process, function (string $type, string $buffer): void {
             if ($type === SymfonyProcess::ERR) {
                 if ($this->output !== null) {
@@ -88,24 +100,45 @@ final class Shell implements ShellInterface
         if (!$recursive) {
             $environment = self::withoutPipeJobserver($environment);
         }
+        $environment = [...$this->environment, ...$environment];
+        $invocation = CommandInvocation::parse($command, $shell, $flags);
+        if ($this->failed($invocation, $environment)) {
+            return 127;
+        }
         return RecipeProcess::run(
-            'exec ' . $shell . ' ' . $flags . ' ' . escapeshellarg($command),
-            [...$this->environment, ...$environment],
+            $invocation->launch(),
+            $environment,
             ($this->output?->buffer->descriptors() ?? []) + ($recursive ? $descriptors : []),
+            function (int $pid, ?int $exitCode): void {
+                if ($this->reporting !== null) {
+                    DebugTrace::write(
+                        $this->reporting,
+                        $this->output,
+                        'j',
+                        $exitCode === null
+                            ? "Putting child PID $pid on the chain."
+                            : 'Reaping ' . ($exitCode === 0 ? 'winning' : 'losing') . " child PID $pid",
+                    );
+                }
+            },
         );
     }
 
     /**
      * @param array<string, string|false> $environment
      */
-    private function process(string $command, array $environment, string $shell, string $flags): SymfonyProcess
+    private function failed(CommandInvocation $invocation, array $environment): bool
     {
-        $process = SymfonyProcess::fromShellCommandline(
-            'exec ' . $shell . ' ' . $flags . ' ' . escapeshellarg($command),
-            env: [...$this->environment, ...$environment],
-        );
-        $process->setTimeout(null);
-        return $process;
+        $error = $invocation->error($environment);
+        if ($error === null) {
+            return false;
+        }
+        if ($this->output !== null) {
+            $this->output->writeWarning($error);
+        } else {
+            fwrite(STDERR, 'phmake: ' . $error . "\n");
+        }
+        return true;
     }
 
     /**

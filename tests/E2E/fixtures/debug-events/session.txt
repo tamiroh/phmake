@@ -1,0 +1,32 @@
+$ ./phmake -rR --no-print-directory --debug=b 2>&1 | sed -n '/Reading makefiles/,$p'
+Reading makefiles...
+Updating makefiles....
+Updating goal targets....
+ File 'all' does not exist.
+  File 'child' does not exist.
+ Must remake target 'child'.
+child
+ Successfully remade target file 'child'.
+Must remake target 'all'.
+parent
+Successfully remade target file 'all'.
+$ ./phmake -rR --no-print-directory --debug=b,n
+child
+parent
+$ ./phmake -rR --no-print-directory -f late.mk
+Updating makefiles....
+Updating goal targets....
+ File 'all' does not exist.
+Must remake target 'all'.
+late
+Successfully remade target file 'all'.
+$ ./phmake -rR --no-print-directory --debug=j 2>&1 | sed -n -e 's/Putting child.*/job started/p' -e 's/Reaping winning child.*/job succeeded/p' -e '/^child$/p' -e '/^parent$/p'
+job started
+child
+job succeeded
+job started
+parent
+job succeeded
+$ ./phmake -rR --no-print-directory --debug=j -f failure.mk 2>&1 | sed -n -e 's/Putting child.*/job started/p' -e 's/Reaping losing child.*/job failed/p'
+job started
+job failed

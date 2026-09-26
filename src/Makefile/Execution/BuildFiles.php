@@ -17,7 +17,6 @@ use function array_map;
 use function implode;
 use function in_array;
 use function preg_replace;
-use function sort;
 use function str_starts_with;
 
 use const PHP_INT_MAX;
@@ -31,10 +30,12 @@ final class BuildFiles
     /** @var list<string> */
     public array $goals = [];
 
-    /** @var array<string, string> */
+    /** @var array<string, array{string, string}> */
     private array $created = [];
 
     private readonly FilePolicy $policy;
+
+    private readonly FileTable $table;
 
     /**
      * @throws MakefileErrorException
@@ -48,11 +49,20 @@ final class BuildFiles
         private readonly BuildState $state,
     ) {
         $this->policy = new FilePolicy($makefile->targetsByName);
+        $this->table = new FileTable();
+        foreach ($makefile->targets as $target) {
+            $this->table->enter($target->name);
+            foreach ($target->rules as $rule) {
+                foreach ($rule->prerequisites->sequence as $dependency) {
+                    $this->table->enter($dependency);
+                }
+            }
+        }
     }
 
     public function assumedOld(string $name): bool
     {
-        foreach ($this->options->oldFiles as $file) {
+        foreach ($this->options->files->oldFiles as $file) {
             if (preg_replace('~^(?:\./)+~', '', $file) === preg_replace('~^(?:\./)+~', '', $this->path($name))) {
                 return true;
             }
@@ -63,13 +73,21 @@ final class BuildFiles
     public function cleanup(): void
     {
         $removed = [];
-        foreach ($this->created as $path) {
-            if ($this->filesystem->exists($path) && $this->filesystem->remove($path)) {
+        foreach ($this->table->names() as $name) {
+            if (!isset($this->created[$name])) {
+                continue;
+            }
+            [, $path] = $this->created[$name];
+            if (
+                $this->intermediate($name)
+                && !$this->policy->keep($name)
+                && $this->filesystem->exists($path)
+                && $this->filesystem->remove($path)
+            ) {
                 $removed[] = $path;
             }
         }
         if ($removed !== []) {
-            sort($removed);
             $this->output->writeLine('rm ' . implode(' ', $removed));
         }
     }
@@ -104,7 +122,7 @@ final class BuildFiles
         if ($modifiedAt === null) {
             return true;
         }
-        foreach ($rule->prerequisites->normal as $dependency) {
+        foreach ([...$rule->prerequisites->normal, ...$rule->prerequisites->extra] as $dependency) {
             $time = $this->time($dependency);
             if ($time === null ? !$this->intermediate($dependency) : $time > $modifiedAt) {
                 return true;
@@ -123,6 +141,7 @@ final class BuildFiles
      */
     public function prepare(string $name, VariableExpander $expander): void
     {
+        $this->table->enter($name);
         $path = $this->path($name);
         if (
             $path !== $name
@@ -131,13 +150,11 @@ final class BuildFiles
             && !$this->makefile->paths->retain($path, $expander)
         ) {
             unset($this->search->state->paths[$name]);
+            $this->search->state->discardedPaths[$name] = true;
         }
-        if (
-            $this->intermediate($name)
-            && !($this->search->state->existed[$name] ?? false)
-            && !$this->policy->keep($name)
-        ) {
-            $this->created[$name] = $this->path($name);
+        $this->search->state->existed[$name] ??= $this->filesystem->exists($this->path($name));
+        if (!$this->search->state->existed[$name]) {
+            $this->created[$name] = [$name, $this->path($name)];
         }
     }
 
@@ -151,7 +168,7 @@ final class BuildFiles
             return PHP_INT_MAX;
         }
         if (!$this->state->remaking || $this->state->restarts === 0) {
-            foreach ($this->options->newFiles as $file) {
+            foreach ($this->options->files->newFiles as $file) {
                 if (preg_replace('~^(?:\./)+~', '', $file) === preg_replace('~^(?:\./)+~', '', $path)) {
                     return PHP_INT_MAX;
                 }

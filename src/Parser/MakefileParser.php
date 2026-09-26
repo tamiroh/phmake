@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\Exports;
+use Tamiroh\Phmake\Makefile\Evaluation\Modules;
 use Tamiroh\Phmake\Makefile\Evaluation\UndefinedVariable;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
@@ -18,6 +19,7 @@ use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReportingOptions;
+use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 
 use function array_values;
@@ -52,6 +54,7 @@ final readonly class MakefileParser
         private ?Shell $shell = null,
         private ?Filesystem $filesystem = null,
         private ReportingOptions $reporting = new ReportingOptions(),
+        private Modules $modules = new Modules(),
     ) {}
 
     private static function removeComment(string $line): string
@@ -68,7 +71,7 @@ final readonly class MakefileParser
                 if ($count < 0) {
                     throw new LogicException('Backslash count must be non-negative');
                 }
-                if (($line[$index] ?? '') === '#') {
+                if (($line[$index] ?? '') === '#' && $depth === 0) {
                     /**
                      * Dividing a non-negative count by 2 yields a non-negative result.
                      * Dividing by 2 cannot cause division by zero or integer overflow.
@@ -122,9 +125,25 @@ final readonly class MakefileParser
      */
     private static function splitRecipe(string $line): array
     {
+        $depth = 0;
         for ($index = 0; $index < strlen($line); $index++) {
             if ($line[$index] === '\\') {
                 $index++;
+                continue;
+            }
+            if ($line[$index] === '$' && isset($line[$index + 1])) {
+                if ($line[$index + 1] === '(' || $line[$index + 1] === '{') {
+                    $depth++;
+                }
+                $index++;
+                continue;
+            }
+            if (($line[$index] === '(' || $line[$index] === '{') && $depth > 0) {
+                $depth++;
+            } elseif (($line[$index] === ')' || $line[$index] === '}') && $depth > 0) {
+                $depth--;
+            }
+            if ($depth > 0) {
                 continue;
             }
             if ($line[$index] === '#') {
@@ -153,6 +172,7 @@ final readonly class MakefileParser
     {
         $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false), $this->output);
         $context = new EvaluationContext();
+        $context->modules = $this->modules;
         $context->reporting = $this->reporting;
         $context->shell = $this->shell;
         $context->filesystem = $this->filesystem;
@@ -160,7 +180,7 @@ final readonly class MakefileParser
         foreach ($this->defaults as $variable) {
             $variables[$variable->name] = $variable;
             if (in_array($variable->origin, ['environment', 'environment override'], true)) {
-                $context->inheritedEnvironment[$variable->name] = $variable->expression;
+                $context->environment->inherited[$variable->name] = $variable->expression;
             }
         }
         foreach ($this->overrides as $variable) {
@@ -239,10 +259,11 @@ final readonly class MakefileParser
         int $start,
         array $sources,
         ?string $evaluationSource,
+        bool $posix,
     ): string {
         $lines = [];
         $depth = 1;
-        while (($line = $reader->next($prefix, true)) !== null) {
+        while (($line = $reader->next($prefix, true, $posix)) !== null) {
             if (!str_starts_with($line, $prefix)) {
                 $directive = trim(self::removeComment($line));
                 $matches = [];
@@ -279,7 +300,7 @@ final readonly class MakefileParser
         array $included,
     ): void {
         if ($file->text === null) {
-            if (!$file->optional && $file->source === null) {
+            if (!$file->optional && $file->source === null && !$this->sources->restarted) {
                 $this->output?->writeWarning($file->path . ': ' . ($file->error ?? 'No such file or directory'));
             }
             return;
@@ -296,12 +317,12 @@ final readonly class MakefileParser
         $this->sources->defaultGoal = $file->defaultGoal;
         try {
             $this->readRules(
-                $file->text,
+                str_starts_with($file->text, "\xEF\xBB\xBF") ? substr($file->text, 3) : $file->text,
                 $builder,
                 $scope->context->variables,
                 [...$included, $file->path],
                 $exports,
-                [1 => $file->path],
+                [1 => $file->displayPath ?? $file->path],
                 $scope,
             );
         } finally {
@@ -331,23 +352,26 @@ final readonly class MakefileParser
         $rule = null;
         $conditionals = new Conditionals();
 
-        while (($line = $reader->next($variables['.RECIPEPREFIX']->expression[0] ?? "\t")) !== null) {
+        while (
+            ($line = $reader->next(
+                $variables['.RECIPEPREFIX']->expression[0] ?? "\t",
+                posix: $scope->context->posix,
+                hasRule: $rule !== null,
+            )) !== null
+        ) {
             $lineNumber = $reader->lineNumber;
             $location = $evaluationSource ?? self::sourceLocation($sources, $lineNumber);
             $expander = $scope->atSource($location);
-            if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
+            if ($rule !== null && str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
                 if (!$conditionals->active()) {
                     continue;
-                }
-                if ($rule === null) {
-                    throw new ParseException($lineNumber, 'Recipe without a rule');
                 }
                 $rule->addRecipe(substr($line, offset: 1), $location);
                 continue;
             }
 
             $uncommented = self::removeComment($line);
-            if (trim($uncommented) === '') {
+            if (trim($uncommented, " \t\n\r\0\x0B\f") === '') {
                 continue;
             }
 
@@ -361,6 +385,7 @@ final readonly class MakefileParser
                     $lineNumber,
                     $sources,
                     $evaluationSource,
+                    $scope->context->posix,
                 );
                 continue;
             }
@@ -413,6 +438,7 @@ final readonly class MakefileParser
                     $lineNumber,
                     $sources,
                     $evaluationSource,
+                    $scope->context->posix,
                 );
                 new Assignment($header->name, $header->operator, $body)->apply(
                     $variables,
@@ -498,22 +524,60 @@ final readonly class MakefileParser
                 continue;
             }
 
+            if (preg_match('/^(-?load)(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
+                foreach (self::words($expander->expand($matches[2] ?? '')) as $name) {
+                    $module = $scope->context->modules->load($name, $matches[1] === '-load', $expander);
+                    $contents = $this->sources->files->read($module->path);
+                    $this->sources->read[] = new ReadFile(
+                        $module->path,
+                        $contents->text,
+                        $contents->modifiedAt,
+                        $module->optional,
+                        false,
+                        $module->source,
+                        !$module->keep,
+                    );
+                }
+                continue;
+            }
+
             if (preg_match('/^vpath(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
                 $builder->paths->define(self::words($expander->expand($matches[1] ?? '')));
                 continue;
             }
 
+            if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
+                throw new ParseException($lineNumber, 'Recipe without a rule');
+            }
             if (ScopedAssignment::read($uncommented, $builder->scopes, $expander, $this->output)) {
                 continue;
             }
 
             [$header, $recipe] = self::splitRecipe($line);
             $expanded = $expander->expand($header);
-            if (trim($expanded) === '' && $recipe === null) {
+            if (trim($expanded, " \t\n\r\0\x0B\f") === '' && $recipe === null) {
                 continue;
             }
             if (!$scope->context->reading) {
-                throw new MakefileErrorException('prerequisites cannot be defined in recipes', $location);
+                throw new MakefileErrorException(
+                    'prerequisites cannot be defined in recipes',
+                    $scope->secondary ? null : $evaluationSource,
+                    contextual: !$scope->secondary,
+                );
+            }
+            if (DependencySyntax::delimiter($expanded, ':') === null) {
+                if (
+                    ($variables['.RECIPEPREFIX']->expression[0] ?? "\t") === "\t"
+                    && str_starts_with($line, '        ')
+                ) {
+                    throw new ParseException($lineNumber, 'missing separator (did you mean TAB instead of 8 spaces?)');
+                }
+                if (preg_match('/^\s*ifn?eq\S/', $line) === 1) {
+                    throw new ParseException(
+                        $lineNumber,
+                        'missing separator (ifeq/ifneq must be followed by whitespace)',
+                    );
+                }
             }
             $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->sources->files);
             if (in_array('.POSIX', $rule->targetNames, true)) {

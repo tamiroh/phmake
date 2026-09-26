@@ -13,6 +13,7 @@ class MakefileErrorException extends Exception
     public function __construct(
         string $message,
         public readonly ?string $source = null,
+        public readonly bool $contextual = true,
     ) {
         parent::__construct($message);
     }

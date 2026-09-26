@@ -29,9 +29,10 @@ final class MakefileSources
         private readonly Filesystem $filesystem,
         public readonly array $main,
         private readonly ?Configuration $configuration = null,
-        private readonly ?string $stdin = null,
+        private readonly ?ReadFile $stdin = null,
         private readonly bool $optionalMain = false,
         public readonly array $evaluations = [],
+        public readonly bool $restarted = false,
     ) {}
 
     /**
@@ -74,8 +75,8 @@ final class MakefileSources
         ?string $source = null,
         bool $main = false,
     ): ReadFile {
-        if ($main && $name === '-') {
-            return $this->read[] = new ReadFile($name, $this->stdin, null, defaultGoal: $defaultGoal, rebuild: false);
+        if ($main && $name === '-' && $this->stdin !== null) {
+            return $this->read[] = $this->stdin;
         }
         $path = $name;
         $contents = $this->files->read($path);
@@ -96,6 +97,7 @@ final class MakefileSources
             $defaultGoal,
             $source,
             error: $contents->error,
+            displayPath: $name,
         );
     }
 }
