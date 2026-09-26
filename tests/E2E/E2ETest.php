@@ -46,9 +46,10 @@ final class E2ETest extends TestCase
         if (is_file($fixtureDirectory . '/gnu-version.txt')) {
             $minimum = file_get_contents($fixtureDirectory . '/gnu-version.txt');
             self::assertIsString($minimum);
-            if (!GnuMake::supports(trim($minimum))) {
-                self::markTestSkipped('Reference GNU make requires version ' . trim($minimum));
-            }
+            self::assertTrue(
+                GnuMake::supports(trim($minimum)),
+                'Fixture requires GNU make ' . trim($minimum) . ', beyond the declared compatibility target.',
+            );
         }
         $expected = $this->readSnapshot($fixtureDirectory);
         $executable = GnuMake::executable();

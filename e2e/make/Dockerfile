@@ -8,6 +8,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-install pcntl
 
+COPY GNU_MAKE_VERSION /tmp/GNU_MAKE_VERSION
+RUN test "$(cat /tmp/GNU_MAKE_VERSION)" = 4.4.1
+
 # GNU make 4.4.1, pinned by the release archive's SHA-256.
 RUN curl -fsSL https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz -o /tmp/make.tar.gz \
     && echo 'dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3  /tmp/make.tar.gz' | sha256sum -c - \

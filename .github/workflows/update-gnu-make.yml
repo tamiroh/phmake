@@ -1,0 +1,75 @@
+name: Update GNU make compatibility target
+
+on:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-gnu-make
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Test the updater
+        run: python3 -m unittest discover -s tools/tests
+
+      - name: Check official stable releases
+        run: python3 tools/update-gnu-make.py
+
+      - name: Create the upgrade pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=automation/gnu-make
+          # An open upgrade PR may contain manual compatibility fixes. Leave it intact.
+          pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$pr" ]; then
+            echo "Upgrade PR #$pr is still open; leaving its branch and description unchanged."
+            exit 0
+          fi
+          version=$(cat GNU_MAKE_VERSION)
+          if git diff --quiet; then
+            exit 0
+          fi
+          if git show-ref --verify --quiet "refs/remotes/origin/$branch" &&
+             git diff --quiet "origin/$branch" -- GNU_MAKE_VERSION tools/install-gnu-make.sh e2e; then
+            echo 'The existing upgrade branch already contains this update.'
+          else
+            git checkout -b "$branch"
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add GNU_MAKE_VERSION tools/install-gnu-make.sh e2e
+            git commit -m "Update GNU make compatibility target to $version"
+            git push --force-with-lease origin "$branch"
+          fi
+          cat > "$RUNNER_TEMP/gnu-make-pr.md" <<EOF
+          Update the GNU make compatibility target to **$version** from the official
+          release index: https://ftp.gnu.org/gnu/make/.
+
+          Updates the reference version, archive SHA-256, installers, runner checks,
+          and documentation together. Fixture minimum versions and upstream test
+          expectations are unchanged. Compatibility failures must be fixed before
+          merging; this PR does not assert that the new target is already supported.
+
+          Approve workflows to run in the PR UI to start CI for this bot-created PR.
+          EOF
+          gh pr create --base "$BASE_BRANCH" --head "$branch" \
+            --title "Update GNU make compatibility target to $version" \
+            --body-file "$RUNNER_TEMP/gnu-make-pr.md"

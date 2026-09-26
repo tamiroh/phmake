@@ -8,13 +8,15 @@ use RuntimeException;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
+use function dirname;
 use function explode;
+use function file_get_contents;
 use function getenv;
 use function is_executable;
 use function realpath;
 use function str_contains;
-use function str_starts_with;
 use function substr;
+use function trim;
 use function version_compare;
 
 final class GnuMake
@@ -34,14 +36,28 @@ final class GnuMake
                 continue;
             }
             $process = new Process([$path, '--version'], env: ['LC_ALL' => 'C']);
-            if ($process->run() === 0 && str_starts_with($process->getOutput(), 'GNU Make ')) {
+            if (
+                $process->run() === 0
+                && explode("\n", $process->getOutput())[0] === 'GNU Make ' . self::requiredVersion()
+            ) {
                 return self::$executable = $path;
             }
         }
 
         throw new RuntimeException(
-            'GNU make is required for E2E tests. Install gmake/make or set GNU_MAKE to its executable.',
+            'GNU make '
+            . self::requiredVersion()
+            . ' is required for E2E tests. Run tools/install-gnu-make.sh or set GNU_MAKE to that version.',
         );
+    }
+
+    public static function requiredVersion(): string
+    {
+        $version = file_get_contents(dirname(__DIR__, 2) . '/GNU_MAKE_VERSION');
+        if ($version === false || trim($version) === '') {
+            throw new RuntimeException('Cannot read GNU_MAKE_VERSION.');
+        }
+        return trim($version);
     }
 
     public static function supports(string $minimum): bool

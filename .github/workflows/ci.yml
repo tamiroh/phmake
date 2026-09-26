@@ -171,5 +171,13 @@ jobs:
       - name: Install dependencies
         run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
 
+      - name: Test maintenance scripts
+        run: python3 -m unittest discover -s tools/tests
+
+      - name: Install the compatibility reference
+        run: |
+          sh tools/install-gnu-make.sh "$RUNNER_TEMP/gnu-make"
+          echo "GNU_MAKE=$RUNNER_TEMP/gnu-make/bin/make" >> "$GITHUB_ENV"
+
       - name: Run tests
         run: make test
