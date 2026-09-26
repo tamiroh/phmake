@@ -44,6 +44,7 @@ final readonly class MakefileLoader
         $stdin = in_array('-', $this->commandLine->input->makefiles, true) ? file_get_contents('php://stdin') : null;
         $restarts = 0;
         while (true) {
+            Signals::check();
             $configuration = clone $this->commandLine;
             $sources = new MakefileSources(
                 new SourceFiles(),
@@ -54,23 +55,35 @@ final readonly class MakefileLoader
                 $configuration->input->makefiles === [],
                 $configuration->input->evaluations,
             );
-            $makefile = new MakefileParser(
-                $sources,
-                $this->variables($configuration, $restarts),
-                $configuration->variables,
-                $configuration->noBuiltinRules ? [] : Builtins::rules(),
-                $this->output,
-                $configuration,
-                new Shell(),
-                new Filesystem(),
-            )->parse();
+            $this->output->beginTarget();
+            try {
+                $makefile = new MakefileParser(
+                    $sources,
+                    $this->variables($configuration, $restarts),
+                    $configuration->variables,
+                    $configuration->noBuiltinRules ? [] : Builtins::rules(),
+                    $this->output,
+                    $configuration,
+                    new Shell(output: $this->output),
+                    new Filesystem(),
+                )->parse();
+            } finally {
+                $this->output->endTarget();
+            }
+            $this->output->buffer->options = $configuration->execution->parallel;
+            $this->output->buffer->prepare();
+            if ($restarts > 0) {
+                $configuration->execution->parallel->reset = false;
+            }
+            $slots = new Jobserver($configuration->execution->parallel, $this->output);
             $build = new Build(
                 $makefile,
-                new Shell(),
+                new Shell(jobserver: $slots, output: $this->output),
                 new Filesystem(),
                 $this->output,
                 $configuration->execution,
                 $restarts,
+                $slots,
             );
             if ($makefile->context !== null) {
                 $makefile->context->variables['MAKEFLAGS'] = new Variable(
@@ -195,6 +208,7 @@ final readonly class MakefileLoader
                 && $variable->origin === 'default'
                 && $name !== 'SHELL'
                 && $name !== 'MAKE'
+                && $name !== '.FEATURES'
             ) {
                 unset($defaults[$name]);
             } elseif ($commandLine->environmentOverrides && $variable->origin === 'environment') {

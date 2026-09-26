@@ -1,0 +1,7 @@
+$ ./phmake --no-print-directory -rR -j2 --jobserver-style=pipe
+left-a
+left-b
+right-a
+right-b
+$ ./phmake --no-print-directory -rR -j2 --jobserver-style=pipe -f shell.mk LITERAL=--jobserver-auth=3,4 2> warning.txt && grep -q 'jobserver unavailable' warning.txt
+leaf --jobserver-auth=3,4

@@ -4,8 +4,9 @@ FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        autoconf bison build-essential ca-certificates git pkg-config re2c unzip \
-    && rm -rf /var/lib/apt/lists/*
+        autoconf bison build-essential ca-certificates procps git pkg-config re2c unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install pcntl
 
 WORKDIR /opt/php-src
 

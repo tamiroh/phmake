@@ -6,6 +6,18 @@ namespace Tamiroh\Phmake\Makefile\Execution;
 
 final class ExecutionOptions
 {
+    public ParallelOptions $parallel;
+
+    public function __construct()
+    {
+        $this->parallel = new ParallelOptions();
+    }
+
+    public function __clone(): void
+    {
+        $this->parallel = clone $this->parallel;
+    }
+
     public bool $dryRun = false;
 
     public bool $question = false;

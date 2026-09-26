@@ -14,9 +14,6 @@ final class BuildState
     /** @var array<string, UpdateResult> */
     public array $results = [];
 
-    /** @var array<string, true> */
-    public array $visiting = [];
-
     /** @var array<string, UpdateResult> */
     public array $recipes = [];
 
@@ -32,6 +29,8 @@ final class BuildState
 
     public bool $failed = false;
 
+    public bool $waiting = false;
+
     public function __construct(
         public readonly int $restarts = 0,
     ) {}
@@ -46,6 +45,9 @@ final class BuildState
                 );
             }
             $this->reported[spl_object_id($error)] = true;
+            if ($error instanceof CommandFailedException) {
+                $error->reported = true;
+            }
         }
         return new UpdateResult(failure: $error);
     }

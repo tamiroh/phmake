@@ -4,8 +4,9 @@ FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential ca-certificates curl git unzip \
-    && rm -rf /var/lib/apt/lists/*
+        build-essential ca-certificates procps curl git unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install pcntl
 
 # Lua 5.4.8 and its SHA-256 from https://www.lua.org/ftp/.
 RUN curl -fsSL https://www.lua.org/ftp/lua-5.4.8.tar.gz -o /tmp/lua.tar.gz \

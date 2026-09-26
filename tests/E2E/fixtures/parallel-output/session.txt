@@ -1,0 +1,18 @@
+$ ./phmake --no-print-directory -rR -j2 -Otarget
+right-start
+right-end
+left-start
+left-end
+$ rm started done
+$ ./phmake --no-print-directory -rR -j2 -Oline
+left-start
+right-start
+right-end
+left-end
+$ rm started done
+$ ./phmake --no-print-directory -rR -j2 -Orecurse > stdout.txt 2> stderr.txt
+$ cat stdout.txt; test ! -s stderr.txt
+right-start
+right-end
+left-start
+left-end

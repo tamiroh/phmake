@@ -1,0 +1,5 @@
+$ ./phmake --no-print-directory -rR -j2
+left-a
+left-b
+right-a
+right-b

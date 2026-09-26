@@ -4,9 +4,10 @@ FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        bc bison build-essential ca-certificates curl flex git libelf-dev libssl-dev \
+        bc bison build-essential ca-certificates procps curl flex git libelf-dev libssl-dev \
         qemu-system-x86 unzip xz-utils \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install pcntl
 
 # Linux 6.12, pinned by https://cdn.kernel.org/pub/linux/kernel/v6.x/sha256sums.asc.
 RUN curl -fsSL https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.12.tar.xz -o /tmp/linux.tar.xz \

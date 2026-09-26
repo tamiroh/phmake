@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Execution;
 
 use Tamiroh\Phmake\Makefile\IO\Output;
+use Tamiroh\Phmake\Makefile\IO\RecipeOutput;
 use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
@@ -81,26 +82,39 @@ final readonly class ExpandedCommand
             return new CommandResult();
         }
         $recursive = $this->recursive || str_contains($prefix, '+');
-        if ($options->question && !$recursive) {
-            return new CommandResult(true, true, needsUpdate: true);
+        if ($output instanceof RecipeOutput) {
+            $output->beginCommand($recursive);
         }
-        if (
-            $options->dryRun && !$options->touch
-            || !$options->silent && !str_contains($prefix, '@') && (!$options->touch || $recursive)
-        ) {
-            $output->write($expanded . "\n");
+        try {
+            if ($options->question && !$recursive) {
+                return new CommandResult(true, true, needsUpdate: true);
+            }
+            if (
+                $options->dryRun && !$options->touch
+                || !$options->silent && !str_contains($prefix, '@') && (!$options->touch || $recursive)
+            ) {
+                $output->write($expanded . "\n");
+            }
+            if (!$recursive && ($options->dryRun || $options->touch)) {
+                return new CommandResult(true, true);
+            }
+            $exitCode = $shell->exec(
+                $expanded,
+                ignoreErrors: $options->ignoreErrors || str_contains($prefix, '-'),
+                recursive: $recursive,
+            );
+            if ($exitCode === 1 && $options->question) {
+                return new CommandResult(true, true, needsUpdate: true);
+            }
+            if ($exitCode !== 0 && ($options->ignoreErrors || str_contains($prefix, '-'))) {
+                $output->writeWarning(($target === null ? '' : "[$target] ") . "Error {$exitCode} (ignored)");
+                return new CommandResult(true);
+            }
+            return new CommandResult(true, exitCode: $exitCode);
+        } finally {
+            if ($output instanceof RecipeOutput) {
+                $output->endCommand();
+            }
         }
-        if (!$recursive && ($options->dryRun || $options->touch)) {
-            return new CommandResult(true, true);
-        }
-        $exitCode = $shell->exec($expanded, ignoreErrors: $options->ignoreErrors || str_contains($prefix, '-'));
-        if ($exitCode === 1 && $options->question) {
-            return new CommandResult(true, true, needsUpdate: true);
-        }
-        if ($exitCode !== 0 && ($options->ignoreErrors || str_contains($prefix, '-'))) {
-            $output->writeWarning(($target === null ? '' : "[$target] ") . "Error {$exitCode} (ignored)");
-            return new CommandResult(true);
-        }
-        return new CommandResult(true, exitCode: $exitCode);
     }
 }

@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tamiroh\Phmake\Makefile\Execution;
+
+use Closure;
+use Fiber;
+use LogicException;
+use Throwable;
+
+final class Suspension
+{
+    /**
+     * @param Closure(): bool $ready
+     */
+    public static function until(Closure $ready): void
+    {
+        try {
+            Fiber::suspend($ready);
+        } catch (Throwable $error) {
+            // The scheduler resumes fibers normally; it never injects exceptions.
+            throw new LogicException('Unexpected exception injected into a build task', previous: $error);
+        }
+    }
+}

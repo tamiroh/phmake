@@ -1,0 +1,9 @@
+$ ./phmake --no-print-directory -rR -j2 > build.txt && sort counts && test ! -e common && test -f left && test -f right
+common
+grouped
+$ ./phmake --no-print-directory -rR -j2 cycle > cycle.log 2>&1 && sort cycle.txt && grep -q Circular cycle.log
+a
+b
+$ printf 'input\nunused\n' | ./phmake --no-print-directory -rR -j2 stdin && cat first.txt second.txt
+first
+empty

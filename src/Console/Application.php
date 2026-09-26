@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Console;
 use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Execution\CommandFailedException;
+use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\ParseException;
 
@@ -26,6 +27,23 @@ final readonly class Application
      */
     public function run(array $arguments): void
     {
+        $signals = new Signals();
+        try {
+            $this->execute($arguments);
+        } catch (InterruptedException) {
+            // Active recipes report their own interruption before the process exits by signal.
+        } finally {
+            $signals->finish();
+        }
+    }
+
+    /**
+     * @param list<string> $arguments
+     *
+     * @throws InterruptedException
+     */
+    private function execute(array $arguments): void
+    {
         try {
             $defaults = $this->initialVariables();
             $commandLine = new CommandLine(
@@ -44,7 +62,7 @@ final readonly class Application
                 }
             }
             $level = max(0, (int) getenv('MAKELEVEL'));
-            $output = new Output($commandLine->execution->silent, $level);
+            $output = new Output($commandLine->execution->silent, $level, $commandLine->execution->parallel);
             $printDirectory =
                 $commandLine->printDirectory
                 ?? !$commandLine->execution->silent
@@ -68,6 +86,8 @@ final readonly class Application
             if ($status !== 0) {
                 exit($status);
             }
+        } catch (InterruptedException $e) {
+            throw $e;
         } catch (CommandFailedException $e) {
             if ($e->reported) {
                 exit(2);

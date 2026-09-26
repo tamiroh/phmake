@@ -131,6 +131,9 @@ final class RuleSearch
         bool $compatibility,
     ): bool {
         foreach ($prerequisites->sequence as $dependency) {
+            if ($dependency === '.WAIT') {
+                continue;
+            }
             $child = $this->makefile->scopes->scope($dependency, $scope->inherit(), $this->output);
             if (
                 isset($this->makefile->targetsByName[$dependency])

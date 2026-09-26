@@ -1,0 +1,4 @@
+$ ./phmake --no-print-directory -rR --jobs=3
+first second
+$ ./phmake --no-print-directory -rR -j3 serial
+serial

@@ -49,6 +49,7 @@ final readonly class ImplicitCandidate
         $prerequisites = new Prerequisites(
             $this->substitute($this->pattern->rule->prerequisites->normal),
             $this->substitute($this->pattern->rule->prerequisites->orderOnly),
+            sequence: $this->substitute($this->pattern->rule->prerequisites->sequence),
             literal: array_values(array_filter(
                 $this->pattern->rule->prerequisites->sequence,
                 static fn(string $name): bool => !new Pattern($name)->hasWildcard(),

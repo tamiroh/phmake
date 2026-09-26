@@ -11,6 +11,9 @@ use function array_values;
 final readonly class Prerequisites
 {
     /** @var list<string> */
+    public array $normal;
+
+    /** @var list<string> */
     public array $orderOnly;
 
     /** @var list<string> */
@@ -24,13 +27,15 @@ final readonly class Prerequisites
      * @param list<string> $literal names produced without stem substitution during implicit expansion
      */
     public function __construct(
-        public array $normal = [],
+        array $normal = [],
         array $orderOnly = [],
         public array $expressions = [],
         ?array $sequence = null,
         public array $literal = [],
     ) {
         $this->sequence = $sequence ?? [...$normal, ...$orderOnly];
+        $this->normal = array_values(array_diff($normal, ['.WAIT']));
+        $orderOnly = array_values(array_diff($orderOnly, ['.WAIT']));
         $this->orderOnly = array_values(array_unique(array_diff($orderOnly, $normal)));
     }
 

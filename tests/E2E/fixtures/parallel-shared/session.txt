@@ -1,0 +1,4 @@
+$ ./phmake --no-print-directory -rR -j2
+shared
+left scope
+right scope

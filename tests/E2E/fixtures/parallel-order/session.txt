@@ -1,0 +1,20 @@
+$ ./phmake --no-print-directory -rR -j3 -l0 > load.txt
+$ sort load.txt
+a
+a b c
+b
+c
+$ ./phmake --no-print-directory -rR --shuffle=reverse
+c
+b
+a
+a b c
+$ ./phmake --no-print-directory -rR -j3 --shuffle=reverse waited
+a
+b
+c
+a b c
+$ ./phmake --no-print-directory -rR --shuffle=12345 > first.txt
+$ ./phmake --no-print-directory -rR --shuffle=12345 > second.txt
+$ cmp first.txt second.txt && echo reproducible
+reproducible

@@ -60,6 +60,7 @@ final readonly class ExportingShell implements Shell
         string $shell = '/bin/sh',
         string $flags = '-c',
         bool $ignoreErrors = false,
+        bool $recursive = false,
     ): int {
         return $this->shell->exec(
             $command,
@@ -75,6 +76,7 @@ final readonly class ExportingShell implements Shell
                         ? $flags
                         : $this->variables->expand('$(.SHELLFLAGS)')
                 ),
+            recursive: $recursive,
         );
     }
 

@@ -31,5 +31,6 @@ interface Shell
         string $shell = '/bin/sh',
         string $flags = '-c',
         bool $ignoreErrors = false,
+        bool $recursive = false,
     ): int;
 }

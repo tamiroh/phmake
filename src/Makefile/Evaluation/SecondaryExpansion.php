@@ -115,6 +115,7 @@ final class SecondaryExpansion
             yield new Prerequisites(
                 $part->normal,
                 $part->orderOnly,
+                sequence: $part->sequence,
                 literal: new Pattern($word)->hasWildcard() ? [] : $part->sequence,
             );
             $orderOnly = $orderOnly || DependencySyntax::delimiter($text, '|') !== null;

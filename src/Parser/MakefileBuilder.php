@@ -103,6 +103,7 @@ final class MakefileBuilder
                             ),
                             $rule->prerequisites->expressions,
                         ),
+                        $rule->prerequisites->sequence,
                     ),
                     $recipe,
                     $rule->doubleColon,
@@ -112,6 +113,15 @@ final class MakefileBuilder
         }
         foreach ($rule->targetNames as $rawName) {
             $name = new Pattern($rawName)->substitute('%');
+            if ($name === '.WAIT') {
+                if ($rule->prerequisites->sequence !== []) {
+                    $this->output?->writeWarning('.WAIT should not have prerequisites', $rule->source);
+                }
+                if ($recipe !== null) {
+                    $this->output?->writeWarning('.WAIT should not have commands', $recipe->source);
+                }
+                continue;
+            }
             if ($name === '.SUFFIXES') {
                 if ($rule->prerequisites->normal === []) {
                     $this->builtinSuffixes = false;
@@ -138,6 +148,7 @@ final class MakefileBuilder
                         $this->substitute($rule->prerequisites->normal, $stem),
                         $this->substitute($rule->prerequisites->orderOnly, $stem),
                         $rule->prerequisites->expressions,
+                        $this->substitute($rule->prerequisites->sequence, $stem),
                     );
             $prerequisites = new Prerequisites(
                 $prerequisites->normal,
@@ -149,10 +160,15 @@ final class MakefileBuilder
                         $rule->hasRecipe,
                         $expression->source,
                         $this->secondary,
-                        new Prerequisites($prerequisites->normal, $prerequisites->orderOnly),
+                        new Prerequisites(
+                            $prerequisites->normal,
+                            $prerequisites->orderOnly,
+                            sequence: $prerequisites->sequence,
+                        ),
                     ),
                     $prerequisites->expressions,
                 ),
+                $prerequisites->sequence,
             );
             $this->addTarget(
                 $name,

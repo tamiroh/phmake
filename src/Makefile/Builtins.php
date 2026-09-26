@@ -82,6 +82,7 @@ final class Builtins
     {
         return [
             new Variable('.LIBPATTERNS', 'lib%.so lib%.a', origin: 'default'),
+            new Variable('.FEATURES', 'jobserver jobserver-fifo output-sync', false, 'default'),
             new Variable('CC', 'cc', origin: 'default'),
             new Variable('FC', 'f77', origin: 'default'),
             new Variable('LEX', 'lex', origin: 'default'),

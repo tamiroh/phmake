@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Override;
+use Random\RandomException;
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
@@ -16,8 +17,12 @@ use Tamiroh\Phmake\Parser\Configuration;
 use function array_map;
 use function array_values;
 use function count;
+use function ctype_digit;
 use function implode;
 use function in_array;
+use function is_numeric;
+use function ltrim;
+use function random_int;
 use function str_contains;
 use function str_replace;
 use function str_starts_with;
@@ -111,7 +116,7 @@ final class CommandLine implements Configuration
                 . ($variable->recursive ? $variable->expression : str_replace('$', '$$', $variable->expression)),
             );
         }
-        return (
+        $flags =
             ($execution->alwaysMake ? 'B' : '')
             . ($this->environmentOverrides ? 'e' : '')
             . ($execution->ignoreErrors ? 'i' : '')
@@ -122,7 +127,18 @@ final class CommandLine implements Configuration
             . ($this->noBuiltinVariables ? 'R' : '')
             . ($execution->silent ? 's' : '')
             . ($execution->touch ? 't' : '')
-            . ($this->printDirectory === null ? '' : ($this->printDirectory ? 'w' : ' --no-print-directory'))
+            . ($this->printDirectory === true ? 'w' : '')
+            . (
+                $execution->parallel->jobs === 1
+                    ? ''
+                    : ' -j' . ($execution->parallel->jobs === 0 ? '' : $execution->parallel->jobs)
+            )
+            . ($execution->parallel->auth === null ? '' : ' --jobserver-auth=' . $execution->parallel->auth)
+            . ($execution->parallel->sync === 'none' ? '' : ' -O' . $execution->parallel->sync)
+            . ($execution->parallel->mutex === null ? '' : ' --sync-mutex=' . $execution->parallel->mutex)
+            . ($execution->parallel->load === null ? '' : ' -l' . $execution->parallel->load)
+            . ($execution->parallel->shuffle === null ? '' : ' --shuffle=' . $execution->parallel->shuffle)
+            . ($this->printDirectory === false ? ' --no-print-directory' : '')
             . implode('', array_map(
                 static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
                 $this->input->includes,
@@ -132,8 +148,8 @@ final class CommandLine implements Configuration
                 . str_replace(['\\', '$', ' ', "\t", "\n"], ['\\\\', '$$', '\\ ', "\\\t", "\\\n"], $text),
                 $this->input->evaluations,
             ))
-            . ($assignments === [] ? '' : ' -- ' . implode(' ', $assignments))
-        );
+            . ($assignments === [] ? '' : ' -- ' . implode(' ', $assignments));
+        return $execution->parallel->jobs === 1 ? $flags : ltrim($flags);
     }
 
     /**
@@ -160,6 +176,7 @@ final class CommandLine implements Configuration
                 && $name !== 'SHELL'
                 && $name !== 'MAKE'
                 && $name !== 'MAKECMDGOALS'
+                && $name !== '.FEATURES'
             ) {
                 unset($variables[$name]);
             } elseif ($this->environmentOverrides && $variable->origin === 'environment' && $name !== 'MAKEFLAGS') {
@@ -251,6 +268,9 @@ final class CommandLine implements Configuration
     private function readOption(string $argument, array $arguments, int &$index, bool $inherited): void
     {
         $argument = match ($argument) {
+            '--jobs' => '-j',
+            '--output-sync' => '-O',
+            '--load-average', '--max-load' => '-l',
             '--silent', '--quiet' => '-s',
             '--version' => '-v',
             '--no-builtin-rules' => '-r',
@@ -272,6 +292,37 @@ final class CommandLine implements Configuration
             '--assume-old', '--old-file' => '-o',
             default => $argument,
         };
+        if ($argument === '--shuffle' || str_starts_with($argument, '--shuffle=')) {
+            $shuffle = $argument === '--shuffle' ? 'random' : substr($argument, 10);
+            if ($shuffle === 'random') {
+                try {
+                    $shuffle = (string) random_int(0, 2147483647);
+                } catch (RandomException $error) {
+                    throw new MakefileErrorException($error->getMessage());
+                }
+            }
+            if (!in_array($shuffle, ['none', 'identity', 'reverse'], true) && !ctype_digit($shuffle)) {
+                throw new MakefileErrorException("invalid shuffle mode: '$shuffle'");
+            }
+            $this->execution->parallel->shuffle = in_array($shuffle, ['none', 'identity'], true) ? null : $shuffle;
+            return;
+        }
+        if (str_starts_with($argument, '--sync-mutex=')) {
+            $this->execution->parallel->mutex = substr($argument, 13);
+            return;
+        }
+        if (str_starts_with($argument, '--jobserver-auth=')) {
+            $this->execution->parallel->auth = substr($argument, 17);
+            return;
+        }
+        if (str_starts_with($argument, '--jobserver-style=')) {
+            $style = substr($argument, 18);
+            if (!in_array($style, ['fifo', 'pipe'], true)) {
+                throw new MakefileErrorException("unknown jobserver auth style '$style'");
+            }
+            $this->execution->parallel->style = $style;
+            return;
+        }
         if ($argument === '--no-print-directory') {
             $this->printDirectory = false;
             return;
@@ -281,6 +332,10 @@ final class CommandLine implements Configuration
             return;
         }
         foreach ([
+            '--jobs=' => '-j',
+            '--output-sync=' => '-O',
+            '--load-average=' => '-l',
+            '--max-load=' => '-l',
             '--file=' => '-f',
             '--makefile=' => '-f',
             '--directory=' => '-C',
@@ -304,6 +359,41 @@ final class CommandLine implements Configuration
         }
         for ($offset = 1; $offset < strlen($argument); $offset++) {
             switch ($argument[$offset]) {
+                case 'O':
+                    $sync = substr($argument, $offset + 1);
+                    $sync = $sync === '' ? 'target' : $sync;
+                    if (!in_array($sync, ['none', 'line', 'target', 'recurse'], true)) {
+                        throw new MakefileErrorException("unknown output-sync type '$sync'");
+                    }
+                    $this->execution->parallel->sync = $sync;
+                    return;
+                case 'l':
+                    $load = substr($argument, $offset + 1);
+                    if ($load === '' && isset($arguments[$index + 1]) && is_numeric($arguments[$index + 1])) {
+                        $load = $arguments[++$index];
+                    }
+                    if ($load !== '' && (!is_numeric($load) || (float) $load < 0)) {
+                        throw new MakefileErrorException('The -l option requires a nonnegative number');
+                    }
+                    $this->execution->parallel->load = $load === '' ? null : (float) $load;
+                    return;
+                case 'j':
+                    $jobs = substr($argument, $offset + 1);
+                    if ($jobs === '' && isset($arguments[$index + 1]) && ctype_digit($arguments[$index + 1])) {
+                        $jobs = $arguments[++$index];
+                    }
+                    if ($jobs !== '' && (!ctype_digit($jobs) || (int) $jobs < 1)) {
+                        throw new MakefileErrorException('The -j option requires a positive integer argument');
+                    }
+                    $this->execution->parallel->jobs = $inherited && $this->execution->parallel->commandJobs !== null
+                        ? $this->execution->parallel->commandJobs
+                        : ($jobs === '' ? 0 : (int) $jobs);
+                    if (!$inherited) {
+                        $this->execution->parallel->reset = $this->execution->parallel->auth !== null;
+                        $this->execution->parallel->commandJobs = $this->execution->parallel->jobs;
+                        $this->execution->parallel->auth = null;
+                    }
+                    return;
                 case 'n':
                     $this->execution->dryRun = true;
                     break;

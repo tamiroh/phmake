@@ -12,5 +12,6 @@ final readonly class UpdateResult
         public bool $changed = false,
         public MakefileErrorException|CommandFailedException|null $failure = null,
         public bool $blocked = false,
+        public bool $circular = false,
     ) {}
 }

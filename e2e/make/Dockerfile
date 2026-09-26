@@ -4,8 +4,9 @@ FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential ca-certificates curl diffutils git patch perl unzip \
-    && rm -rf /var/lib/apt/lists/*
+        build-essential ca-certificates procps curl diffutils git patch perl unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install pcntl
 
 # GNU make 4.4.1, pinned by the release archive's SHA-256.
 RUN curl -fsSL https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz -o /tmp/make.tar.gz \
