@@ -27,10 +27,12 @@ RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --no-
 COPY src/ src/
 COPY --chmod=755 phmake ./phmake
 
-# Recursive make commands must use phmake as well.
+# Default to phmake; run-build selects GNU make for reference builds.
 RUN ln -s /opt/phmake/phmake /usr/local/bin/make
 
 WORKDIR /opt/git
 COPY e2e/git/verify.sh /usr/local/bin/verify-git-build
 
-CMD ["sh", "/usr/local/bin/verify-git-build"]
+COPY e2e/run-build.sh /usr/local/bin/run-build
+
+CMD ["sh", "/usr/local/bin/run-build", "git"]

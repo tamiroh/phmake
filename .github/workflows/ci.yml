@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   build-php:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -13,12 +13,12 @@ jobs:
       - name: Prepare PHP build environment
         run: docker build --platform linux/amd64 -f e2e/php/Dockerfile -t phmake-php-build .
 
-      - name: Build and verify PHP with phmake
-        run: docker run --rm --platform linux/amd64 phmake-php-build
+      - name: Compare PHP builds with GNU make and phmake
+        run: python3 e2e/compare-builds.py php
 
   build-lua:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -26,12 +26,12 @@ jobs:
       - name: Prepare Lua build environment
         run: docker build --platform linux/amd64 -f e2e/lua/Dockerfile -t phmake-lua-build .
 
-      - name: Build and verify Lua with phmake
-        run: docker run --rm --platform linux/amd64 phmake-lua-build
+      - name: Compare Lua builds with GNU make and phmake
+        run: python3 e2e/compare-builds.py lua
 
   build-make:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,12 +39,12 @@ jobs:
       - name: Prepare GNU make build environment
         run: docker build --platform linux/amd64 -f e2e/make/Dockerfile -t phmake-make-build .
 
-      - name: Build and verify GNU make with phmake
-        run: docker run --rm --platform linux/amd64 phmake-make-build
+      - name: Compare GNU make builds with GNU make and phmake
+        run: python3 e2e/compare-builds.py make
 
   build-git:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -52,12 +52,12 @@ jobs:
       - name: Prepare Git build environment
         run: docker build --platform linux/amd64 -f e2e/git/Dockerfile -t phmake-git-build .
 
-      - name: Build and verify Git with phmake
-        run: docker run --rm --init --platform linux/amd64 --network none phmake-git-build
+      - name: Compare Git builds with GNU make and phmake
+        run: python3 e2e/compare-builds.py git
 
   build-linux:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,8 +65,8 @@ jobs:
       - name: Prepare Linux build environment
         run: docker build --platform linux/amd64 -f e2e/linux/Dockerfile -t phmake-linux-build .
 
-      - name: Build and boot Linux with phmake
-        run: docker run --rm --platform linux/amd64 --network none phmake-linux-build
+      - name: Compare Linux builds with GNU make and phmake
+        run: python3 e2e/compare-builds.py linux
 
   test-gnu-make:
     runs-on: ubuntu-24.04

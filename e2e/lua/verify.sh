@@ -2,7 +2,7 @@
 set -eu
 
 cd /opt/lua
-php /opt/phmake/phmake linux
+make linux
 ./src/lua -v
 ./src/luac -v
 ./src/lua -e '

@@ -1,8 +1,8 @@
 # Git build verification
 
-This CI job builds and installs Git 2.55.0 with phmake on Linux. The release
+This CI job builds and installs Git 2.55.0 with GNU make and phmake on Linux. The release
 archive and container base images are pinned by checksum. Recursive make calls
-also use phmake. Tcl/Tk GUIs are disabled; the command-line tools (including Rust
+use the selected implementation. Tcl/Tk GUIs are disabled; the command-line tools (including Rust
 code), Perl modules, templates, and translations use the normal `all` and
 `install` targets.
 PHP's memory limit is set to 1 GiB in this container because Git expands a large
@@ -17,5 +17,7 @@ Run the same verification locally from the repository root:
 
 ```sh
 docker build --platform linux/amd64 -f e2e/git/Dockerfile -t phmake-git-build .
-docker run --rm --init --platform linux/amd64 --network none phmake-git-build
+python3 e2e/compare-builds.py git
 ```
+
+See [build comparisons](../README.md) for timing details and single-implementation runs.

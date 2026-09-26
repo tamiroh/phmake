@@ -2,7 +2,7 @@
 set -eu
 
 cd /opt/linux
-# Both configuration and recursive Kbuild invocations use the PATH's phmake.
+# Configuration and recursive Kbuild invocations use the selected make.
 make ARCH=x86_64 KCONFIG_ALLCONFIG=/opt/kernel.config allnoconfig
 make ARCH=x86_64 bzImage
 test -s vmlinux

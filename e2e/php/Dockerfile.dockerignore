@@ -7,3 +7,4 @@
 !e2e/
 !e2e/php/
 !e2e/php/verify.sh
+!e2e/run-build.sh

@@ -7,3 +7,4 @@
 !e2e/
 !e2e/lua/
 !e2e/lua/verify.sh
+!e2e/run-build.sh

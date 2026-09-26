@@ -42,7 +42,7 @@ COPY tools/build-phar.php tools/build-phar.php
 RUN php -d phar.readonly=0 tools/build-phar.php /tmp/phmake.phar /usr/local/bin/php \
     && mv /tmp/phmake.phar /opt/phmake/phmake
 
-# Recursive make commands must use phmake as well.
+# Default to phmake; run-build selects GNU make for reference builds.
 RUN ln -s /opt/phmake/phmake /usr/local/bin/make
 
 WORKDIR /opt/make
@@ -55,4 +55,6 @@ RUN patch -d /opt/make -p1 < /tmp/test-runner.patch \
     && perl /usr/local/bin/verify-gnu-test-runner \
     && chmod -R a+rwX /opt/make/tests
 
-CMD ["sh", "/usr/local/bin/verify-make-build"]
+COPY e2e/run-build.sh /usr/local/bin/run-build
+
+CMD ["sh", "/usr/local/bin/run-build", "make"]

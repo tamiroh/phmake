@@ -4,13 +4,13 @@ From the repository root:
 
 ```sh
 docker build --platform linux/amd64 -f e2e/linux/Dockerfile -t phmake-linux-build .
-docker run --rm --platform linux/amd64 --network none phmake-linux-build
+python3 e2e/compare-builds.py linux
 ```
 
 The image pins Linux 6.12 and verifies the archive against its SHA-256 from
 [kernel.org](https://cdn.kernel.org/pub/linux/kernel/v6.x/sha256sums.asc).
-Both configuration and the kernel build use phmake, including recursive make
-invocations. The CI job is named `build-linux`; an unsupported Kbuild feature
+Both configuration and the kernel build use the selected make, including recursive
+invocations. CI runs both GNU make and phmake in the `build-linux` job; an unsupported Kbuild feature
 fails the job so it can become the next compatibility target.
 
 `kernel.config` supplies a small x86_64 configuration to `allnoconfig`. It enables
@@ -26,15 +26,15 @@ QEMU exit and the exact success line, rejects a kernel panic, and times out
 after 120 seconds. This verifies a boot into userspace, not driver or hardware
 coverage. Boot output is printed in the CI log; no artifacts are uploaded.
 
-To validate the test environment independently with GNU make, use a fresh
-container and replace only its make symlink:
+To run only the GNU make reference build:
 
 ```sh
-docker run --rm --platform linux/amd64 --network none phmake-linux-build \
-  sh -c 'ln -sf /usr/bin/make /usr/local/bin/make; exec sh /usr/local/bin/verify-linux-build'
+docker run --rm --init --platform linux/amd64 --network none \
+  -e MAKE_IMPLEMENTATION=gnu phmake-linux-build
 ```
 
-That reference run is a local environment check; CI always uses phmake.
+Omit `MAKE_IMPLEMENTATION` for phmake. See [build comparisons](../README.md) for
+the CI timing table; its elapsed time includes kernel configuration and QEMU boot.
 
 The image packages phmake as an executable PHAR with an absolute PHP interpreter
 path. Kbuild invokes `MAKE` from shell scripts as well as Makefile recipes, so

@@ -27,7 +27,7 @@ COPY tools/build-phar.php tools/build-phar.php
 RUN php -d phar.readonly=0 tools/build-phar.php /tmp/phmake.phar /usr/local/bin/php \
     && mv /tmp/phmake.phar /opt/phmake/phmake
 
-# Recursive make commands must use phmake as well.
+# Default to phmake; run-build selects GNU make for reference builds.
 RUN ln -s /opt/phmake/phmake /usr/local/bin/make
 
 COPY e2e/linux/init.c /tmp/linux-init.c
@@ -38,4 +38,6 @@ COPY e2e/linux/kernel.config /opt/kernel.config
 COPY e2e/linux/verify.sh /usr/local/bin/verify-linux-build
 
 WORKDIR /opt/linux
-CMD ["sh", "/usr/local/bin/verify-linux-build"]
+COPY e2e/run-build.sh /usr/local/bin/run-build
+
+CMD ["sh", "/usr/local/bin/run-build", "linux"]

@@ -16,3 +16,4 @@
 !native/module-host.c
 !native/guile.c
 !native/module-api.h
+!e2e/run-build.sh

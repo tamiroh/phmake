@@ -2,8 +2,8 @@
 set -eu
 
 cd /opt/git
-php /opt/phmake/phmake -j2 NO_TCLTK=YesPlease prefix=/opt/git-install all
-php /opt/phmake/phmake -j2 NO_TCLTK=YesPlease prefix=/opt/git-install install
+make -j2 NO_TCLTK=YesPlease prefix=/opt/git-install all
+make -j2 NO_TCLTK=YesPlease prefix=/opt/git-install install
 
 PATH=/opt/git-install/bin:$PATH
 export PATH

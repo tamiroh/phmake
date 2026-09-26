@@ -2,7 +2,7 @@
 set -eu
 
 cd /opt/make
-php /opt/phmake/phmake
+make
 ./make --version
 ./make --version | grep -Fx 'GNU Make 4.4.1'
 

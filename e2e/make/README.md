@@ -12,6 +12,16 @@ The default command builds GNU make 4.4.1 with phmake and checks the resulting e
 docker run --rm --platform linux/amd64 phmake-make-build
 ```
 
+CI compares this build smoke test with the same build using the image's system
+GNU make, each in a fresh container. Run the comparison locally with:
+
+```sh
+python3 e2e/compare-builds.py make
+```
+
+See [build comparisons](../README.md) for timing details. This comparison does
+not change the separate compatibility suite or its pinned reference executable.
+
 To run GNU make's own test suite against phmake:
 
 ```sh
@@ -95,7 +105,7 @@ ordinary termination signals; image construction fails if the check fails. Test
 cases, expected outputs, and pass/fail comparisons are unchanged except for the
 product-name assertion described below.
 
-In CI, `build-make` runs the build smoke test and `test-gnu-make` runs the full
+In CI, `build-make` runs the build smoke test with both implementations and `test-gnu-make` runs the full
 compatibility suite, first against the reference executable and then against phmake.
 Test failures fail the compatibility job. Output is available
 in the job log, and its job summary shows the counts even when tests fail.

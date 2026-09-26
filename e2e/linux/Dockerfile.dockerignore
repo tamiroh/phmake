@@ -13,3 +13,4 @@
 
 !tools/
 !tools/build-phar.php
+!e2e/run-build.sh

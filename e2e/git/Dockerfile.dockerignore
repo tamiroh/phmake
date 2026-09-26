@@ -7,3 +7,4 @@
 !e2e/
 !e2e/git/
 !e2e/git/verify.sh
+!e2e/run-build.sh
