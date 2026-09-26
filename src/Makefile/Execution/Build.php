@@ -311,6 +311,7 @@ final class Build
                 $alwaysMake ? $prerequisites->normal : $changed,
                 $path->scope,
                 $this->state->remaking ? $this->options->forMakefiles($this->state->restarts) : $this->options,
+                !$this->state->remaking,
             );
         } catch (CommandFailedException $error) {
             if ($rule->group !== []) {

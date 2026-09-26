@@ -1,12 +1,12 @@
 $ ./phmake --no-print-directory -rR -j2
-phmake: *** [fail] Error 1
+phmake: *** [Makefile:4: fail] Error 1
 phmake: *** Waiting for unfinished jobs....
 [exit 2]
 $ test -f finished && test ! -f late && echo waited
 waited
 $ rm started finished
 $ ./phmake --no-print-directory -rR -j2 -k
-phmake: *** [fail] Error 1
+phmake: *** [Makefile:4: fail] Error 1
 phmake: Target 'all' not remade because of errors.
 [exit 2]
 $ test -f finished && test -f late && echo continued

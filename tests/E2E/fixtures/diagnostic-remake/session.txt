@@ -1,0 +1,8 @@
+$ ./phmake --no-print-directory -rR -k
+Makefile:1: missing.mk: No such file or directory
+phmake: *** No rule to make target 'absent', needed by 'missing.mk'.
+Makefile:1: Failed to remake makefile 'missing.mk'.
+[exit 2]
+$ ./phmake --no-print-directory -rR -j2 -f optional.mk
+attempt
+survived

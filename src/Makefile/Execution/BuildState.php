@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
+use Tamiroh\Phmake\Makefile\Diagnostics;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-
-use function spl_object_id;
 
 final class BuildState
 {
@@ -19,9 +18,6 @@ final class BuildState
 
     /** @var array<string, true> */
     public array $simulated = [];
-
-    /** @var array<int, true> */
-    private array $reported = [];
 
     public bool $remaking = false;
 
@@ -37,17 +33,8 @@ final class BuildState
 
     public function failure(MakefileErrorException|CommandFailedException $error, Output $output): UpdateResult
     {
-        if (!$this->remaking && !isset($this->reported[spl_object_id($error)])) {
-            if (!($error instanceof CommandFailedException && $error->reported)) {
-                $output->writeWarning(
-                    '*** ' . $error->getMessage() . ($error instanceof CommandFailedException ? '' : '.'),
-                    $error instanceof MakefileErrorException ? $error->source : null,
-                );
-            }
-            $this->reported[spl_object_id($error)] = true;
-            if ($error instanceof CommandFailedException) {
-                $error->reported = true;
-            }
+        if (!$this->remaking) {
+            Diagnostics::report($error, $output, false);
         }
         return new UpdateResult(failure: $error);
     }

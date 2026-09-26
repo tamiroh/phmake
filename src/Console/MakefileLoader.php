@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Tamiroh\Phmake\Makefile\Builtins;
+use Tamiroh\Phmake\Makefile\Diagnostics;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Execution\Build;
 use Tamiroh\Phmake\Makefile\Execution\CommandFailedException;
@@ -67,6 +68,9 @@ final readonly class MakefileLoader
                     new Shell(output: $this->output),
                     new Filesystem(),
                 )->parse();
+            } catch (MakefileErrorException $error) {
+                Diagnostics::report($error, $this->output);
+                throw $error;
             } finally {
                 $this->output->endTarget();
             }
@@ -93,7 +97,7 @@ final readonly class MakefileLoader
                 );
             }
             try {
-                if ($this->remake($sources, $build)) {
+                if ($this->remake($sources, $build, $configuration->execution->keepGoing)) {
                     $build->cleanup();
                     $restarts++;
                     continue;
@@ -147,7 +151,7 @@ final readonly class MakefileLoader
      * @throws MakefileErrorException
      * @throws CommandFailedException
      */
-    private function remake(MakefileSources $sources, Build $build): bool
+    private function remake(MakefileSources $sources, Build $build, bool $keepGoing): bool
     {
         $names = [];
         $inputs = [];
@@ -189,6 +193,10 @@ final readonly class MakefileLoader
                         $file->path . ': ' . ($file->error ?? 'No such file or directory'),
                         $file->source,
                     );
+                }
+                if ($keepGoing) {
+                    Diagnostics::report($errors[$file->path], $this->output, false);
+                    $this->output->writeWarning("Failed to remake makefile '$file->path'.", $file->source);
                 }
                 throw $errors[$file->path];
             }

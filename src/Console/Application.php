@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Tamiroh\Phmake\Makefile\Builtins;
+use Tamiroh\Phmake\Makefile\Diagnostics;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Execution\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
@@ -28,12 +29,16 @@ final readonly class Application
     public function run(array $arguments): void
     {
         $signals = new Signals();
+        $status = 0;
         try {
-            $this->execute($arguments);
+            $status = $this->execute($arguments);
         } catch (InterruptedException) {
             // Active recipes report their own interruption before the process exits by signal.
         } finally {
             $signals->finish();
+        }
+        if ($status !== 0) {
+            exit($status);
         }
     }
 
@@ -42,8 +47,11 @@ final readonly class Application
      *
      * @throws InterruptedException
      */
-    private function execute(array $arguments): void
+    private function execute(array $arguments): int
     {
+        $level = max(0, (int) getenv('MAKELEVEL'));
+        $output = new Output(level: $level);
+        $printDirectory = false;
         try {
             $defaults = $this->initialVariables();
             $commandLine = new CommandLine(
@@ -54,14 +62,13 @@ final readonly class Application
             );
             if ($commandLine->version) {
                 echo "phmake (development)\n";
-                return;
+                return 0;
             }
             foreach ($commandLine->input->directories as $directory) {
                 if (!@chdir($directory)) {
                     throw new MakefileErrorException("Cannot change directory to '$directory'");
                 }
             }
-            $level = max(0, (int) getenv('MAKELEVEL'));
             $output = new Output($commandLine->execution->silent, $level, $commandLine->execution->parallel);
             $printDirectory =
                 $commandLine->printDirectory
@@ -71,32 +78,25 @@ final readonly class Application
             if ($printDirectory) {
                 $output->writeDirectory(true, (string) getcwd());
             }
-            try {
-                $status = new MakefileLoader(
-                    $commandLine,
-                    $output,
-                    $defaults,
-                    $level,
-                )->load()->run($commandLine->targets);
-            } finally {
-                if ($printDirectory) {
-                    $output->writeDirectory(false, (string) getcwd());
-                }
+            return new MakefileLoader($commandLine, $output, $defaults, $level)->load()->run($commandLine->targets);
+        } catch (InterruptedException $error) {
+            throw $error;
+        } catch (CommandFailedException|MakefileErrorException $error) {
+            Diagnostics::report($error, $output);
+            return 2;
+        } catch (ParseException $error) {
+            Diagnostics::report(
+                new MakefileErrorException(
+                    $error->reason,
+                    ($commandLine->input->makefiles[0] ?? 'Makefile') . ":$error->lineNumber",
+                ),
+                $output,
+            );
+            return 2;
+        } finally {
+            if ($printDirectory) {
+                $output->writeDirectory(false, (string) getcwd());
             }
-            if ($status !== 0) {
-                exit($status);
-            }
-        } catch (InterruptedException $e) {
-            throw $e;
-        } catch (CommandFailedException $e) {
-            if ($e->reported) {
-                exit(2);
-            }
-            Process::stopWithCommandFailure($e->target, $e->exitCode);
-        } catch (ParseException $e) {
-            Process::stopWithError($e->reason, ($commandLine->input->makefiles[0] ?? 'Makefile') . ":$e->lineNumber");
-        } catch (MakefileErrorException $e) {
-            Process::stopWithError($e->getMessage(), $e->source ?? 'phmake');
         }
     }
 

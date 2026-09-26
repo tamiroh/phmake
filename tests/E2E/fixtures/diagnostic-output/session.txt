@@ -1,0 +1,20 @@
+$ ./phmake -rR -w -Otarget > output.txt 2>&1; status=$?; sed "s|$PWD|WORK|g" output.txt; test "$status" -eq 2
+phmake: Entering directory 'WORK'
+before
+phmake: *** [Makefile:3: all] Error 1
+phmake: Leaving directory 'WORK'
+$ ./phmake -rR -w -Otarget -f parse.mk > output.txt 2>&1; status=$?; sed "s|$PWD|WORK|g" output.txt; test "$status" -eq 2
+phmake: Entering directory 'WORK'
+parsing
+parse.mk:2: *** parse failed.  Stop.
+phmake: Leaving directory 'WORK'
+$ ./phmake -rR -w -Otarget -f expand.mk > output.txt 2>&1; status=$?; sed "s|$PWD|WORK|g" output.txt; test "$status" -eq 2
+phmake: Entering directory 'WORK'
+expanding
+expand.mk:2: *** expansion failed.  Stop.
+phmake: Leaving directory 'WORK'
+$ ./phmake -rR -w -Oline -f line.mk > output.txt 2>&1; status=$?; sed "s|$PWD|WORK|g" output.txt; test "$status" -eq 2
+phmake: Entering directory 'WORK'
+before
+phmake: *** [line.mk:2: all] Error 1
+phmake: Leaving directory 'WORK'

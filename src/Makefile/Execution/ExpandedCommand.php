@@ -25,6 +25,7 @@ final readonly class ExpandedCommand
         public string $expression,
         private string $prefix = '',
         private bool $recursive = false,
+        public ?string $source = null,
     ) {}
 
     /**
@@ -107,7 +108,13 @@ final readonly class ExpandedCommand
                 return new CommandResult(true, true, needsUpdate: true);
             }
             if ($exitCode !== 0 && ($options->ignoreErrors || str_contains($prefix, '-'))) {
-                $output->writeWarning(($target === null ? '' : "[$target] ") . "Error {$exitCode} (ignored)");
+                $output->writeWarning(
+                    (
+                        $target === null
+                            ? "Error $exitCode"
+                            : new CommandFailedException($target, $exitCode, $this->source)->getMessage()
+                    ) . ' (ignored)',
+                );
                 return new CommandResult(true);
             }
             return new CommandResult(true, exitCode: $exitCode);

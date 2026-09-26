@@ -1,6 +1,6 @@
 $ echo retained > second
 $ ./phmake -rR -k
-phmake: *** [first] Error 1
+phmake: *** [Makefile:5: first] Error 1
 phmake: *** Deleting file 'first'
 phmake: *** [first] Deleting file 'second'
 independent

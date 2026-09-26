@@ -1,0 +1,3 @@
+all:
+	@echo before
+	@false

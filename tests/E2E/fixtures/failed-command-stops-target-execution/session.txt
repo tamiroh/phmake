@@ -1,4 +1,4 @@
 $ ./phmake foo
 false
-phmake: *** [foo] Error 1
+phmake: *** [Makefile:2: foo] Error 1
 [exit 2]

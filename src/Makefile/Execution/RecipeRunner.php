@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
+use Tamiroh\Phmake\Makefile\Diagnostics;
 use Tamiroh\Phmake\Makefile\Evaluation\AutomaticVariables;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
@@ -47,6 +48,7 @@ final readonly class RecipeRunner
         array $changed,
         VariableScope $scope,
         ExecutionOptions $options,
+        bool $reportFailure = true,
     ): CommandResult {
         if ($this->output instanceof RecipeOutput) {
             $this->output->beginTarget();
@@ -97,10 +99,11 @@ final readonly class RecipeRunner
             foreach ($expanded as $command) {
                 $result = $command->run($shell, $this->output, $options, $oneShell, $target->name);
                 if ($result->exitCode !== 0) {
-                    $error = new CommandFailedException($target->name, $result->exitCode);
+                    $error = new CommandFailedException($target->name, $result->exitCode, $command->source);
+                    if ($reportFailure || isset($this->makefile->targetsByName['.DELETE_ON_ERROR'])) {
+                        Diagnostics::report($error, $this->output);
+                    }
                     if (isset($this->makefile->targetsByName['.DELETE_ON_ERROR'])) {
-                        $this->output->writeWarning('*** ' . $error->getMessage());
-                        $error->reported = true;
                         foreach ([$target->name, ...$rule->group] as $name) {
                             if (
                                 !$this->applies('.PRECIOUS', $name)
@@ -160,6 +163,9 @@ final readonly class RecipeRunner
                     $this->output->writeWarning("*** Deleting file '$name'");
                 }
             }
+            throw $error;
+        } catch (MakefileErrorException $error) {
+            Diagnostics::report($error, $this->output);
             throw $error;
         } finally {
             if ($this->output instanceof RecipeOutput) {

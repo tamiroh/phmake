@@ -1,0 +1,16 @@
+$ ./phmake --no-print-directory -rR failed
+before
+phmake: *** [recipe.mk:4: failed] Error 1
+[exit 2]
+$ ./phmake --no-print-directory -rR ignored
+phmake: [recipe.mk:7: ignored] Error 1 (ignored)
+continued
+$ ./phmake --no-print-directory -rR recursive
+child
+phmake[1]: *** [child.mk:3: all] Error 1
+phmake: *** [recipe.mk:10: recursive] Error 2
+[exit 2]
+$ ./phmake --no-print-directory -rR -f oneshell.mk
+before
+phmake: *** [oneshell.mk:5: all] Error 1
+[exit 2]

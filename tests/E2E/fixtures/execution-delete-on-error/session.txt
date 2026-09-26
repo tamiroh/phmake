@@ -1,14 +1,14 @@
 $ ./phmake -rR broken
-phmake: *** [broken] Error 1
+phmake: *** [Makefile:5: broken] Error 1
 phmake: *** Deleting file 'broken'
 [exit 2]
 $ test ! -f broken
 $ ./phmake -rR saved
-phmake: *** [saved] Error 1
+phmake: *** [Makefile:5: saved] Error 1
 [exit 2]
 $ cat saved
 partial
 $ ./phmake -rR -i broken
-phmake: [broken] Error 1 (ignored)
+phmake: [Makefile:5: broken] Error 1 (ignored)
 $ cat broken
 partial

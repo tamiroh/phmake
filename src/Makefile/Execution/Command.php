@@ -35,6 +35,7 @@ final readonly class Command
                 : new VariableExpander($variables, $output, source: $this->source))->expand($this->expression),
             substr(ltrim($this->expression), 0, strspn(ltrim($this->expression), "@-+ \t")),
             str_contains($this->expression, '$(MAKE)') || str_contains($this->expression, '${MAKE}'),
+            $this->source,
         );
     }
 

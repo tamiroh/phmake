@@ -4,7 +4,7 @@ echo normal
 normal
 $ ./phmake -rR ignored
 false
-phmake: [ignored] Error 1 (ignored)
+phmake: [Makefile:6: ignored] Error 1 (ignored)
 echo continued
 continued
 $ ./phmake -rR -sn quiet normal

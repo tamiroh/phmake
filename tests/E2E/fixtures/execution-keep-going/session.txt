@@ -1,15 +1,15 @@
 $ ./phmake -rR -k
-phmake: *** [bad] Error 1
+phmake: *** [Makefile:4: bad] Error 1
 good
 phmake: Target 'all' not remade because of errors.
 [exit 2]
 $ ./phmake -rR
-phmake: *** [bad] Error 1
+phmake: *** [Makefile:4: bad] Error 1
 [exit 2]
 $ ./phmake -rR -k -S
-phmake: *** [bad] Error 1
+phmake: *** [Makefile:4: bad] Error 1
 [exit 2]
 $ ./phmake -rR -k independent
-phmake: *** [independent] Error 1
+phmake: *** [Makefile:10: independent] Error 1
 second-rule
 [exit 2]
