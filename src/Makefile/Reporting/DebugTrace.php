@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile;
+namespace Tamiroh\Phmake\Makefile\Reporting;
 
 use Tamiroh\Phmake\Makefile\IO\Output;
 

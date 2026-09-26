@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use Closure;
-use Tamiroh\Phmake\Makefile\Execution\ExportingShell;
+use Tamiroh\Phmake\Makefile\Evaluation\Environment\ExportingShell;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;

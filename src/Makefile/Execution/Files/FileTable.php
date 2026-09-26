@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Execution;
+namespace Tamiroh\Phmake\Makefile\Execution\Files;
 
 /**
  * Preserve file-table traversal order for intermediate cleanup diagnostics.

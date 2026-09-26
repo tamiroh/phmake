@@ -7,7 +7,7 @@ namespace Tamiroh\Phmake\Console\Process;
 use Override;
 use Random\RandomException;
 use Tamiroh\Phmake\Console\Output\Output;
-use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;
+use Tamiroh\Phmake\Makefile\Execution\Scheduling\ParallelOptions;
 use Tamiroh\Phmake\Makefile\IO\JobSlots;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 

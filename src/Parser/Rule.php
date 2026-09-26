@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
-use Tamiroh\Phmake\Makefile\Execution\Command;
+use Tamiroh\Phmake\Makefile\Execution\Recipe\Command;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 
 use function trim;

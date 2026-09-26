@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console\Output;
 
 use Override;
-use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;
+use Tamiroh\Phmake\Makefile\Execution\Scheduling\ParallelOptions;
 use Tamiroh\Phmake\Makefile\IO\RecipeOutput;
 
 use const PHP_EOL;

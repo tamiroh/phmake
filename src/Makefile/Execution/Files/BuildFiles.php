@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Execution;
+namespace Tamiroh\Phmake\Makefile\Execution\Files;
 
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Execution\BuildState;
+use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Makefile;

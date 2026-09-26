@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Rule;
 
-use Tamiroh\Phmake\Makefile\Execution\Command;
+use Tamiroh\Phmake\Makefile\Execution\Recipe\Command;
 
 /**
  * One recipe shared by every target belonging to a grouped rule.

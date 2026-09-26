@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Execution;
+namespace Tamiroh\Phmake\Makefile\Execution\Scheduling;
 
 use Closure;
 use Fiber;
 use LogicException;
+use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
+use Tamiroh\Phmake\Makefile\Execution\UpdateResult;
 use Tamiroh\Phmake\Makefile\IO\JobSlots;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;

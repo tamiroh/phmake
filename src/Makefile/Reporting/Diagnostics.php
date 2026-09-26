@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile;
+namespace Tamiroh\Phmake\Makefile\Reporting;
 
-use Tamiroh\Phmake\Makefile\Execution\CommandFailedException;
+use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\IO\Output;
+use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 use function str_ends_with;
 use function trim;

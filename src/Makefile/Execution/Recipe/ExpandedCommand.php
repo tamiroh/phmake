@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Execution;
+namespace Tamiroh\Phmake\Makefile\Execution\Recipe;
 
+use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\RecipeOutput;
 use Tamiroh\Phmake\Makefile\IO\Shell;

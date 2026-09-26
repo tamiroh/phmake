@@ -15,11 +15,11 @@ use Tamiroh\Phmake\Console\Process\ModuleHost;
 use Tamiroh\Phmake\Console\Process\RestartFailureException;
 use Tamiroh\Phmake\Console\Process\Signals;
 use Tamiroh\Phmake\Makefile\Builtins;
-use Tamiroh\Phmake\Makefile\Diagnostics;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
-use Tamiroh\Phmake\Makefile\Execution\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
+use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
 use Tamiroh\Phmake\Parser\ParseException;
 
 use function basename;

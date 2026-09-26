@@ -6,7 +6,7 @@ namespace Tamiroh\Phmake\Console\Output;
 
 use Fiber;
 use RuntimeException;
-use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;
+use Tamiroh\Phmake\Makefile\Execution\Scheduling\ParallelOptions;
 use WeakMap;
 
 use function fclose;

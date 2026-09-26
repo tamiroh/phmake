@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
-use Tamiroh\Phmake\Makefile\ReportingOptions;
+use Tamiroh\Phmake\Makefile\Execution\Files\FileOptions;
+use Tamiroh\Phmake\Makefile\Execution\Scheduling\ParallelOptions;
+use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 
 final class ExecutionOptions
 {

@@ -8,8 +8,8 @@ use Phar;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Output\OutputBuffer;
-use Tamiroh\Phmake\Makefile\DebugTrace;
-use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;
+use Tamiroh\Phmake\Makefile\Execution\Scheduling\ParallelOptions;
+use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
 
 use function array_filter;
 use function array_values;

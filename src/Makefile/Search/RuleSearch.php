@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Search;
 
-use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\Evaluation\SecondaryExpansion;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
@@ -12,6 +11,7 @@ use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
 use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;

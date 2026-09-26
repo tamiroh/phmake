@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Evaluation\Environment;
 
 final class EnvironmentState
 {

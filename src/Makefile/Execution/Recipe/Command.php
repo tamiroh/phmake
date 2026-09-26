@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Execution;
+namespace Tamiroh\Phmake\Makefile\Execution\Recipe;
 
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;

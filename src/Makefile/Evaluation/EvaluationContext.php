@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use Closure;
+use Tamiroh\Phmake\Makefile\Evaluation\Environment\EnvironmentState;
+use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
+use Tamiroh\Phmake\Makefile\Evaluation\Module\Modules;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Shell;
-use Tamiroh\Phmake\Makefile\ReportingOptions;
+use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 
 use function in_array;
 

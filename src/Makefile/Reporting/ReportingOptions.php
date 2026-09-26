@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile;
+namespace Tamiroh\Phmake\Makefile\Reporting;
+
+use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 use function explode;
 use function in_array;

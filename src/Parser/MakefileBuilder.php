@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
+use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
-use Tamiroh\Phmake\Makefile\Evaluation\Exports;
 use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;

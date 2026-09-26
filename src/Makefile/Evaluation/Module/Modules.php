@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Evaluation\Module;
 
 use Closure;
+use Tamiroh\Phmake\Makefile\Evaluation\Functions;
+use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\ModuleHost;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
