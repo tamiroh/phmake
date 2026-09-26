@@ -12,6 +12,6 @@ final class ParseException extends Exception
         public readonly int $lineNumber,
         public readonly string $reason,
     ) {
-        parent::__construct("Makefile:$lineNumber: $reason");
+        parent::__construct("Makefile:{$lineNumber}: {$reason}");
     }
 }

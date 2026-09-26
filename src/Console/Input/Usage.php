@@ -15,7 +15,7 @@ final class Usage
     public static function text(string $program): string
     {
         return (
-            "Usage: $program [options] [target ...]\n"
+            "Usage: {$program} [options] [target ...]\n"
             . "  -f FILE, --file=FILE       Read FILE as a makefile (- for standard input).\n"
             . "  -C DIR, --directory=DIR    Change directory before reading makefiles.\n"
             . "  -j [N], --jobs[=N]        Run recipes in parallel.\n"

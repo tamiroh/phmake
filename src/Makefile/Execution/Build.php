@@ -103,14 +103,14 @@ final class Build
             $target = $this->makefile->targetsByName[$name] ?? null;
             if ($target?->isPhony === true) {
                 if (!$this->filesystem->exists($name)) {
-                    $errors[$name] = new UnremadeMakefileException("No rule to make target '$name'");
+                    $errors[$name] = new UnremadeMakefileException("No rule to make target '{$name}'");
                 }
                 continue;
             }
             foreach ($target->rules ?? [] as $rule) {
                 if ($rule->doubleColon && $rule->prerequisites->sequence === [] && $rule->recipe !== null) {
                     if (!$this->filesystem->exists($name)) {
-                        $errors[$name] = new UnremadeMakefileException("No rule to make target '$name'");
+                        $errors[$name] = new UnremadeMakefileException("No rule to make target '{$name}'");
                     }
                     continue 2;
                 }
@@ -190,14 +190,14 @@ final class Build
                         if ($result->failure !== null) {
                             $this->state->failed = true;
                             if ($result->blocked) {
-                                $this->output->writeWarning("Target '$name' not remade because of errors.");
+                                $this->output->writeWarning("Target '{$name}' not remade because of errors.");
                             }
                         } elseif (!$executed && !$this->options->question && !$this->options->reporting->silent) {
                             $target = $this->search->resolve($name, $this->path->scope);
                             $this->output->writeInfo(
                                 $target === null || $target->isPhony || ($target->rules[0]->recipe ?? null) === null
-                                    ? "Nothing to be done for '$name'."
-                                    : "'$name' is up to date.",
+                                    ? "Nothing to be done for '{$name}'."
+                                    : "'{$name}' is up to date.",
                             );
                         }
                         return $result;
@@ -411,7 +411,7 @@ final class Build
                     && !$this->filesystem->exists($peer)
                 ) {
                     $this->output->writeWarning(
-                        "warning: pattern recipe did not update peer target '$peer'.",
+                        "warning: pattern recipe did not update peer target '{$peer}'.",
                         $rule->recipe?->source,
                     );
                 }
@@ -463,7 +463,7 @@ final class Build
                 continue;
             }
             if (isset($path->visiting[$dependency])) {
-                $this->output->writeWarning("Circular $name <- $dependency dependency dropped.");
+                $this->output->writeWarning("Circular {$name} <- {$dependency} dependency dropped.");
                 $this->state->dropped[$name][$dependency] = true;
                 continue;
             }
@@ -651,7 +651,7 @@ final class Build
             $this->options->reporting,
             $this->output,
             'v',
-            "Considering target file '$name'.",
+            "Considering target file '{$name}'.",
             count($path->visiting),
         );
         if ($this->files->time($name) === null) {
@@ -659,7 +659,7 @@ final class Build
                 $this->options->reporting,
                 $this->output,
                 'b',
-                " File '$name' does not exist.",
+                " File '{$name}' does not exist.",
                 count($path->visiting),
             );
         }

@@ -105,8 +105,8 @@ final class Shell implements ShellInterface
                         $this->output,
                         'j',
                         $exitCode === null
-                            ? "Putting child PID $pid on the chain."
-                            : 'Reaping ' . ($exitCode === 0 ? 'winning' : 'losing') . " child PID $pid",
+                            ? "Putting child PID {$pid} on the chain."
+                            : 'Reaping ' . ($exitCode === 0 ? 'winning' : 'losing') . " child PID {$pid}",
                     );
                 }
             },

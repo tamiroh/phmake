@@ -16,35 +16,35 @@ final class FileHash
      */
     public static function value(string $name): int
     {
-        $a = $b = $c = 0xdeadbeef;
+        $a = $b = $c = 0xdead_beef;
         $offset = 0;
         while (true) {
-            $a = ($a + self::word($name, $offset)) & 0xffffffff;
+            $a = ($a + self::word($name, $offset)) & 0xffff_ffff;
             if ((strlen($name) - $offset) < 4) {
                 break;
             }
             $offset += 4;
-            $b = ($b + self::word($name, $offset)) & 0xffffffff;
+            $b = ($b + self::word($name, $offset)) & 0xffff_ffff;
             if ((strlen($name) - $offset) < 4) {
                 break;
             }
             $offset += 4;
-            $c = ($c + self::word($name, $offset)) & 0xffffffff;
+            $c = ($c + self::word($name, $offset)) & 0xffff_ffff;
             if ((strlen($name) - $offset) < 4) {
                 break;
             }
             $offset += 4;
             foreach ([4, 6, 8, 16, 19, 4] as $rotation) {
-                $a = (($a - $c) & 0xffffffff) ^ self::rotate($c, $rotation);
-                $c = ($c + $b) & 0xffffffff;
+                $a = (($a - $c) & 0xffff_ffff) ^ self::rotate($c, $rotation);
+                $c = ($c + $b) & 0xffff_ffff;
                 [$a, $b, $c] = [$b, $c, $a];
             }
         }
         foreach ([14, 11, 25, 16, 4, 14, 24] as $rotation) {
-            $c = (($c ^ $b) - self::rotate($b, $rotation)) & 0xffffffff;
+            $c = (($c ^ $b) - self::rotate($b, $rotation)) & 0xffff_ffff;
             [$a, $b, $c] = [$b, $c, $a];
         }
-        return ($b + $offset) & 0xffffffff;
+        return ($b + $offset) & 0xffff_ffff;
     }
 
     /**
@@ -52,7 +52,7 @@ final class FileHash
      */
     private static function rotate(int $value, int $count): int
     {
-        return (($value << $count) | ($value >> (32 - $count))) & 0xffffffff;
+        return (($value << $count) | ($value >> (32 - $count))) & 0xffff_ffff;
     }
 
     /**

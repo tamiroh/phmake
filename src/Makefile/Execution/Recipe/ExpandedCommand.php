@@ -116,7 +116,7 @@ final readonly class ExpandedCommand
                 $output->writeWarning(
                     (
                         $target === null
-                            ? "Error $exitCode"
+                            ? "Error {$exitCode}"
                             : new CommandFailedException($target, $exitCode, $this->source)->getMessage()
                     ) . ' (ignored)',
                 );

@@ -67,7 +67,7 @@ final class Modules
         }
         if (count($arguments) < $function->minimum) {
             throw new MakefileErrorException(
-                'insufficient number of arguments (' . count($arguments) . ") to function '$name'",
+                'insufficient number of arguments (' . count($arguments) . ") to function '{$name}'",
             );
         }
         if ($function->maximum !== 0) {
@@ -153,7 +153,7 @@ final class Modules
                 if ($kind === 'F' && count($values) === 4) {
                     $name = $values[0];
                     if (preg_match('/^[A-Za-z0-9_.-]+$/D', $name) !== 1) {
-                        throw new MakefileErrorException("Invalid loaded function name '$name'");
+                        throw new MakefileErrorException("Invalid loaded function name '{$name}'");
                     }
                     $this->functions[$name] = new ModuleFunction(
                         $module,

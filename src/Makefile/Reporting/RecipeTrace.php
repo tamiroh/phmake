@@ -48,6 +48,8 @@ final class RecipeTrace
                 $reason = $missing === [] ? 'unknown reasons' : implode(' ', $missing);
             }
         }
-        $output->write(($rule->recipe->source ?? '<builtin>') . ": update target '$target->name' due to: $reason\n");
+        $output->write(
+            ($rule->recipe->source ?? '<builtin>') . ": update target '{$target->name}' due to: {$reason}\n",
+        );
     }
 }

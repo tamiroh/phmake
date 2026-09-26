@@ -17,6 +17,7 @@ use-tabs = false
 integrations = ["phpunit"]
 
 [linter.rules]
+prefer-early-continue = { enabled = false }
 ambiguous-function-call = { enabled = true }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }

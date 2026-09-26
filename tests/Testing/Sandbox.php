@@ -60,7 +60,7 @@ final readonly class Sandbox
                         $sandbox->path . '/phmake',
                         "#!/bin/sh\nexec " . escapeshellarg($executable) . ' "$@"' . "\n",
                     ) === false
-                    || !chmod($sandbox->path . '/phmake', permissions: 0755)
+                    || !chmod($sandbox->path . '/phmake', permissions: 0o755)
                 ) {
                     throw new RuntimeException('Failed to create GNU make launcher');
                 }
@@ -110,7 +110,7 @@ final readonly class Sandbox
             $output .= "\n[no newline]\n";
         }
         if ($exitCode !== 0) {
-            $output .= "[exit $exitCode]\n";
+            $output .= "[exit {$exitCode}]\n";
         }
 
         return $output;

@@ -140,7 +140,7 @@ final class MakefileBuilder
             }
             $stem = $rule->targetPattern === null ? '' : new Pattern($rule->targetPattern)->match($name);
             if ($stem === null) {
-                $this->output?->writeWarning("target '$name' doesn't match the target pattern", $rule->source);
+                $this->output?->writeWarning("target '{$name}' doesn't match the target pattern", $rule->source);
             }
             $prerequisites =
                 $rule->targetPattern === null || $stem === null
@@ -281,15 +281,18 @@ final class MakefileBuilder
     {
         $previous = $this->targets[$name]->rules[0] ?? null;
         if ($previous !== null && $previous->doubleColon !== $rule->doubleColon) {
-            throw new ParseException($declaration->lineNumber, "target file '$name' has both : and :: entries");
+            throw new ParseException($declaration->lineNumber, "target file '{$name}' has both : and :: entries");
         }
         if ($previous === null || $rule->doubleColon) {
             $this->targets[$name] = new Target($name, [...($this->targets[$name]->rules ?? []), $rule]);
             return;
         }
         if ($rule->recipe !== null && $previous->recipe !== null) {
-            $this->output?->writeWarning("warning: overriding recipe for target '$name'", $rule->recipe->source);
-            $this->output?->writeWarning("warning: ignoring old recipe for target '$name'", $previous->recipe->source);
+            $this->output?->writeWarning("warning: overriding recipe for target '{$name}'", $rule->recipe->source);
+            $this->output?->writeWarning(
+                "warning: ignoring old recipe for target '{$name}'",
+                $previous->recipe->source,
+            );
         }
         $this->targets[$name] = new Target($name, [new BuildRule(
             $rule->recipe === null

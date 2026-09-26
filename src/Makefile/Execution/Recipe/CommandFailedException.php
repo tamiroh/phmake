@@ -15,6 +15,6 @@ final class CommandFailedException extends Exception
         public readonly int $exitCode,
         ?string $source = null,
     ) {
-        parent::__construct('[' . ($source === null ? '' : $source . ': ') . "$target] Error $exitCode");
+        parent::__construct('[' . ($source === null ? '' : $source . ': ') . "{$target}] Error {$exitCode}");
     }
 }

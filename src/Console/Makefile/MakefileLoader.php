@@ -229,7 +229,7 @@ final readonly class MakefileLoader
                     && $errors[$file->path]->target !== $file->path
                     && ($inputs[$errors[$file->path]->target]->optional ?? false)
                 ) {
-                    $this->output->writeWarning("Failed to remake makefile '$file->path'.", $file->source);
+                    $this->output->writeWarning("Failed to remake makefile '{$file->path}'.", $file->source);
                     $errors[$file->path]->reported = true;
                     throw $errors[$file->path];
                 }
@@ -245,7 +245,7 @@ final readonly class MakefileLoader
                 }
                 if ($keepGoing) {
                     Diagnostics::report($errors[$file->path], $this->output, false);
-                    $this->output->writeWarning("Failed to remake makefile '$file->path'.", $file->source);
+                    $this->output->writeWarning("Failed to remake makefile '{$file->path}'.", $file->source);
                 }
                 throw $errors[$file->path];
             }

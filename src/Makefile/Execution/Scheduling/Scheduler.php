@@ -116,7 +116,7 @@ final class Scheduler
             if ($owner !== null && $task->waitsFor($owner)) {
                 foreach ($this->tasks as $parent => $candidate) {
                     if ($candidate === $owner) {
-                        $this->output?->writeWarning("Circular $parent <- $name dependency dropped.");
+                        $this->output?->writeWarning("Circular {$parent} <- {$name} dependency dropped.");
                         break;
                     }
                 }

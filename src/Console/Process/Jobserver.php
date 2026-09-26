@@ -155,7 +155,7 @@ final class Jobserver implements JobSlots
             $path = substr($auth, 5);
             $reader = @fopen($path, 'r+');
             if (!is_resource($reader)) {
-                $output->writeWarning("cannot open jobserver $path: No such file or directory", $output->prefix);
+                $output->writeWarning("cannot open jobserver {$path}: No such file or directory", $output->prefix);
                 return false;
             }
             $this->reader = $this->writer = $reader;
@@ -195,7 +195,7 @@ final class Jobserver implements JobSlots
         } catch (RandomException $error) {
             throw new MakefileErrorException($error->getMessage());
         }
-        if (!@mkdir($this->directory, 0700)) {
+        if (!@mkdir($this->directory, 0o700)) {
             $output->writeWarning('cannot create jobserver: No such file or directory', $output->prefix);
             $this->directory = null;
             $this->pipe();

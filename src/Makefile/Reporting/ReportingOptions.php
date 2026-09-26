@@ -45,7 +45,7 @@ final class ReportingOptions
     {
         foreach (explode(',', str_replace(' ', ',', rtrim($levels, ', '))) as $level) {
             if (!in_array(strtolower($level[0] ?? ''), ['a', 'b', 'i', 'j', 'm', 'n', 'p', 'v', 'w'], true)) {
-                throw new MakefileErrorException("unknown debug level specification '$level'");
+                throw new MakefileErrorException("unknown debug level specification '{$level}'");
             }
         }
         if (!in_array($levels, $this->debugLevels, true)) {

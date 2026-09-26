@@ -74,7 +74,7 @@ final class SearchPaths
         $names = [];
         foreach ($patterns as $pattern) {
             if (!new Pattern($pattern)->hasWildcard()) {
-                $expander->output?->writeWarning(".LIBPATTERNS element '$pattern' is not a pattern");
+                $expander->output?->writeWarning(".LIBPATTERNS element '{$pattern}' is not a pattern");
                 continue;
             }
             $names[] = new Pattern($pattern)->substitute(substr($name, 2));

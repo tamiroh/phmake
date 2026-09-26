@@ -1266,7 +1266,8 @@ final class Functions
     {
         if (preg_match('/^[0-9]+$/D', trim($value)) !== 1) {
             throw new MakefileErrorException(
-                "invalid $position argument to '$function' function: " . ($value === '' ? 'empty value' : "'$value'"),
+                "invalid {$position} argument to '{$function}' function: "
+                . ($value === '' ? 'empty value' : "'{$value}'"),
             );
         }
         $digits = ltrim(trim($value), '0');
@@ -1275,14 +1276,14 @@ final class Functions
             || strlen($digits) === strlen((string) PHP_INT_MAX) && strcmp($digits, (string) PHP_INT_MAX) > 0
         ) {
             throw new MakefileErrorException(
-                "invalid $position argument to '$function' function: '$value' out of range",
+                "invalid {$position} argument to '{$function}' function: '{$value}' out of range",
             );
         }
         if ((int) $digits < $minimum) {
             if ($function === 'wordlist') {
-                throw new MakefileErrorException("invalid $position argument to '$function' function: '$value'");
+                throw new MakefileErrorException("invalid {$position} argument to '{$function}' function: '{$value}'");
             }
-            throw new MakefileErrorException("$position argument to '$function' function must be greater than 0");
+            throw new MakefileErrorException("{$position} argument to '{$function}' function must be greater than 0");
         }
         return (int) $digits;
     }
@@ -1295,7 +1296,8 @@ final class Functions
         $text = trim($text);
         if (preg_match('/^[+-]?[0-9]+$/D', $text) !== 1) {
             throw new MakefileErrorException(
-                "non-numeric $position argument to 'intcmp' function: " . ($text === '' ? 'empty value' : "'$text'"),
+                "non-numeric {$position} argument to 'intcmp' function: "
+                . ($text === '' ? 'empty value' : "'{$text}'"),
                 $source,
             );
         }

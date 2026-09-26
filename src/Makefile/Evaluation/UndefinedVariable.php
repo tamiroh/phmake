@@ -34,7 +34,7 @@ final class UndefinedVariable
                 true,
             )
         ) {
-            $expander->output?->writeWarning("warning: undefined variable '$name'", $expander->source);
+            $expander->output?->writeWarning("warning: undefined variable '{$name}'", $expander->source);
         }
     }
 }

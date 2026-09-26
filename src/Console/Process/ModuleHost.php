@@ -74,7 +74,7 @@ final class ModuleHost implements ModuleHostInterface
         while (true) {
             $kind = $this->read(1);
             $count = $this->number();
-            if ($count > 65536) {
+            if ($count > 65_536) {
                 throw new MakefileErrorException('Invalid native module response');
             }
             $values = [];

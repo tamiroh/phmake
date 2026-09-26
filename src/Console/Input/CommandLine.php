@@ -318,13 +318,13 @@ final class CommandLine implements Configuration
             $shuffle = $argument === '--shuffle' ? 'random' : substr($argument, 10);
             if ($shuffle === 'random') {
                 try {
-                    $shuffle = (string) random_int(0, 2147483647);
+                    $shuffle = (string) random_int(0, 2_147_483_647);
                 } catch (RandomException $error) {
                     throw new MakefileErrorException($error->getMessage());
                 }
             }
             if (!in_array($shuffle, ['none', 'identity', 'reverse'], true) && !ctype_digit($shuffle)) {
-                throw new MakefileErrorException("invalid shuffle mode: '$shuffle'");
+                throw new MakefileErrorException("invalid shuffle mode: '{$shuffle}'");
             }
             $this->execution->parallel->shuffle = in_array($shuffle, ['none', 'identity'], true) ? null : $shuffle;
             return;
@@ -340,7 +340,7 @@ final class CommandLine implements Configuration
         if (str_starts_with($argument, '--jobserver-style=')) {
             $style = substr($argument, 18);
             if (!in_array($style, ['fifo', 'pipe'], true)) {
-                throw new MakefileErrorException("unknown jobserver auth style '$style'");
+                throw new MakefileErrorException("unknown jobserver auth style '{$style}'");
             }
             $this->execution->parallel->style = $style;
             return;
@@ -372,7 +372,7 @@ final class CommandLine implements Configuration
             if (str_starts_with($argument, $prefix)) {
                 if ($argument === $prefix) {
                     throw new MakefileErrorException(
-                        "Option $short requires " . ($short === '-f' ? 'a file name' : 'a directory'),
+                        "Option {$short} requires " . ($short === '-f' ? 'a file name' : 'a directory'),
                     );
                 }
                 $argument = $short . substr($argument, strlen($prefix));
@@ -385,7 +385,7 @@ final class CommandLine implements Configuration
                     $sync = substr($argument, $offset + 1);
                     $sync = $sync === '' ? 'target' : $sync;
                     if (!in_array($sync, ['none', 'line', 'target', 'recurse'], true)) {
-                        throw new MakefileErrorException("unknown output-sync type '$sync'");
+                        throw new MakefileErrorException("unknown output-sync type '{$sync}'");
                     }
                     $this->execution->parallel->sync = $sync;
                     $this->execution->parallel->syncSpecified = true;
@@ -480,7 +480,7 @@ final class CommandLine implements Configuration
                     }
                     if ($path === '') {
                         throw new MakefileErrorException(
-                            "Option -$option requires " . ($option === 'f' ? 'an argument' : 'a directory'),
+                            "Option -{$option} requires " . ($option === 'f' ? 'an argument' : 'a directory'),
                         );
                     }
                     if ($option === 'I') {
@@ -510,7 +510,7 @@ final class CommandLine implements Configuration
                     }
                     return;
                 default:
-                    throw new UsageException("Option `$argument' is not supported");
+                    throw new UsageException("Option `{$argument}' is not supported");
             }
         }
     }

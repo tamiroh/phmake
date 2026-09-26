@@ -51,7 +51,7 @@ final class Output implements RecipeOutput
     }
 
     public string $prefix {
-        get => $this->program . ($this->level === 0 ? '' : "[$this->level]");
+        get => $this->program . ($this->level === 0 ? '' : "[{$this->level}]");
     }
 
     #[Override]
@@ -69,14 +69,14 @@ final class Output implements RecipeOutput
         }
         StreamOutput::write(
             STDOUT,
-            $this->prefix . ': ' . ($entering ? 'Entering' : 'Leaving') . " directory '$directory'" . PHP_EOL,
+            $this->prefix . ': ' . ($entering ? 'Entering' : 'Leaving') . " directory '{$directory}'" . PHP_EOL,
         );
     }
 
     #[Override]
     public function writeInfo(string $message): void
     {
-        $this->writeLine($this->prefix . ": $message");
+        $this->writeLine($this->prefix . ": {$message}");
     }
 
     #[Override]
@@ -90,6 +90,6 @@ final class Output implements RecipeOutput
     #[Override]
     public function writeWarning(string $message, ?string $source = null): void
     {
-        $this->buffer->write(($source ?? $this->prefix) . ": $message" . PHP_EOL, true);
+        $this->buffer->write(($source ?? $this->prefix) . ": {$message}" . PHP_EOL, true);
     }
 }

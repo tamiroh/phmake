@@ -67,7 +67,7 @@ final class ExpansionSyntax
             && isset(Functions::ARGUMENT_COUNTS[$matches[1]])
         ) {
             throw new MakefileErrorException(
-                "unterminated call to function '{$matches[1]}': missing '$closing'",
+                "unterminated call to function '{$matches[1]}': missing '{$closing}'",
                 $source,
             );
         }

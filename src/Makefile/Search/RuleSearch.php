@@ -278,7 +278,7 @@ final class RuleSearch
             $scope->context->reporting,
             $this->output,
             'i',
-            "Looking for an implicit rule for '$name'.",
+            "Looking for an implicit rule for '{$name}'.",
             count($used),
         );
         $candidates = $this->candidates($name, $used);
@@ -338,7 +338,7 @@ final class RuleSearch
                     $scope->context->reporting,
                     $this->output,
                     'i',
-                    "Found an implicit rule for '$name'.",
+                    "Found an implicit rule for '{$name}'.",
                     count($used),
                 );
                 return new BuildRule(

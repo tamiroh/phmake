@@ -39,7 +39,7 @@ final readonly class FilePolicy
         foreach ($special['.NOTINTERMEDIATE'] ?? [] as $name) {
             foreach (['.INTERMEDIATE', '.SECONDARY'] as $kind) {
                 if (in_array($name, $special[$kind] ?? [], true)) {
-                    throw new MakefileErrorException("$name cannot be both .NOTINTERMEDIATE and $kind");
+                    throw new MakefileErrorException("{$name} cannot be both .NOTINTERMEDIATE and {$kind}");
                 }
             }
         }

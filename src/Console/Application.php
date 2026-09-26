@@ -88,7 +88,7 @@ final readonly class Application
             }
             foreach ($commandLine->input->directories as $directory) {
                 if (!@chdir($directory)) {
-                    throw new MakefileErrorException("Cannot change directory to '$directory'");
+                    throw new MakefileErrorException("Cannot change directory to '{$directory}'");
                 }
             }
             $output = new Output(
@@ -130,7 +130,7 @@ final readonly class Application
             Diagnostics::report(
                 new MakefileErrorException(
                     $error->reason,
-                    ($commandLine->input->makefiles[0] ?? 'Makefile') . ":$error->lineNumber",
+                    ($commandLine->input->makefiles[0] ?? 'Makefile') . ":{$error->lineNumber}",
                 ),
                 $output,
             );

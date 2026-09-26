@@ -196,7 +196,7 @@ final readonly class VariableExpander
             'notdir' => Functions::notdir($first),
             'basename' => Functions::basename($first),
             'suffix' => Functions::suffix($first),
-            default => throw new LogicException("Unknown function: $name"),
+            default => throw new LogicException("Unknown function: {$name}"),
         };
     }
 

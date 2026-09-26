@@ -133,7 +133,7 @@ final readonly class RecipeRunner
                                 $this->output->writeWarning(
                                     '*** '
                                     . ($name === $target->name ? '' : "[{$target->name}] ")
-                                    . "Deleting file '$name'",
+                                    . "Deleting file '{$name}'",
                                 );
                             }
                         }
@@ -179,7 +179,7 @@ final readonly class RecipeRunner
                     && $this->filesystem->lastModified($name) !== $timestamp
                     && $this->filesystem->remove($name)
                 ) {
-                    $this->output->writeWarning("*** Deleting file '$name'");
+                    $this->output->writeWarning("*** Deleting file '{$name}'");
                 }
             }
             throw $error;

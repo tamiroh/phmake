@@ -10,6 +10,8 @@ final class MissingTargetException extends MakefileErrorException
 {
     public function __construct(string $target, ?string $neededBy = null)
     {
-        parent::__construct("No rule to make target '$target'" . ($neededBy === null ? '' : ", needed by '$neededBy'"));
+        parent::__construct(
+            "No rule to make target '{$target}'" . ($neededBy === null ? '' : ", needed by '{$neededBy}'"),
+        );
     }
 }
