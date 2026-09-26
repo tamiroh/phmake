@@ -11,12 +11,9 @@ use Tamiroh\Phmake\Makefile\Execution\Suspension;
 
 use function fclose;
 use function fopen;
-use function getenv;
 use function is_resource;
 use function proc_close;
 use function proc_get_status;
-use function proc_open;
-use function putenv;
 use function usleep;
 
 /**
@@ -48,7 +45,8 @@ final class RecipeProcess
             $descriptors[0] = $input;
         }
         try {
-            $process = self::start($command, $environment, $descriptors);
+            $pipes = [];
+            $process = ProcessLauncher::start($command, $environment, $descriptors, $pipes);
             if (!is_resource($process)) {
                 return 127;
             }
@@ -80,36 +78,6 @@ final class RecipeProcess
             }
             if ($ownsInput) {
                 self::$inputBusy = false;
-            }
-        }
-    }
-
-    /**
-     * Preserve empty environment values, which associative proc_open environments omit.
-     * No fiber can run while the process environment is temporarily changed.
-     *
-     * @param non-empty-list<string>|string $command
-     * @param array<array-key, string|false> $environment
-     * @param array{0?: resource, 1?: resource, 2?: resource, 3?: resource, 4?: resource} $descriptors
-     *
-     * @return resource|false
-     */
-    private static function start(array|string $command, array $environment, array $descriptors = []): mixed
-    {
-        $previous = [];
-        try {
-            foreach ($environment as $name => $value) {
-                $previous[$name] = getenv((string) $name);
-                putenv($value === false ? (string) $name : $name . '=' . $value);
-            }
-            $pipes = [];
-            // PHP supports arbitrary descriptor numbers; Mago's stub only lists 0-2.
-            // https://www.php.net/manual/en/function.proc-open.php
-            // @mago-expect analysis:possibly-invalid-argument
-            return proc_open($command, $descriptors, $pipes);
-        } finally {
-            foreach ($previous as $name => $value) {
-                putenv($value === false ? (string) $name : $name . '=' . $value);
             }
         }
     }

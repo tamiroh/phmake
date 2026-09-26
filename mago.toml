@@ -60,7 +60,7 @@ permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Console\'
-permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**', 'Tamiroh\Phmake\Parser\**', 'Symfony\Component\Process\**']
+permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**', 'Tamiroh\Phmake\Parser\**']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Tests\'

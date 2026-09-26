@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Process;
 
-use Symfony\Component\Process\Process;
 use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
 
 use function array_reverse;
@@ -71,10 +70,10 @@ final class Signals
     public static function stop(mixed $process): void
     {
         $pid = proc_get_status($process)['pid'];
-        $listing = new Process(['ps', '-eo', 'pid=,ppid=']);
-        if ($listing->run() === 0) {
+        $listing = CapturedProcess::run(['ps', '-eo', 'pid=,ppid='], interruptible: false);
+        if ($listing->status === 0) {
             $rows = [];
-            preg_match_all('/^\s*(\d+)\s+(\d+)\s*$/m', $listing->getOutput(), $rows, PREG_SET_ORDER);
+            preg_match_all('/^\s*(\d+)\s+(\d+)\s*$/m', $listing->output, $rows, PREG_SET_ORDER);
             $descendants = [$pid => true];
             do {
                 $added = false;

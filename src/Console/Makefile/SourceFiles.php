@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console\Makefile;
 
 use Override;
-use Symfony\Component\Process\Process;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
+use Tamiroh\Phmake\Console\Process\CapturedProcess;
 use Tamiroh\Phmake\Parser\SourceFiles as SourceFilesInterface;
 use Tamiroh\Phmake\Parser\SourceText;
 
@@ -61,11 +61,11 @@ final class SourceFiles implements SourceFilesInterface
         if ($seconds === false) {
             return null;
         }
-        $stat = new Process(
+        $stat = CapturedProcess::run(
             PHP_OS_FAMILY === 'Darwin' || PHP_OS_FAMILY === 'BSD'
                 ? ['stat', '-L', '-f', '%Fm', '--', $path]
                 : ['stat', '-L', '--format=%y', '--', $path],
         );
-        return $stat->run() === 0 ? trim($stat->getOutput()) : (string) $seconds;
+        return $stat->status === 0 ? trim($stat->output) : (string) $seconds;
     }
 }

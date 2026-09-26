@@ -27,14 +27,12 @@
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "friendsofphp/php-cs-fixer": "^3.95",
-        "kubawerlos/php-cs-fixer-custom-fixers": "^3.37"
+        "kubawerlos/php-cs-fixer-custom-fixers": "^3.37",
+        "symfony/process": "^8.1.7"
     },
     "config": {
         "allow-plugins": {
             "carthage-software/mago": true
         }
-    },
-    "require": {
-        "symfony/process": "^8.1.7"
     }
 }

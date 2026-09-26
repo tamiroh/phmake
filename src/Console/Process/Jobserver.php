@@ -6,7 +6,6 @@ namespace Tamiroh\Phmake\Console\Process;
 
 use Override;
 use Random\RandomException;
-use Symfony\Component\Process\Process;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;
 use Tamiroh\Phmake\Makefile\IO\JobSlots;
@@ -203,7 +202,7 @@ final class Jobserver implements JobSlots
             return;
         }
         $path = $this->directory . '/fifo';
-        if (new Process(['mkfifo', '-m', '600', $path])->run() !== 0) {
+        if (CapturedProcess::run(['mkfifo', '-m', '600', $path])->status !== 0) {
             $this->pipe();
             return;
         }

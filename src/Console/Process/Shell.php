@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Process;
 
-use Closure;
 use Override;
-use Symfony\Component\Process\Exception\ProcessSignaledException;
-use Symfony\Component\Process\Process as SymfonyProcess;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\IO\Shell as ShellInterface;
@@ -16,7 +13,6 @@ use Tamiroh\Phmake\Makefile\ReportingOptions;
 
 use function explode;
 use function fwrite;
-use function is_array;
 use function preg_replace;
 
 use const STDERR;
@@ -68,21 +64,13 @@ final class Shell implements ShellInterface
         if ($this->failed($invocation, $environment)) {
             return new ShellResult('', 127);
         }
-        $launch = $invocation->launch();
-        $process = is_array($launch)
-            ? new SymfonyProcess($launch, env: $environment)
-            : SymfonyProcess::fromShellCommandline($launch, env: $environment);
-        $process->setTimeout(null);
-        $status = $this->run($process, function (string $type, string $buffer): void {
-            if ($type === SymfonyProcess::ERR) {
-                if ($this->output !== null) {
-                    $this->output->buffer->write($buffer, true);
-                } else {
-                    fwrite(STDERR, $buffer);
-                }
+        return CapturedProcess::run($invocation->launch(), $environment, function (string $buffer): void {
+            if ($this->output !== null) {
+                $this->output->buffer->write($buffer, true);
+            } else {
+                fwrite(STDERR, $buffer);
             }
         });
-        return new ShellResult($process->getOutput(), $status);
     }
 
     /**
@@ -140,17 +128,5 @@ final class Shell implements ShellInterface
             fwrite(STDERR, 'phmake: ' . $error . "\n");
         }
         return true;
-    }
-
-    /**
-     * @param Closure(string, string): void $callback
-     */
-    private function run(SymfonyProcess $process, Closure $callback): int
-    {
-        try {
-            return $process->run($callback);
-        } catch (ProcessSignaledException $error) {
-            return 128 + $error->getSignal();
-        }
     }
 }
