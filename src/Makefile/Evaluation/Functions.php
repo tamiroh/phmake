@@ -1012,7 +1012,7 @@ final class Functions
         if ($text === null) {
             throw new MakefileErrorException("insufficient number of arguments to function 'sort'");
         }
-        $words = array_values(array_unique(self::splitWords($text)));
+        $words = self::splitWords($text) |> array_unique(...) |> array_values(...);
         sort($words, SORT_STRING);
         return implode(' ', $words);
     }

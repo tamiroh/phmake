@@ -38,7 +38,7 @@ final readonly class Prerequisites
         $this->sequence = $sequence ?? [...$normal, ...$orderOnly, ...$extra];
         $this->normal = array_values(array_diff($normal, ['.WAIT']));
         $orderOnly = array_values(array_diff($orderOnly, ['.WAIT']));
-        $this->orderOnly = array_values(array_unique(array_diff($orderOnly, $normal)));
+        $this->orderOnly = array_diff($orderOnly, $normal) |> array_unique(...) |> array_values(...);
     }
 
     public function merge(self $other): self
