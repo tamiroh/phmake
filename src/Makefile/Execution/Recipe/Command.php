@@ -39,6 +39,9 @@ final readonly class Command
         );
     }
 
+    /**
+     * @pure
+     */
     public function isRecursive(): bool
     {
         return (

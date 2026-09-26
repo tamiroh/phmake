@@ -11,6 +11,9 @@ namespace Tamiroh\Phmake\Makefile\Execution\Files;
  */
 final class FileHash
 {
+    /**
+     * @pure
+     */
     public static function value(string $name): int
     {
         $a = $b = $c = 0xdeadbeef;
@@ -44,11 +47,17 @@ final class FileHash
         return ($b + $offset) & 0xffffffff;
     }
 
+    /**
+     * @pure
+     */
     private static function rotate(int $value, int $count): int
     {
         return (($value << $count) | ($value >> (32 - $count))) & 0xffffffff;
     }
 
+    /**
+     * @pure
+     */
     private static function word(string $name, int $offset): int
     {
         $word = 0;

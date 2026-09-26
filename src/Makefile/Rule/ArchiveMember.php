@@ -14,6 +14,9 @@ final readonly class ArchiveMember
         public string $member,
     ) {}
 
+    /**
+     * @pure
+     */
     public static function expand(string $text): string
     {
         return preg_replace_callback(

@@ -145,6 +145,8 @@ final readonly class CommandInvocation
     }
 
     /**
+     * @pure
+     *
      * Preserve exec's shell-script fallback, which PHP's array-form proc_open omits.
      * Positional arguments prevent the launcher from interpreting command contents.
      *

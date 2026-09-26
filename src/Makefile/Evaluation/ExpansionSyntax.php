@@ -19,6 +19,8 @@ use function substr;
 final class ExpansionSyntax
 {
     /**
+     * @pure
+     *
      * @return list<string>
      */
     public static function arguments(string $text, int $limit, string $opening): array

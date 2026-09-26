@@ -48,11 +48,17 @@ final readonly class Pattern
         return [$prefix . substr($expression, $offset), null];
     }
 
+    /**
+     * @pure
+     */
     public function hasWildcard(): bool
     {
         return $this->suffix !== null;
     }
 
+    /**
+     * @pure
+     */
     public function match(string $name): ?string
     {
         if ($this->suffix === null) {
@@ -68,6 +74,9 @@ final readonly class Pattern
         return substr($name, strlen($this->prefix), strlen($name) - strlen($this->prefix) - strlen($this->suffix));
     }
 
+    /**
+     * @pure
+     */
     public function substitute(string $stem): string
     {
         return $this->suffix === null ? $this->prefix : $this->prefix . $stem . $this->suffix;

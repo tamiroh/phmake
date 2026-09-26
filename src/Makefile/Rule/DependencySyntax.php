@@ -18,6 +18,9 @@ use function substr;
  */
 final class DependencySyntax
 {
+    /**
+     * @pure
+     */
     public static function delimiter(string $text, string $delimiter): ?int
     {
         if (!str_contains($text, $delimiter)) {
@@ -42,6 +45,8 @@ final class DependencySyntax
     }
 
     /**
+     * @pure
+     *
      * @return list<string>
      */
     public static function expressions(string $text): array
@@ -87,6 +92,8 @@ final class DependencySyntax
     }
 
     /**
+     * @pure
+     *
      * @return list<string>
      */
     public static function words(string $text): array

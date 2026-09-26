@@ -82,6 +82,9 @@ final readonly class Assignment
         }
     }
 
+    /**
+     * @pure
+     */
     private static function priority(string $origin): int
     {
         return match ($origin) {

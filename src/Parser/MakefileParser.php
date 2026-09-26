@@ -58,6 +58,9 @@ final readonly class MakefileParser
         private Modules $modules = new Modules(),
     ) {}
 
+    /**
+     * @pure
+     */
     private static function removeComment(string $line): string
     {
         if (!str_contains($line, '#')) {
@@ -110,6 +113,8 @@ final readonly class MakefileParser
     }
 
     /**
+     * @pure
+     *
      * @param array<int, string> $sources
      */
     private static function sourceLocation(array $sources, int $lineNumber): ?string
@@ -125,6 +130,8 @@ final readonly class MakefileParser
     }
 
     /**
+     * @pure
+     *
      * @return array{string, ?string}
      */
     private static function splitRecipe(string $line): array
@@ -164,6 +171,8 @@ final readonly class MakefileParser
     }
 
     /**
+     * @pure
+     *
      * @return list<string>
      */
     private static function words(string $text): array

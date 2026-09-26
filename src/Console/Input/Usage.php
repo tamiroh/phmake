@@ -9,6 +9,9 @@ use const PHP_VERSION;
 
 final class Usage
 {
+    /**
+     * @pure
+     */
     public static function text(string $program): string
     {
         return (
@@ -28,6 +31,9 @@ final class Usage
         );
     }
 
+    /**
+     * @pure
+     */
     public static function version(): string
     {
         return 'phmake (development)' . "\nBuilt for PHP " . PHP_VERSION . ' on ' . PHP_OS_FAMILY . "\n";

@@ -1304,6 +1304,8 @@ final class Functions
     }
 
     /**
+     * @pure
+     *
      * @return list<string>
      */
     private static function splitWords(string $text): array
@@ -1312,6 +1314,9 @@ final class Functions
         return $words === false ? [] : $words;
     }
 
+    /**
+     * @pure
+     */
     private static function suffixPosition(string $word): ?int
     {
         $slash = strrpos($word, '/');
