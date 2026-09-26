@@ -1,0 +1,14 @@
+$ ./phmake
+rm -f|default|recursive
+rm -f artifact missing-artifact
+removed
+$ ./phmake -r inspect
+rm -f|default|recursive
+$ ./phmake -R inspect
+|undefined|undefined
+$ ./phmake inspect RM=custom-rm
+custom-rm|command line|recursive
+$ RM=environment-rm ./phmake inspect
+environment-rm|environment|recursive
+$ ./phmake SILENT_RM=yes remove
+removed

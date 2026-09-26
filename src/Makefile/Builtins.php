@@ -118,6 +118,7 @@ final class Builtins
             new Variable('COMPILE.f', '$(FC) $(FFLAGS) $(TARGET_ARCH) -c', origin: 'default'),
             new Variable('AR', 'ar', origin: 'default'),
             new Variable('ARFLAGS', '-rv', origin: 'default'),
+            new Variable('RM', 'rm -f', origin: 'default'),
             new Variable('SHELL', '/bin/sh', origin: 'default'),
             new Variable('.SHELLFLAGS', '-c', false, 'default'),
             new Variable('COMPILE.c', '$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c', origin: 'default'),
