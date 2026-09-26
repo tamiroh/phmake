@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
-use RuntimeException;
+use Exception;
 
-final class ParseException extends RuntimeException
+final class ParseException extends Exception
 {
     public function __construct(
         public readonly int $lineNumber,

@@ -29,6 +29,9 @@ final class Conditionals
         return $index === null || $this->stack[$index]['active'];
     }
 
+    /**
+     * @throws ParseException
+     */
     public function finish(int $lineNumber): void
     {
         if ($this->stack !== []) {
@@ -38,6 +41,7 @@ final class Conditionals
 
     /**
      * @throws MakefileErrorException
+     * @throws ParseException
      */
     public function read(string $line, VariableExpander $expander, int $lineNumber): bool
     {
@@ -92,6 +96,8 @@ final class Conditionals
     }
 
     /**
+     * @throws ParseException
+     *
      * @return array{string, string}
      */
     private function comparison(string $argument, int $lineNumber): array
@@ -135,6 +141,7 @@ final class Conditionals
 
     /**
      * @throws MakefileErrorException
+     * @throws ParseException
      */
     private function evaluate(string $directive, string $argument, VariableExpander $expander, int $lineNumber): bool
     {

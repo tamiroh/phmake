@@ -183,6 +183,7 @@ final readonly class MakefileParser
 
     /**
      * @throws MakefileErrorException
+     * @throws ParseException
      */
     public function parse(): Makefile
     {
@@ -268,6 +269,8 @@ final readonly class MakefileParser
 
     /**
      * @param array<int, string> $sources
+     *
+     * @throws ParseException
      */
     private function readDefinition(
         LineReader $reader,

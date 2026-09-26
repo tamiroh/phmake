@@ -26,6 +26,7 @@ use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
 use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\MakefileSources;
+use Tamiroh\Phmake\Parser\ParseException;
 use Tamiroh\Phmake\Parser\ReadFile;
 
 use function array_values;
@@ -55,6 +56,7 @@ final readonly class MakefileLoader
     /**
      * @throws MakefileErrorException
      * @throws CommandFailedException
+     * @throws ParseException
      */
     public function load(): Build
     {
