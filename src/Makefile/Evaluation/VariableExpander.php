@@ -261,7 +261,7 @@ final readonly class VariableExpander
     {
         $matches = [];
         if (preg_match('/^([a-z-]+)[ \t\n]+/', $reference, $matches) === 1) {
-            /** @var array{non-empty-string, non-empty-string} $matches */
+            /** @var array{non-falsy-string, non-empty-string} $matches */
             $argumentCount = Functions::ARGUMENT_COUNTS[$matches[1]] ?? null;
             if ($argumentCount !== null) {
                 try {

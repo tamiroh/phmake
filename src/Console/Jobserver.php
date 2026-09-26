@@ -221,7 +221,7 @@ final class Jobserver implements JobSlots
     private function pipe(): void
     {
         $pair = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, 0);
-        if ($pair === false) {
+        if ($pair === false || !isset($pair[0], $pair[1])) {
             throw new MakefileErrorException('Cannot create jobserver pipe');
         }
         [$this->reader, $this->writer] = $pair;

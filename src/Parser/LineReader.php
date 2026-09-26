@@ -36,13 +36,15 @@ final class LineReader
         }
 
         $this->lineNumber = $this->offset + 1;
-        $line = $this->lines[$this->offset++];
+        $line = $this->lines[$this->offset];
+        $this->offset++;
         $recipe = !$definition && $this->isRecipe($line, $recipePrefix);
         while (
             ((strlen($line) - strlen(rtrim($line, characters: '\\'))) % 2) === 1
             && isset($this->lines[$this->offset])
         ) {
-            $next = $this->lines[$this->offset++];
+            $next = $this->lines[$this->offset];
+            $this->offset++;
             if ($recipe) {
                 $line .= "\n" . (str_starts_with($next, $recipePrefix) ? substr($next, offset: 1) : $next);
             } else {

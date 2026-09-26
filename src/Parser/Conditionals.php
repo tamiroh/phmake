@@ -45,7 +45,7 @@ final class Conditionals
         if (preg_match('/^\s*(ifdef|ifndef|ifeq|ifneq|else|endif)(?:[ \t]+|$)(.*)$/s', $line, $matches) !== 1) {
             return false;
         }
-        /** @var array{string, string, string} $matches */
+        /** @var array{non-falsy-string, 'ifdef'|'ifndef'|'ifeq'|'ifneq'|'else'|'endif', string} $matches */
         [, $directive, $argument] = $matches;
         if (preg_match('/^\s*(?::=|\+=|\?=|=)/', $argument) === 1) {
             return false;
@@ -78,7 +78,7 @@ final class Conditionals
                 if (preg_match('/^(ifdef|ifndef|ifeq|ifneq)[ \t]+(.*)$/s', $argument, $matches) !== 1) {
                     throw new ParseException($lineNumber, "extraneous text after 'else'");
                 }
-                /** @var array{string, string, string} $matches */
+                /** @var array{non-falsy-string, 'ifdef'|'ifndef'|'ifeq'|'ifneq', string} $matches */
                 $frame['active'] = $eligible && $this->evaluate($matches[1], trim($matches[2]), $expander, $lineNumber);
             }
             $frame['matched'] = $frame['matched'] || $frame['active'];

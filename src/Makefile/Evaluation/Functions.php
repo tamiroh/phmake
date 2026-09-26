@@ -655,7 +655,7 @@ final class Functions
             ? ($leftNegative ? -1 : 1)
             : (strlen($left) === strlen($right) ? strcmp($left, $right) : strlen($left) <=> strlen($right))
             * ($leftNegative ? -1 : 1);
-        if (count($arguments) === 2) {
+        if (!isset($arguments[2])) {
             return $comparison === 0 ? $left : '';
         }
         return $expand(

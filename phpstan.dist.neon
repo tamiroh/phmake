@@ -7,6 +7,20 @@ includes:
 
 parameters:
 	level: max
+	checkBenevolentUnionTypes: true
+	checkUninitializedProperties: true
+	checkMissingCallableSignature: true
+	checkTooWideReturnTypesInProtectedAndPublicMethods: true
+	checkTooWideParameterOutInProtectedAndPublicMethods: true
+	checkTooWideThrowTypesInProtectedAndPublicMethods: true
+	reportAnyTypeWideningInVarTag: true
+	reportPossiblyNonexistentGeneralArrayOffset: true
+	reportPossiblyNonexistentConstantArrayOffset: true
+	reportAlwaysTrueInLastCondition: true
+	checkMissingOverrideMethodAttribute: true
+	reportIgnoresWithoutComments: true
+	rememberPossiblyImpureFunctionValues: false
+	# reportUnsafeArrayStringKeyCasting: detect
 	paths:
 		- phmake
 		- src
@@ -17,3 +31,5 @@ parameters:
 			- RuntimeException
 		check:
 			missingCheckedExceptionInThrows: true
+			throwTypeCovariance: true
+			tooWideImplicitThrowType: true

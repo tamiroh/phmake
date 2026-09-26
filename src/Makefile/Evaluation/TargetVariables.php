@@ -49,7 +49,7 @@ final class TargetVariables
                 return;
             }
             // Pattern appends are evaluated when the pattern is installed on a target.
-            $variables[$assignment->name] = new Variable(
+            $value = new Variable(
                 $assignment->name,
                 $assignment->expression,
                 $previous->recursive ?? true,
@@ -57,9 +57,8 @@ final class TargetVariables
                 $expander->source,
             );
         } else {
-            $assignment->apply($variables, $origin, $output, $expander->source, $scope);
+            $value = $assignment->apply($variables, $origin, $output, $expander->source, $scope);
         }
-        $value = $variables[$assignment->name];
         if ($value === $previous) {
             return;
         }

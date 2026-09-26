@@ -56,6 +56,17 @@ final class Scheduler
     }
 
     /**
+     * @param Closure(): UpdateResult $work
+     *
+     * @throws MakefileErrorException
+     * @throws CommandFailedException
+     */
+    public function await(string $name, Closure $work): UpdateResult
+    {
+        return $this->join([$name => $work])[$name] ?? throw new LogicException('Build task result is missing');
+    }
+
+    /**
      * Finish running commands before cleaning up intermediates or returning an error.
      */
     public function drain(): void

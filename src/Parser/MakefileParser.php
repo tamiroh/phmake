@@ -240,7 +240,6 @@ final readonly class MakefileParser
                 if (preg_match('/^define(?:[ \t]+(?![:+?!=])\S|$)/', $directive) === 1) {
                     $depth++;
                 } elseif (preg_match('/^endef(?:\s+(.*))?$/', $directive, $matches) === 1) {
-                    /** @var array{string, 1?: string} $matches */
                     if (--$depth === 0) {
                         if (($matches[1] ?? '') !== '') {
                             $this->output?->writeWarning(
@@ -373,7 +372,7 @@ final readonly class MakefileParser
             while (
                 preg_match('/^\s*(override|private|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1
             ) {
-                /** @var array{string, 'override'|'private'|'export'|'unexport', string} $matches */
+                /** @var array{non-falsy-string, 'override'|'private'|'export'|'unexport', string} $matches */
                 if (preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[2])) === 1) {
                     break;
                 }
@@ -390,7 +389,6 @@ final readonly class MakefileParser
                 preg_match('/^define(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
                 && preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
             ) {
-                /** @var array{string, 1?: string} $matches */
                 $header = Assignment::parse($matches[1] ?? '', allowWhitespace: true) ?? new Assignment(
                     trim($matches[1] ?? ''),
                     '=',
@@ -433,7 +431,6 @@ final readonly class MakefileParser
                 preg_match('/^undefine(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
                 && preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
             ) {
-                /** @var array{string, 1?: string} $matches */
                 $name = new Assignment(trim($matches[1] ?? ''), '=', '')->resolveName($expander)->name;
                 Assignment::undefine($variables, $name, $origin);
                 continue;

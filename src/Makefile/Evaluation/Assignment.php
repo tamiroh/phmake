@@ -99,7 +99,7 @@ final readonly class Assignment
         ?string $source = null,
         ?VariableExpander $expander = null,
         bool $private = false,
-    ): void {
+    ): Variable {
         $shellValue = null;
         if ($this->operator === '!=') {
             $scope = $expander ?? new VariableExpander(array_values($variables), $output, source: $source);
@@ -116,7 +116,7 @@ final readonly class Assignment
             $previous !== null && self::priority($previous->origin) > self::priority($origin)
             || $this->operator === '?=' && $previous !== null
         ) {
-            return;
+            return $previous;
         }
         $recursive = $this->operator === '+='
             ? $previous->recursive ?? true
@@ -136,13 +136,13 @@ final readonly class Assignment
         }
         if ($this->operator === '+=' && $previous !== null) {
             if ($value === '') {
-                return;
+                return $previous;
             }
             $separator = $this->name === 'MAKEFLAGS' ? strpos($previous->expression, ' -- ') : false;
             $before = $separator === false ? $previous->expression : substr($previous->expression, 0, $separator);
             $value = ($before === '' ? '' : $before . ' ') . $value;
         }
-        $variables[$this->name] = new Variable($this->name, $value, $recursive, $origin, $source, $private);
+        return $variables[$this->name] = new Variable($this->name, $value, $recursive, $origin, $source, $private);
     }
 
     /**

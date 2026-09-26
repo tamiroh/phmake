@@ -43,6 +43,7 @@ final class CommandLine implements Configuration
 
     public private(set) bool $version = false;
 
+    #[Override]
     public private(set) bool $noBuiltinRules = false;
 
     public private(set) bool $noBuiltinVariables = false;
@@ -52,6 +53,7 @@ final class CommandLine implements Configuration
     public private(set) ?bool $printDirectory = null;
 
     /** @var list<string> */
+    #[Override]
     public array $includeDirectories {
         get => $this->input->includes;
     }
@@ -213,12 +215,12 @@ final class CommandLine implements Configuration
         $variables = &$context->variables;
         $expander = new VariableExpander($context, new Output());
         $assignment = $assignment->resolveName($expander);
-        $assignment->apply($variables, 'command line', expander: $expander);
+        $variable = $assignment->apply($variables, 'command line', expander: $expander);
         if (isset($variables['.SHELLSTATUS'])) {
             $this->variables['.SHELLSTATUS'] = $variables['.SHELLSTATUS'];
         }
-        if ($variables[$assignment->name]->origin === 'command line') {
-            $this->variables[$assignment->name] = $variables[$assignment->name];
+        if ($variable->origin === 'command line') {
+            $this->variables[$variable->name] = $variable;
         }
         return true;
     }
@@ -370,7 +372,8 @@ final class CommandLine implements Configuration
                 case 'l':
                     $load = substr($argument, $offset + 1);
                     if ($load === '' && isset($arguments[$index + 1]) && is_numeric($arguments[$index + 1])) {
-                        $load = $arguments[++$index];
+                        $load = $arguments[$index + 1];
+                        $index++;
                     }
                     if ($load !== '' && (!is_numeric($load) || (float) $load < 0)) {
                         throw new MakefileErrorException('The -l option requires a nonnegative number');
@@ -380,7 +383,8 @@ final class CommandLine implements Configuration
                 case 'j':
                     $jobs = substr($argument, $offset + 1);
                     if ($jobs === '' && isset($arguments[$index + 1]) && ctype_digit($arguments[$index + 1])) {
-                        $jobs = $arguments[++$index];
+                        $jobs = $arguments[$index + 1];
+                        $index++;
                     }
                     if ($jobs !== '' && (!ctype_digit($jobs) || (int) $jobs < 1)) {
                         throw new MakefileErrorException('The -j option requires a positive integer argument');

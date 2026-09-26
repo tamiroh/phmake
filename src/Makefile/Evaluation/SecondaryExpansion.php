@@ -12,6 +12,7 @@ use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\PrerequisiteExpression;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 
+use function ksort;
 use function preg_replace_callback;
 use function str_contains;
 use function str_replace;
@@ -71,8 +72,9 @@ final class SecondaryExpansion
             $previous = $previous->merge($parts[$index]);
         }
         $prerequisites = new Prerequisites();
-        foreach ($expressions as $index => $_) {
-            $prerequisites = $prerequisites->merge($parts[$index]);
+        ksort($parts);
+        foreach ($parts as $part) {
+            $prerequisites = $prerequisites->merge($part);
         }
         return new BuildRule(
             $prerequisites,

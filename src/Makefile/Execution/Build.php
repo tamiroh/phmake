@@ -219,16 +219,16 @@ final class Build
             return $this->state->recipes[$key];
         }
         if ($rule->group !== [] && !$grouped && $this->parallel()) {
-            return $this->scheduler->join([
-                '@group:' . $key =>
-                    /**
-                     * @throws MakefileErrorException
-                     * @throws CommandFailedException
-                     */
-                    function () use ($target, $rule, $modifiedAt, &$executed, $parent, $path): UpdateResult {
-                        return $this->buildRule($target, $rule, $modifiedAt, $executed, $parent, $path, true);
-                    },
-            ])['@group:' . $key];
+            return $this->scheduler->await(
+                '@group:' . $key,
+                /**
+                 * @throws MakefileErrorException
+                 * @throws CommandFailedException
+                 */
+                function () use ($target, $rule, $modifiedAt, &$executed, $parent, $path): UpdateResult {
+                    return $this->buildRule($target, $rule, $modifiedAt, $executed, $parent, $path, true);
+                },
+            );
         }
         $rule = SecondaryExpansion::explicit(
             $target->name,
@@ -289,7 +289,7 @@ final class Build
                     function () use ($dependency, &$executed, $path, $target): UpdateResult {
                         return $this->update($dependency, $executed, clone $path, $target->name);
                     };
-                $result = $this->parallel() ? $this->scheduler->join([$dependency => $update])[$dependency] : $update();
+                $result = $this->parallel() ? $this->scheduler->await($dependency, $update) : $update();
                 if ($result->failure !== null) {
                     return new UpdateResult(failure: $result->failure, blocked: true);
                 }
@@ -392,7 +392,7 @@ final class Build
                 };
             if ($serial) {
                 $updates[$dependency] = $this->parallel()
-                    ? $this->scheduler->join($work)[$dependency]
+                    ? $this->scheduler->await($dependency, $work[$dependency])
                     : $work[$dependency]();
                 $work = [];
             }

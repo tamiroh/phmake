@@ -76,7 +76,7 @@ final class E2ETest extends TestCase
         return preg_replace_callback(
             '/^(?:' . preg_quote($programName, delimiter: '/') . '|phmake): ([^\n]*)$/m',
             static function (array $matches): string {
-                /** @var array{string, string} $matches */
+                /** @var array{non-falsy-string, string} $matches */
                 $message = str_replace('`', replace: "'", subject: $matches[1]);
                 $message =
                     preg_replace(
