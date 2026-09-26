@@ -21,6 +21,7 @@ use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 use Tamiroh\Phmake\Makefile\Rule\Recipe;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 use Tamiroh\Phmake\Makefile\Search\SearchPaths;
+use Tamiroh\Phmake\Parser\Syntax\Rule;
 
 use function array_filter;
 use function array_map;

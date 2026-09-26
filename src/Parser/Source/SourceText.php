@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Parser\Source;
 
 /**
  * Read failures remain available until the makefile regeneration phase.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Parser\Syntax;
 
 use Tamiroh\Phmake\Makefile\Execution\Recipe\Command;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;

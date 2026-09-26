@@ -7,8 +7,8 @@ namespace Tamiroh\Phmake\Console\Makefile;
 use Override;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Console\Process\CapturedProcess;
-use Tamiroh\Phmake\Parser\SourceFiles as SourceFilesInterface;
-use Tamiroh\Phmake\Parser\SourceText;
+use Tamiroh\Phmake\Parser\Source\SourceFiles as SourceFilesInterface;
+use Tamiroh\Phmake\Parser\Source\SourceText;
 
 use function clearstatcache;
 use function error_get_last;

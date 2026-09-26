@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Parser\Syntax;
 
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Parser\ParseException;
 
 use function array_key_last;
 use function array_pop;

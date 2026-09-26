@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Parser\Syntax;
 
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;

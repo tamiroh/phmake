@@ -25,9 +25,9 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
 use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
 use Tamiroh\Phmake\Parser\MakefileParser;
-use Tamiroh\Phmake\Parser\MakefileSources;
 use Tamiroh\Phmake\Parser\ParseException;
-use Tamiroh\Phmake\Parser\ReadFile;
+use Tamiroh\Phmake\Parser\Source\MakefileSources;
+use Tamiroh\Phmake\Parser\Source\ReadFile;
 
 use function array_values;
 use function function_exists;

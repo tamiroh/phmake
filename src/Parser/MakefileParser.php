@@ -21,6 +21,12 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
+use Tamiroh\Phmake\Parser\Source\LineReader;
+use Tamiroh\Phmake\Parser\Source\MakefileSources;
+use Tamiroh\Phmake\Parser\Source\ReadFile;
+use Tamiroh\Phmake\Parser\Syntax\Conditionals;
+use Tamiroh\Phmake\Parser\Syntax\RuleSyntax;
+use Tamiroh\Phmake\Parser\Syntax\ScopedAssignment;
 
 use function array_values;
 use function implode;

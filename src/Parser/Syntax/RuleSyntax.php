@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Parser\Syntax;
 
 use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
@@ -10,6 +10,8 @@ use Tamiroh\Phmake\Makefile\Rule\FileName;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\PrerequisiteExpression;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
+use Tamiroh\Phmake\Parser\ParseException;
+use Tamiroh\Phmake\Parser\Source\SourceFiles;
 
 use function count;
 use function ltrim;

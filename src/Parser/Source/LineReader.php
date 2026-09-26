@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Parser\Source;
 
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
+use Tamiroh\Phmake\Parser\Syntax\ScopedAssignment;
 
 use function explode;
 use function ltrim;
