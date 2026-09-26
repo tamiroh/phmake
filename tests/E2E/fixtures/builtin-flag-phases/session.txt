@@ -1,0 +1,18 @@
+$ ./phmake --no-print-directory
+before= --no-print-directory|default|suffixes
+after=R --no-print-directory|default|suffixes
+build=rR --no-print-directory|undefined|
+$ ./phmake --no-print-directory -R
+before=rR --no-print-directory|undefined|
+after=rR --no-print-directory|undefined|
+build=rR --no-print-directory|undefined|
+$ ./phmake --no-print-directory -r
+before=r --no-print-directory|default|
+after=rR --no-print-directory|default|
+build=rR --no-print-directory|undefined|
+$ ./phmake --no-print-directory -f rules.mk
+parse=r --no-print-directory|default|suffixes
+build=r --no-print-directory|default|
+$ ./phmake --no-print-directory -f custom.mk
+parse=custom-cc|custom
+build=custom-cc|custom

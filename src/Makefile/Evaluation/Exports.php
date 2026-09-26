@@ -70,11 +70,8 @@ final class Exports
                 || isset($this->directives[$variable->name])
                 || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $variable->name) === 1
             ) {
-                $environment[$variable->name] = in_array(
-                    $variable->origin,
-                    ['environment', 'environment override'],
-                    true,
-                )
+                $environment[$variable->name] = $variable->name !== 'MAKEFLAGS'
+                && in_array($variable->origin, ['environment', 'environment override'], true)
                     ? $variable->expression
                     : $expander->expand('$(' . $variable->name . ')');
             } elseif (in_array($variable->name, $this->inherited, true)) {

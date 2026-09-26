@@ -22,6 +22,7 @@ final class Builtins
         'MAKECMDGOALS',
         'SUFFIXES',
         '.FEATURES',
+        '.INCLUDE_DIRS',
         '.VARIABLES',
         '.RECIPEPREFIX',
         '.LOADED',

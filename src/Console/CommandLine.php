@@ -15,15 +15,12 @@ use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\Configuration;
 
-use function array_map;
 use function array_values;
 use function count;
 use function ctype_digit;
 use function getcwd;
-use function implode;
 use function in_array;
 use function is_numeric;
-use function ltrim;
 use function random_int;
 use function str_contains;
 use function str_replace;
@@ -75,12 +72,14 @@ final class CommandLine implements Configuration
         $this->input = new InputOptions();
         $this->switches = new ReversibleOptions();
         $this->execution = new ExecutionOptions();
-        $this->readFlags($gnumakeflags, $defaults, 'environment');
+        // Inherited flags have command-line priority, but actual arguments are read last.
+        $this->readFlags($gnumakeflags, $defaults, 'command line');
         if ($this->execution->reporting->warnUndefinedVariables && !isset($defaults['MAKEFLAGS'])) {
             new Output()->writeWarning("warning: undefined variable 'MAKEFLAGS'");
         }
-        $this->readFlags($makeflags, $defaults, 'environment');
+        $this->readFlags($makeflags, $defaults, 'command line');
         $this->readArguments($arguments, false, $defaults, 'command line');
+        $this->noBuiltinRules = $this->noBuiltinRules || $this->noBuiltinVariables;
     }
 
     /**
@@ -109,70 +108,32 @@ final class CommandLine implements Configuration
     }
 
     /**
-     * @param array<string, Variable>|null $variables
+     * @param array<string, Variable> $variables
+     *
+     * @throws MakefileErrorException
      */
-    public function makeflags(
-        ?int $makefileRestart = null,
-        bool $legacy = false,
-        ?array $variables = null,
-        bool $posix = false,
-    ): string {
-        $execution = $makefileRestart === null ? $this->execution : $this->execution->forMakefiles($makefileRestart);
-        $flags =
-            ($execution->alwaysMake ? 'B' : '')
-            . ($this->environmentOverrides ? 'e' : '')
-            . ($execution->ignoreErrors ? 'i' : '')
-            . ($execution->keepGoing ? 'k' : '')
-            . ($execution->dryRun ? 'n' : '')
-            . ($execution->question ? 'q' : '')
-            . ($this->noBuiltinRules ? 'r' : '')
-            . ($this->noBuiltinVariables ? 'R' : '')
-            . ($execution->reporting->silent ? 's' : '')
-            . ($this->switches->value('keepGoing') === false ? 'S' : '')
-            . ($execution->touch ? 't' : '')
-            . ($this->switches->value('printDirectory') === true ? 'w' : '')
-            . implode('', array_map(
-                static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
-                $this->input->includes,
-            ))
-            . (
-                $execution->parallel->jobs === 1
-                    ? ''
-                    : ' -j' . ($execution->parallel->jobs === 0 ? '' : $execution->parallel->jobs)
-            )
-            . ($execution->parallel->load === null ? '' : ' -l' . $execution->parallel->load)
-            . (
-                !$execution->parallel->syncSpecified && $execution->parallel->sync === 'none'
-                    ? ''
-                    : ' -O' . $execution->parallel->sync
-            )
-            . implode('', array_map(
-                static fn(string $levels): string => ' --debug=' . str_replace(' ', '\\ ', $levels),
-                $execution->reporting->debugLevels,
-            ))
-            . ($execution->parallel->auth === null ? '' : ' --jobserver-auth=' . $execution->parallel->auth)
-            . ($execution->reporting->trace ? ' --trace' : '')
-            . ($this->switches->value('printDirectory') === false ? ' --no-print-directory' : '')
-            . ($this->switches->value('silent') === false ? ' --no-silent' : '')
-            . ($execution->reporting->warnUndefinedVariables ? ' --warn-undefined-variables' : '')
-            . ($execution->parallel->mutex === null ? '' : ' --sync-mutex=' . $execution->parallel->mutex)
-            . implode('', array_map(
-                static fn(string $text): string => ' --eval='
-                . str_replace(['\\', '$', ' ', "\t", "\n"], ['\\\\', '$$', '\\ ', "\\\t", "\\\n"], $text),
-                $this->input->evaluations,
-            ))
-            . ($execution->parallel->shuffle === null ? '' : ' --shuffle=' . $execution->parallel->shuffle);
-        if ($legacy) {
-            $flags = ltrim($flags);
-            return $flags === '' || str_starts_with($flags, '-') ? $flags : '-' . $flags;
+    #[Override]
+    public function finishReading(array &$variables, VariableExpander $expander): void
+    {
+        if (isset($variables['GNUMAKEFLAGS'])) {
+            $this->readFlags($expander->expand('$(GNUMAKEFLAGS)'), $variables, 'environment');
         }
-        $reference = $posix ? CommandVariables::INTERNAL_NAME : 'MAKEOVERRIDES';
-        if ($variables === null ? $this->variables !== [] : ($variables[$reference]->expression ?? '') !== '') {
-            $flags = str_replace('$', '$$', $flags) . ' -- $(' . $reference . ')';
-        } else {
-            $flags = str_replace('$', '$$', $flags);
+        $variables['GNUMAKEFLAGS'] = new Variable('GNUMAKEFLAGS', '', false, 'override');
+        $this->updateMakeflags($variables, $expander, 'environment');
+        $this->noBuiltinRules = $this->noBuiltinRules || $this->noBuiltinVariables;
+        foreach ($variables as $name => $variable) {
+            if (
+                $this->noBuiltinVariables
+                && $variable->origin === 'default'
+                && !in_array($name, Builtins::INTERNAL_VARIABLES, true)
+            ) {
+                unset($variables[$name]);
+            }
         }
-        return $execution->parallel->jobs === 1 ? $flags : ltrim($flags);
+        if ($this->noBuiltinRules) {
+            new Assignment('SUFFIXES', ':=', '')->apply($variables, 'default');
+        }
+        MakeFlags::define($this, $variables, $expander->context->posix);
     }
 
     /**
@@ -181,11 +142,15 @@ final class CommandLine implements Configuration
      * @throws MakefileErrorException
      */
     #[Override]
-    public function updateMakeflags(array &$variables, ?VariableExpander $expander = null): void
-    {
+    public function updateMakeflags(
+        array &$variables,
+        ?VariableExpander $expander = null,
+        string $origin = 'file',
+    ): void {
         $this->readFlags(
             ($expander ?? new VariableExpander(array_values($variables)))->expand('$(MAKEFLAGS)'),
             $variables,
+            $origin,
         );
         if ($expander?->output instanceof Output) {
             $expander->output->silent = $this->execution->reporting->silent;
@@ -196,19 +161,8 @@ final class CommandLine implements Configuration
                 $expander->output->buffer->directory = null;
             }
         }
-        foreach ($this->variables as $name => $variable) {
-            if (($variables[$name]->origin ?? '') !== 'override') {
-                $variables[$name] = $variable;
-            }
-        }
         foreach ($variables as $name => $variable) {
-            if (
-                $this->noBuiltinVariables
-                && $variable->origin === 'default'
-                && !in_array($name, Builtins::INTERNAL_VARIABLES, true)
-            ) {
-                unset($variables[$name]);
-            } elseif ($this->environmentOverrides && $variable->origin === 'environment' && $name !== 'MAKEFLAGS') {
+            if ($this->environmentOverrides && $variable->origin === 'environment') {
                 $variables[$name] = new Variable(
                     $name,
                     $variable->expression,
@@ -217,14 +171,7 @@ final class CommandLine implements Configuration
                 );
             }
         }
-        $variables = CommandVariables::definitions($this->variables, $variables);
-        $variables['MFLAGS'] = new Variable('MFLAGS', $this->makeflags(legacy: true), true, 'environment');
-        $variables['MAKEFLAGS'] = new Variable(
-            'MAKEFLAGS',
-            $this->makeflags(variables: $variables, posix: $expander?->context->posix ?? false),
-            true,
-            $variables['MAKEFLAGS']->origin ?? 'file',
-        );
+        MakeFlags::define($this, $variables, $expander?->context->posix ?? false);
     }
 
     /**
@@ -232,24 +179,30 @@ final class CommandLine implements Configuration
      *
      * @throws MakefileErrorException
      */
-    private function assign(string $argument, array $defaults): bool
+    private function assign(string $argument, array &$defaults, string $origin): bool
     {
         $assignment = Assignment::parse($argument, allowWhitespace: true);
         if ($assignment === null) {
             return false;
         }
-        $context = new EvaluationContext(array_values([...$defaults, ...$this->variables]));
+        $context = new EvaluationContext(array_values(
+            $origin === 'command line' ? [...$defaults, ...$this->variables] : $defaults,
+        ));
         $context->shell = new Shell();
         $context->reporting = $this->execution->reporting;
         $context->filesystem = new Filesystem();
         $variables = &$context->variables;
         $expander = new VariableExpander($context, new Output());
         $assignment = $assignment->resolveName($expander);
-        $variable = $assignment->apply($variables, 'command line', expander: $expander);
+        $variable = $assignment->apply($variables, $origin, expander: $expander);
         if (isset($variables['.SHELLSTATUS'])) {
-            $this->variables['.SHELLSTATUS'] = $variables['.SHELLSTATUS'];
+            $defaults['.SHELLSTATUS'] = $variables['.SHELLSTATUS'];
+            if ($origin === 'command line') {
+                $this->variables['.SHELLSTATUS'] = $variables['.SHELLSTATUS'];
+            }
         }
-        if ($variable->origin === 'command line') {
+        $defaults[$variable->name] = $variable;
+        if ($origin === 'command line' && $variable->origin === 'command line') {
             $this->variables[$variable->name] = $variable;
         }
         return true;
@@ -261,7 +214,7 @@ final class CommandLine implements Configuration
      *
      * @throws MakefileErrorException
      */
-    private function readArguments(array $arguments, bool $inherited, array $defaults, string $origin): void
+    private function readArguments(array $arguments, bool $inherited, array &$defaults, string $origin): void
     {
         $options = true;
         for ($index = 0; $index < count($arguments); $index++) {
@@ -271,7 +224,12 @@ final class CommandLine implements Configuration
             } elseif ($options && str_starts_with($argument, '-') && $argument !== '-') {
                 $this->readOption($argument, $arguments, $index, $inherited, $origin);
             } elseif (
-                !$this->assign($inherited ? str_replace('$$', '$', $argument) : $argument, $defaults) && !$inherited
+                !$this->assign(
+                    $inherited && $origin === 'command line' ? str_replace('$$', '$', $argument) : $argument,
+                    $defaults,
+                    $origin,
+                )
+                && !$inherited
             ) {
                 $this->targets[] = $argument;
             }
@@ -283,7 +241,7 @@ final class CommandLine implements Configuration
      *
      * @throws MakefileErrorException
      */
-    private function readFlags(string $flags, array $defaults, string $origin = 'file'): void
+    private function readFlags(string $flags, array &$defaults, string $origin = 'file'): void
     {
         $arguments = self::splitFlags($flags);
         if (isset($arguments[0]) && !str_starts_with($arguments[0], '-') && !str_contains($arguments[0], '=')) {
@@ -473,7 +431,6 @@ final class CommandLine implements Configuration
                     break;
                 case 'R':
                     $this->noBuiltinVariables = true;
-                    $this->noBuiltinRules = true;
                     break;
                 case 'e':
                     $this->environmentOverrides = true;

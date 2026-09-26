@@ -219,6 +219,7 @@ final readonly class MakefileParser
         if ($scope->variable('GNUMAKEFLAGS') === null) {
             UndefinedVariable::warn($scope, 'GNUMAKEFLAGS');
         }
+        $this->configuration?->finishReading($variables, $scope);
         $context->reading = false;
         return $builder->build(
             array_values($variables),
@@ -422,7 +423,7 @@ final readonly class MakefileParser
                     $private,
                 );
                 if ($header->name === 'MAKEFLAGS') {
-                    $this->configuration?->updateMakeflags($variables, $expander);
+                    $this->configuration?->updateMakeflags($variables, $expander, $origin);
                     $variables['.INCLUDE_DIRS'] = new Variable(
                         '.INCLUDE_DIRS',
                         implode(' ', $this->sources->directories()),
@@ -466,7 +467,7 @@ final readonly class MakefileParser
                 }
                 $assignment->apply($variables, $origin, $this->output, $location, $expander, $private);
                 if ($assignment->name === 'MAKEFLAGS') {
-                    $this->configuration?->updateMakeflags($variables, $expander);
+                    $this->configuration?->updateMakeflags($variables, $expander, $origin);
                     $variables['.INCLUDE_DIRS'] = new Variable(
                         '.INCLUDE_DIRS',
                         implode(' ', $this->sources->directories()),

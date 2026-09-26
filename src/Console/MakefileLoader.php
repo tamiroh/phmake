@@ -91,21 +91,7 @@ final readonly class MakefileLoader
                 $slots,
             );
             if ($makefile->context !== null) {
-                $makefile->context->variables['MFLAGS'] = new Variable(
-                    'MFLAGS',
-                    $configuration->makeflags($restarts, legacy: true),
-                    true,
-                    'environment',
-                );
-                $makefile->context->variables['MAKEFLAGS'] = new Variable(
-                    'MAKEFLAGS',
-                    $configuration->makeflags(
-                        $restarts,
-                        variables: $makefile->context->variables,
-                        posix: $makefile->context->posix,
-                    ),
-                    true,
-                );
+                MakeFlags::define($configuration, $makefile->context->variables, $makefile->context->posix, $restarts);
             }
             try {
                 if ($this->remake($sources, $build, $configuration->execution->keepGoing)) {
@@ -118,20 +104,7 @@ final readonly class MakefileLoader
                 throw $error;
             } finally {
                 if ($makefile->context !== null) {
-                    $makefile->context->variables['MFLAGS'] = new Variable(
-                        'MFLAGS',
-                        $configuration->makeflags(legacy: true),
-                        true,
-                        'environment',
-                    );
-                    $makefile->context->variables['MAKEFLAGS'] = new Variable(
-                        'MAKEFLAGS',
-                        $configuration->makeflags(
-                            variables: $makefile->context->variables,
-                            posix: $makefile->context->posix,
-                        ),
-                        true,
-                    );
+                    MakeFlags::define($configuration, $makefile->context->variables, $makefile->context->posix);
                 }
             }
             if ($this->commandLine->targets === [] && $makefile->defaultGoal === null && !$this->hasMain($sources)) {
@@ -225,11 +198,16 @@ final readonly class MakefileLoader
     }
 
     /**
+     * @throws MakefileErrorException
+     *
      * @return list<Variable>
      */
     private function variables(CommandLine $commandLine, int $restarts): array
     {
-        $defaults = CommandVariables::definitions($commandLine->variables, $this->defaults);
+        $defaults = CommandVariables::definitions($commandLine->variables, [
+            ...$this->defaults,
+            ...$commandLine->variables,
+        ]);
         foreach ($defaults as $name => $variable) {
             if (
                 $commandLine->noBuiltinVariables
@@ -246,11 +224,13 @@ final readonly class MakefileLoader
                 );
             }
         }
+        if ($commandLine->noBuiltinRules && ($defaults['SUFFIXES']->origin ?? '') === 'default') {
+            $defaults['SUFFIXES'] = new Variable('SUFFIXES', '', false, 'default');
+        }
+        MakeFlags::define($commandLine, $defaults);
         return [
             ...array_values($defaults),
-            new Variable('MAKEFLAGS', $commandLine->makeflags(variables: $defaults), true),
             new Variable('.DEFAULT_GOAL', '', false),
-            new Variable('MFLAGS', $commandLine->makeflags(legacy: true), true, 'environment'),
             ...(
                 isset($defaults['GNUMAKEFLAGS'])
                     ? [new Variable('GNUMAKEFLAGS', '', true, $defaults['GNUMAKEFLAGS']->origin)]

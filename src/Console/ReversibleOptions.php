@@ -15,9 +15,10 @@ final class ReversibleOptions
     public function set(string $name, bool $value, string $origin): bool
     {
         $priority = match ($origin) {
+            'override' => 3,
             'command line' => 2,
-            'environment' => 1,
-            default => 0,
+            'environment' => 0,
+            default => 1,
         };
         if ($priority >= ($this->settings[$name][1] ?? -1)) {
             $this->settings[$name] = [$value, $priority];

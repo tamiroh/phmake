@@ -23,5 +23,16 @@ interface Configuration
      *
      * @throws MakefileErrorException
      */
-    public function updateMakeflags(array &$variables, ?VariableExpander $expander = null): void;
+    public function finishReading(array &$variables, VariableExpander $expander): void;
+
+    /**
+     * @param array<string, Variable> $variables
+     *
+     * @throws MakefileErrorException
+     */
+    public function updateMakeflags(
+        array &$variables,
+        ?VariableExpander $expander = null,
+        string $origin = 'file',
+    ): void;
 }

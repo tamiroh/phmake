@@ -1,0 +1,33 @@
+$ ./phmake --no-print-directory
+before=file:recursive: --no-print-directory|environment:--no-print-directory
+after=file:s --no-print-directory|environment:-s --no-print-directory
+build=file:s --no-print-directory|override:simple
+$ ./phmake --no-print-directory -e
+before=environment override:recursive:e --no-print-directory|environment override:-e --no-print-directory
+after=environment override:e --no-print-directory|environment override:-e --no-print-directory
+build=environment override:e --no-print-directory|override:simple
+$ MAKEFLAGS=-e ./phmake --no-print-directory
+before=environment override:recursive:e --no-print-directory|environment override:-e --no-print-directory
+after=environment override:e --no-print-directory|environment override:-e --no-print-directory
+build=environment override:e --no-print-directory|override:simple
+$ ./phmake --no-silent -f override.mk
+parse=override:-s
+build=override:-s
+$ ./phmake -f command.mk MAKEFLAGS=-s
+parse=command line:-s
+assigned=command line:-s
+build=command line:-s
+$ ./phmake --no-silent -f command.mk MAKEFLAGS=-s
+parse=command line:-s
+assigned=command line:-s
+build=command line:-s
+phmake: 'all' is up to date.
+$ ./phmake --no-print-directory -f legacy.mk
+parse=file:custom
+build=file:custom
+$ ./phmake --no-print-directory -e -f legacy.mk
+parse=environment override:-e --no-print-directory
+build=environment override:-e --no-print-directory
+phmake: 'all' is up to date.
+$ ./phmake --no-print-directory -e -f recursive.mk MAKE=./phmake VALUE=command
+child=command:command line:environment override

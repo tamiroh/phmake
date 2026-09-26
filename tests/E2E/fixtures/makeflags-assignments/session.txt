@@ -1,0 +1,27 @@
+$ ./phmake --no-print-directory
+parse=file:file|new:file| --no-print-directory
+build=file:file|new:file| --no-print-directory
+$ ./phmake --no-print-directory VALUE=command
+parse=command:command line|new:file| --no-print-directory -- VALUE=command
+build=command:command line|new:file| --no-print-directory -- VALUE=command
+$ ./phmake --no-print-directory -f overrides.mk VALUE=command
+before= --no-print-directory -- VALUE=command|default
+after=r --no-print-directory|undefined
+build=r --no-print-directory|undefined
+$ ./phmake --no-print-directory -f overrides.mk VALUE=command MAKEOVERRIDES=
+before= --no-print-directory|command line
+after=r --no-print-directory|command line
+build=r --no-print-directory|command line
+$ ./phmake --no-print-directory -f dollars.mk 'VALUE=a $$HOME'
+before=a $HOME|VALUE=a\ $$$$HOME
+after=a $HOME|VALUE=a\ $$$$HOME
+$ ./phmake --no-print-directory -f dollars.mk 'VALUE:=a $$HOME'
+before=a $HOME|VALUE:=a\ $$HOME
+after=a $HOME|VALUE:=a\ $$HOME
+$ ./phmake --no-print-directory -f gnu.mk
+parse= --no-print-directory|file
+build=s --no-print-directory|override
+$ ./phmake --no-silent -f gnu.mk
+parse= --no-silent|file
+build= --no-silent|override
+phmake: 'all' is up to date.
