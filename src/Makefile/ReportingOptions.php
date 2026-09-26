@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Execution;
-
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
+namespace Tamiroh\Phmake\Makefile;
 
 use function explode;
 use function in_array;
@@ -20,6 +18,8 @@ final class ReportingOptions
     public bool $silent = false;
 
     public bool $trace = false;
+
+    public bool $warnUndefinedVariables = false;
 
     public bool $remaking = false;
 

@@ -13,6 +13,8 @@ final class ParallelOptions
 
     public string $sync = 'none';
 
+    public bool $syncSpecified = false;
+
     public ?string $mutex = null;
 
     public ?float $load = null;

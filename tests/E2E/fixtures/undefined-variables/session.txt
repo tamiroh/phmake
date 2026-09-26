@@ -1,0 +1,16 @@
+$ ./phmake --no-print-directory --warn-undefined-variables -f warnings.mk
+warnings.mk:3: warning: undefined variable 'MISSING'
+warnings.mk:5: warning: undefined variable 'ABSENT'
+warnings.mk:6: warning: undefined variable 'UNSET'
+warnings.mk:12: warning: undefined variable 'CALL_MISSING'
+warnings.mk:14: warning: undefined variable 'MISSING'
+recipe= empty=
+$ ./phmake --no-print-directory --warn-undefined-variables -f scope.mk
+scope.mk:3: warning: undefined variable 'TARGET_MISSING'
+
+$ ./phmake --no-print-directory --warn-undefined-variables -f eval.mk
+eval.mk:4: warning: undefined variable 'EVAL_MISSING'
+phmake: 'all' is up to date.
+$ ./phmake --no-print-directory --warn-undefined-variables -f call.mk
+call.mk:4: warning: undefined variable '2'
+value

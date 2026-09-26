@@ -13,6 +13,20 @@ use Tamiroh\Phmake\Makefile\Rule\Recipe;
 
 final class Builtins
 {
+    /** Variables retained when -R disables built-in tool definitions. */
+    public const array INTERNAL_VARIABLES = [
+        'SHELL',
+        'MAKE',
+        'MAKE_COMMAND',
+        'MAKECMDGOALS',
+        'SUFFIXES',
+        '.FEATURES',
+        '.VARIABLES',
+        '.RECIPEPREFIX',
+        '.LOADED',
+        '.SHELLFLAGS',
+    ];
+
     /**
      * @return list<Variable>
      */
@@ -81,6 +95,11 @@ final class Builtins
     public static function variables(): array
     {
         return [
+            new Variable('.VARIABLES', '', false, 'default'),
+            new Variable('.RECIPEPREFIX', '', false, 'default'),
+            new Variable('.LOADED', '', false, 'default'),
+            new Variable('GNUMAKEFLAGS', '', true, 'default'),
+            new Variable('SUFFIXES', '.o .c .f', false, 'default'),
             new Variable('.LIBPATTERNS', 'lib%.so lib%.a', origin: 'default'),
             new Variable('.FEATURES', 'jobserver jobserver-fifo output-sync', false, 'default'),
             new Variable('CC', 'cc', origin: 'default'),

@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\Exports;
+use Tamiroh\Phmake\Makefile\Evaluation\UndefinedVariable;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
@@ -16,6 +17,7 @@ use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\ReportingOptions;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 
 use function array_values;
@@ -49,6 +51,7 @@ final readonly class MakefileParser
         private ?Configuration $configuration = null,
         private ?Shell $shell = null,
         private ?Filesystem $filesystem = null,
+        private ReportingOptions $reporting = new ReportingOptions(),
     ) {}
 
     private static function removeComment(string $line): string
@@ -150,6 +153,7 @@ final readonly class MakefileParser
     {
         $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false), $this->output);
         $context = new EvaluationContext();
+        $context->reporting = $this->reporting;
         $context->shell = $this->shell;
         $context->filesystem = $this->filesystem;
         $variables = &$context->variables;
@@ -199,7 +203,7 @@ final readonly class MakefileParser
         foreach ($this->sources->evaluations as $text) {
             $this->readRules($text, $builder, $variables, [], $exports, [], $scope, '<command-line>');
         }
-        foreach (self::words($scope->expand('$(MAKEFILES)')) as $path) {
+        foreach (self::words($scope->variable('MAKEFILES') === null ? '' : $scope->expand('$(MAKEFILES)')) as $path) {
             $this->readFile(
                 $this->sources->open($path, optional: true, defaultGoal: false),
                 $builder,
@@ -210,6 +214,10 @@ final readonly class MakefileParser
         }
         foreach ($this->sources->main as $path) {
             $this->readFile($this->sources->open($path, main: true), $builder, $exports, $scope, []);
+        }
+        // GNU make rereads its environment flags after reading all makefiles.
+        if ($scope->variable('GNUMAKEFLAGS') === null) {
+            UndefinedVariable::warn($scope, 'GNUMAKEFLAGS');
         }
         $context->reading = false;
         return $builder->build(

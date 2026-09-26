@@ -115,6 +115,7 @@ final readonly class Application
             false,
             'default',
         );
+        $variables['MAKE_COMMAND'] = new Variable('MAKE_COMMAND', $variables['MAKE']->expression, false, 'default');
         foreach (getenv() as $name => $value) {
             if ($name !== 'SHELL' && $name !== 'MAKE_RESTARTS') {
                 $variables[$name] = new Variable($name, $value, origin: 'environment');

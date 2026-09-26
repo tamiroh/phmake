@@ -67,6 +67,7 @@ final readonly class MakefileLoader
                     $configuration,
                     new Shell(output: $this->output),
                     new Filesystem(),
+                    $configuration->execution->reporting,
                 )->parse();
             } catch (MakefileErrorException $error) {
                 Diagnostics::report($error, $this->output);
@@ -90,6 +91,12 @@ final readonly class MakefileLoader
                 $slots,
             );
             if ($makefile->context !== null) {
+                $makefile->context->variables['MFLAGS'] = new Variable(
+                    'MFLAGS',
+                    $configuration->makeflags($restarts, legacy: true),
+                    true,
+                    'environment',
+                );
                 $makefile->context->variables['MAKEFLAGS'] = new Variable(
                     'MAKEFLAGS',
                     $configuration->makeflags($restarts),
@@ -107,6 +114,12 @@ final readonly class MakefileLoader
                 throw $error;
             } finally {
                 if ($makefile->context !== null) {
+                    $makefile->context->variables['MFLAGS'] = new Variable(
+                        'MFLAGS',
+                        $configuration->makeflags(legacy: true),
+                        true,
+                        'environment',
+                    );
                     $makefile->context->variables['MAKEFLAGS'] = new Variable(
                         'MAKEFLAGS',
                         $configuration->makeflags(),
@@ -214,9 +227,7 @@ final readonly class MakefileLoader
             if (
                 $commandLine->noBuiltinVariables
                 && $variable->origin === 'default'
-                && $name !== 'SHELL'
-                && $name !== 'MAKE'
-                && $name !== '.FEATURES'
+                && !in_array($name, Builtins::INTERNAL_VARIABLES, true)
             ) {
                 unset($defaults[$name]);
             } elseif ($commandLine->environmentOverrides && $variable->origin === 'environment') {
@@ -231,7 +242,13 @@ final readonly class MakefileLoader
         return [
             ...array_values($defaults),
             new Variable('MAKEFLAGS', $commandLine->makeflags(), false),
-            ...(isset($defaults['GNUMAKEFLAGS']) ? [new Variable('GNUMAKEFLAGS', '', false, 'environment')] : []),
+            new Variable('.DEFAULT_GOAL', '', false),
+            new Variable('MFLAGS', $commandLine->makeflags(legacy: true), true, 'environment'),
+            ...(
+                isset($defaults['GNUMAKEFLAGS'])
+                    ? [new Variable('GNUMAKEFLAGS', '', true, $defaults['GNUMAKEFLAGS']->origin)]
+                    : []
+            ),
             new Variable('MAKELEVEL', (string) $this->level, false, 'environment'),
             new Variable('CURDIR', (string) getcwd(), false),
             ...(

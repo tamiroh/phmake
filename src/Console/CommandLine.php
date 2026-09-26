@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Console;
 
 use Override;
 use Random\RandomException;
+use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
@@ -15,6 +16,7 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\Configuration;
 
 use function array_map;
+use function array_reverse;
 use function array_values;
 use function count;
 use function ctype_digit;
@@ -73,6 +75,9 @@ final class CommandLine implements Configuration
         $this->input = new InputOptions();
         $this->execution = new ExecutionOptions();
         $this->readFlags($gnumakeflags, $defaults);
+        if ($this->execution->reporting->warnUndefinedVariables && !isset($defaults['MAKEFLAGS'])) {
+            new Output()->writeWarning("warning: undefined variable 'MAKEFLAGS'");
+        }
         $this->readFlags($makeflags, $defaults);
         $this->readArguments($arguments, false, $defaults);
     }
@@ -102,11 +107,11 @@ final class CommandLine implements Configuration
         return $words;
     }
 
-    public function makeflags(?int $makefileRestart = null): string
+    public function makeflags(?int $makefileRestart = null, bool $legacy = false): string
     {
         $execution = $makefileRestart === null ? $this->execution : $this->execution->forMakefiles($makefileRestart);
         $assignments = [];
-        foreach ($this->variables as $variable) {
+        foreach (array_reverse($this->variables) as $variable) {
             if ($variable->origin !== 'command line') {
                 continue;
             }
@@ -130,32 +135,41 @@ final class CommandLine implements Configuration
             . ($execution->reporting->silent ? 's' : '')
             . ($execution->touch ? 't' : '')
             . ($this->printDirectory === true ? 'w' : '')
+            . implode('', array_map(
+                static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
+                $this->input->includes,
+            ))
             . (
                 $execution->parallel->jobs === 1
                     ? ''
                     : ' -j' . ($execution->parallel->jobs === 0 ? '' : $execution->parallel->jobs)
             )
-            . ($execution->parallel->auth === null ? '' : ' --jobserver-auth=' . $execution->parallel->auth)
-            . ($execution->parallel->sync === 'none' ? '' : ' -O' . $execution->parallel->sync)
-            . ($execution->parallel->mutex === null ? '' : ' --sync-mutex=' . $execution->parallel->mutex)
             . ($execution->parallel->load === null ? '' : ' -l' . $execution->parallel->load)
-            . ($execution->parallel->shuffle === null ? '' : ' --shuffle=' . $execution->parallel->shuffle)
+            . (
+                !$execution->parallel->syncSpecified && $execution->parallel->sync === 'none'
+                    ? ''
+                    : ' -O' . $execution->parallel->sync
+            )
             . implode('', array_map(
                 static fn(string $levels): string => ' --debug=' . str_replace(' ', '\\ ', $levels),
                 $execution->reporting->debugLevels,
             ))
+            . ($execution->parallel->auth === null ? '' : ' --jobserver-auth=' . $execution->parallel->auth)
             . ($execution->reporting->trace ? ' --trace' : '')
             . ($this->printDirectory === false ? ' --no-print-directory' : '')
-            . implode('', array_map(
-                static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
-                $this->input->includes,
-            ))
+            . ($execution->reporting->warnUndefinedVariables ? ' --warn-undefined-variables' : '')
+            . ($execution->parallel->mutex === null ? '' : ' --sync-mutex=' . $execution->parallel->mutex)
             . implode('', array_map(
                 static fn(string $text): string => ' --eval='
                 . str_replace(['\\', '$', ' ', "\t", "\n"], ['\\\\', '$$', '\\ ', "\\\t", "\\\n"], $text),
                 $this->input->evaluations,
             ))
-            . ($assignments === [] ? '' : ' -- ' . implode(' ', $assignments));
+            . ($execution->parallel->shuffle === null ? '' : ' --shuffle=' . $execution->parallel->shuffle)
+            . ($legacy || $assignments === [] ? '' : ' -- ' . implode(' ', $assignments));
+        if ($legacy) {
+            $flags = ltrim($flags);
+            return $flags === '' || str_starts_with($flags, '-') ? $flags : '-' . $flags;
+        }
         return $execution->parallel->jobs === 1 ? $flags : ltrim($flags);
     }
 
@@ -180,10 +194,7 @@ final class CommandLine implements Configuration
             if (
                 $this->noBuiltinVariables
                 && $variable->origin === 'default'
-                && $name !== 'SHELL'
-                && $name !== 'MAKE'
-                && $name !== 'MAKECMDGOALS'
-                && $name !== '.FEATURES'
+                && !in_array($name, Builtins::INTERNAL_VARIABLES, true)
             ) {
                 unset($variables[$name]);
             } elseif ($this->environmentOverrides && $variable->origin === 'environment' && $name !== 'MAKEFLAGS') {
@@ -195,6 +206,7 @@ final class CommandLine implements Configuration
                 );
             }
         }
+        $variables['MFLAGS'] = new Variable('MFLAGS', $this->makeflags(legacy: true), true, 'environment');
         $variables['MAKEFLAGS'] = new Variable(
             'MAKEFLAGS',
             $this->makeflags(),
@@ -216,6 +228,7 @@ final class CommandLine implements Configuration
         }
         $context = new EvaluationContext(array_values([...$defaults, ...$this->variables]));
         $context->shell = new Shell();
+        $context->reporting = $this->execution->reporting;
         $context->filesystem = new Filesystem();
         $variables = &$context->variables;
         $expander = new VariableExpander($context, new Output());
@@ -299,6 +312,10 @@ final class CommandLine implements Configuration
             '--assume-old', '--old-file' => '-o',
             default => $argument,
         };
+        if ($argument === '--warn-undefined-variables') {
+            $this->execution->reporting->warnUndefinedVariables = true;
+            return;
+        }
         if ($argument === '--trace') {
             $this->execution->reporting->trace = true;
             return;
@@ -381,6 +398,7 @@ final class CommandLine implements Configuration
                         throw new MakefileErrorException("unknown output-sync type '$sync'");
                     }
                     $this->execution->parallel->sync = $sync;
+                    $this->execution->parallel->syncSpecified = true;
                     return;
                 case 'l':
                     $load = substr($argument, $offset + 1);

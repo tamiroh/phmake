@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 
+use function array_keys;
 use function array_slice;
 use function array_values;
 use function explode;
@@ -193,10 +194,13 @@ final readonly class VariableExpander
 
     public function variable(string $name): ?Variable
     {
-        return (
+        $variable =
             $this->locals[$name]
-            ?? ($this->scope === null ? $this->context->variables[$name] ?? null : $this->scope->variable($name))
-        );
+            ?? ($this->scope === null ? $this->context->variables[$name] ?? null : $this->scope->variable($name));
+        if ($name === '.VARIABLES' && $variable?->origin === 'default') {
+            return new Variable($name, implode(' ', array_keys($this->context->variables)), false, 'default');
+        }
+        return $variable;
     }
 
     /**
@@ -317,6 +321,7 @@ final readonly class VariableExpander
     {
         $variable = $this->variable($name);
         if ($variable === null) {
+            UndefinedVariable::warn($this, $name);
             return '';
         }
         if (!$variable->recursive) {

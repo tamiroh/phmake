@@ -1,0 +1,12 @@
+$ ./phmake --no-print-directory MAKE=./phmake
+Makefile:3: warning: undefined variable 'AFTER_MISSING'
+child.mk:2: warning: undefined variable 'CHILD_MISSING'
+child=
+$ GNUMAKEFLAGS=--warn-undefined-variables ./phmake --no-print-directory -f child.mk
+phmake: warning: undefined variable 'MAKEFLAGS'
+child.mk:2: warning: undefined variable 'CHILD_MISSING'
+child=
+$ ./phmake --no-print-directory --warn-undefined-variables -f include.mk
+other.mk:1: warning: undefined variable 'INCLUDED_MISSING'
+include.mk:3: warning: undefined variable 'MAIN_MISSING'
+main=

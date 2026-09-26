@@ -269,6 +269,9 @@ final class Functions
         }
         $variable = $expander->variable($name);
         if ($variable === null) {
+            if ($name !== '') {
+                UndefinedVariable::warn($expander, $name);
+            }
             return '';
         }
         if (!$variable->recursive) {

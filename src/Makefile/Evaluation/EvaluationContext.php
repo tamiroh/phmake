@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Makefile\Evaluation;
 use Closure;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Shell;
+use Tamiroh\Phmake\Makefile\ReportingOptions;
 
 use function in_array;
 
@@ -29,6 +30,8 @@ final class EvaluationContext
 
     public Exports $exports;
 
+    public ReportingOptions $reporting;
+
     public bool $shellEnvironment = false;
 
     /** @var array<string, string> */
@@ -40,6 +43,7 @@ final class EvaluationContext
     public function __construct(array $variables = [])
     {
         $this->exports = new Exports();
+        $this->reporting = new ReportingOptions();
         foreach ($variables as $variable) {
             $this->variables[$variable->name] = $variable;
             if (in_array($variable->origin, ['environment', 'environment override'], true)) {

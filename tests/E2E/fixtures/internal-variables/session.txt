@@ -1,0 +1,8 @@
+$ ./phmake --no-print-directory --warn-undefined-variables
+origins=.VARIABLES:default:simple .RECIPEPREFIX:default:simple .LOADED:default:simple GNUMAKEFLAGS:default:recursive MFLAGS:environment:recursive MAKE_COMMAND:default:simple .DEFAULT_GOAL:file:simple
+names=.LOADED .RECIPEPREFIX .VARIABLES NAMES
+changed=replaced
+Makefile:8: warning: undefined variable '.VARIABLES'
+Makefile:8: warning: undefined variable '.RECIPEPREFIX'
+removed=
+phmake: 'all' is up to date.

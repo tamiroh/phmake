@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
+use Tamiroh\Phmake\Makefile\ReportingOptions;
+
 final class ExecutionOptions
 {
     public ParallelOptions $parallel;

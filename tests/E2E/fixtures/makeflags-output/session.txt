@@ -1,0 +1,13 @@
+$ mkdir first second; ./phmake --no-print-directory -Ifirst -Onone VALUE=example-user
+MAKEFLAGS= -Ifirst -Onone --no-print-directory -- VALUE=example-user
+MFLAGS=-Ifirst -Onone --no-print-directory
+UPDATED= -Ifirst -Isecond -l2.5 -Onone --no-print-directory -- VALUE=example-user
+LEGACY=-Ifirst -Isecond -l2.5 -Onone --no-print-directory
+phmake: 'all' is up to date.
+$ ./phmake --no-print-directory -rR -Onone -Isecond -Ifirst -l2.5 --warn-undefined-variables VALUE=sample
+MAKEFLAGS=rR -Isecond -Ifirst -l2.5 -Onone --no-print-directory --warn-undefined-variables -- VALUE=sample
+MFLAGS=-rR -Isecond -Ifirst -l2.5 -Onone --no-print-directory --warn-undefined-variables
+UPDATED=rR -Isecond -Ifirst -l2.5 -Onone --no-print-directory --warn-undefined-variables -- VALUE=sample
+LEGACY=-rR -Isecond -Ifirst -l2.5 -Onone --no-print-directory --warn-undefined-variables
+phmake: warning: undefined variable 'GNUMAKEFLAGS'
+phmake: 'all' is up to date.
