@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Makefile;
 
 use Override;
 use Symfony\Component\Process\Process;
+use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Parser\SourceFiles as SourceFilesInterface;
 use Tamiroh\Phmake\Parser\SourceText;
 

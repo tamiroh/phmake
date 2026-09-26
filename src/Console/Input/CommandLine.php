@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Input;
 
 use Override;
 use Random\RandomException;
+use Tamiroh\Phmake\Console\Filesystem\Filesystem;
+use Tamiroh\Phmake\Console\Output\Output;
+use Tamiroh\Phmake\Console\Process\Shell;
 use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;

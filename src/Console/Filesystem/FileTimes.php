@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Filesystem;
 
 use function clearstatcache;
 use function dirname;

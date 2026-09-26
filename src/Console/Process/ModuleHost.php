@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Process;
 
 use Closure;
 use Override;
+use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Makefile\IO\ModuleHost as ModuleHostInterface;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 

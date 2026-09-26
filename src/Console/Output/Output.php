@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Output;
 
 use Override;
 use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;

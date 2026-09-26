@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Process;
 
 use Override;
 use Random\RandomException;
 use Symfony\Component\Process\Process;
+use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;
 use Tamiroh\Phmake\Makefile\IO\JobSlots;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;

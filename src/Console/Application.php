@@ -5,6 +5,15 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Phar;
+use Tamiroh\Phmake\Console\Input\CommandLine;
+use Tamiroh\Phmake\Console\Input\Usage;
+use Tamiroh\Phmake\Console\Input\UsageException;
+use Tamiroh\Phmake\Console\Makefile\MakefileLoader;
+use Tamiroh\Phmake\Console\Output\Output;
+use Tamiroh\Phmake\Console\Output\OutputWriteException;
+use Tamiroh\Phmake\Console\Process\ModuleHost;
+use Tamiroh\Phmake\Console\Process\RestartFailureException;
+use Tamiroh\Phmake\Console\Process\Signals;
 use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Diagnostics;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;

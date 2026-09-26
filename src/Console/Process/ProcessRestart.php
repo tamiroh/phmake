@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Process;
 
 use Phar;
+use Tamiroh\Phmake\Console\Input\CommandLine;
+use Tamiroh\Phmake\Console\Output\Output;
+use Tamiroh\Phmake\Console\Output\OutputBuffer;
 use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\Execution\ParallelOptions;
 
@@ -38,7 +41,7 @@ final class ProcessRestart
         $executable = Phar::running(false);
         if ($executable === '') {
             $executable = PHP_BINARY;
-            $arguments = [dirname(__DIR__, 2) . '/phmake', ...$arguments];
+            $arguments = [dirname(__DIR__, 3) . '/phmake', ...$arguments];
         }
         DebugTrace::write(
             $configuration->execution->reporting,

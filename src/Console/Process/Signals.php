@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Process;
 
 use Symfony\Component\Process\Process;
 use Tamiroh\Phmake\Makefile\Execution\InterruptedException;

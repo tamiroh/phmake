@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Input;
 
 use const PHP_OS_FAMILY;
 use const PHP_VERSION;

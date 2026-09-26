@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Process;
 
 use Closure;
 use Override;
 use Symfony\Component\Process\Exception\ProcessSignaledException;
 use Symfony\Component\Process\Process as SymfonyProcess;
+use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\IO\Shell as ShellInterface;
 use Tamiroh\Phmake\Makefile\IO\ShellResult;

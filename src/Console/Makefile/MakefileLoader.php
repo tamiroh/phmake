@@ -2,8 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console;
+namespace Tamiroh\Phmake\Console\Makefile;
 
+use Tamiroh\Phmake\Console\Filesystem\Filesystem;
+use Tamiroh\Phmake\Console\Input\CommandLine;
+use Tamiroh\Phmake\Console\Input\CommandVariables;
+use Tamiroh\Phmake\Console\Input\MakeFlags;
+use Tamiroh\Phmake\Console\Output\Output;
+use Tamiroh\Phmake\Console\Process\Jobserver;
+use Tamiroh\Phmake\Console\Process\ModuleHost;
+use Tamiroh\Phmake\Console\Process\ProcessRestart;
+use Tamiroh\Phmake\Console\Process\Shell;
+use Tamiroh\Phmake\Console\Process\Signals;
 use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\DebugTrace;
 use Tamiroh\Phmake\Makefile\Diagnostics;
