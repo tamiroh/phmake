@@ -9,6 +9,9 @@ use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
 
+/**
+ * @internal
+ */
 final class BuildState
 {
     /** @var array<string, UpdateResult> */

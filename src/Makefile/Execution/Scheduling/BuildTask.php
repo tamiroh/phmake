@@ -12,6 +12,9 @@ use Tamiroh\Phmake\Makefile\Execution\UpdateResult;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Throwable;
 
+/**
+ * @internal
+ */
 final class BuildTask
 {
     /** @var Fiber<null, Closure(): bool, null, void> */

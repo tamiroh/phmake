@@ -20,6 +20,9 @@ use function strspn;
 use function substr;
 use function trim;
 
+/**
+ * @internal
+ */
 final readonly class ExpandedCommand
 {
     public function __construct(

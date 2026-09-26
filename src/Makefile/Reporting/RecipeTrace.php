@@ -16,6 +16,8 @@ use function implode;
 
 /**
  * Explain a recipe invocation using its source and automatic prerequisite values.
+ *
+ * @internal
  */
 final class RecipeTrace
 {

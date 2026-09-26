@@ -18,6 +18,8 @@ use function usleep;
 
 /**
  * Cooperatively run dependency traversals while recipe processes are waiting.
+ *
+ * @internal
  */
 final class Scheduler
 {

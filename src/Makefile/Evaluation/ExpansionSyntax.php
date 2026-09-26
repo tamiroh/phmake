@@ -13,6 +13,9 @@ use function preg_replace;
 use function strlen;
 use function substr;
 
+/**
+ * @internal
+ */
 final class ExpansionSyntax
 {
     /**

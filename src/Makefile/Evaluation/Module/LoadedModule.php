@@ -6,6 +6,9 @@ namespace Tamiroh\Phmake\Makefile\Evaluation\Module;
 
 use Tamiroh\Phmake\Makefile\IO\ModuleHost;
 
+/**
+ * @internal
+ */
 final class LoadedModule
 {
     public ?ModuleHost $host = null;

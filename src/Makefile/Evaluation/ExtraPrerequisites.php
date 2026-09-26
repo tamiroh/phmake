@@ -15,6 +15,8 @@ use function in_array;
 
 /**
  * Dependency-only prerequisites use a target's own definition, without inheritance.
+ *
+ * @internal
  */
 final class ExtraPrerequisites
 {

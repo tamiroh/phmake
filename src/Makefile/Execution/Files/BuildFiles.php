@@ -26,6 +26,8 @@ use const PHP_INT_MIN;
 
 /**
  * File names, timestamps, and intermediate lifetime for one build invocation.
+ *
+ * @internal
  */
 final class BuildFiles
 {

@@ -13,6 +13,8 @@ use function trim;
 
 /**
  * Report a failure once, through the same output channel as its build phase.
+ *
+ * @internal
  */
 final class Diagnostics
 {

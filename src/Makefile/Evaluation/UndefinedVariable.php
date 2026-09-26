@@ -8,6 +8,8 @@ use function in_array;
 
 /**
  * Warn about missing references, excluding GNU make's implicitly defined names.
+ *
+ * @internal
  */
 final class UndefinedVariable
 {

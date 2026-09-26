@@ -6,6 +6,8 @@ namespace Tamiroh\Phmake\Makefile\Rule;
 
 /**
  * A leading current-directory component does not distinguish make targets.
+ *
+ * @internal
  */
 final class FileName
 {

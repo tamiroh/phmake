@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution\Recipe;
 
+/**
+ * @internal
+ */
 final readonly class CommandResult
 {
     public function __construct(

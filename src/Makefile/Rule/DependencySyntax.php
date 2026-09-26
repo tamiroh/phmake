@@ -13,6 +13,8 @@ use function substr;
 
 /**
  * Tokenization shared by first and secondary prerequisite expansion.
+ *
+ * @internal
  */
 final class DependencySyntax
 {

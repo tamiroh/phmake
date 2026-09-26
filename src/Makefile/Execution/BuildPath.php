@@ -8,6 +8,8 @@ use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
 
 /**
  * A traversal's variable scope and ancestors, independent of concurrent branches.
+ *
+ * @internal
  */
 final class BuildPath
 {

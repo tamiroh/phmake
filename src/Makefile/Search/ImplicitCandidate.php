@@ -23,6 +23,8 @@ use function strpbrk;
 
 /**
  * A matched pattern retains the unexpanded rule until its prerequisites are tested.
+ *
+ * @internal
  */
 final readonly class ImplicitCandidate
 {

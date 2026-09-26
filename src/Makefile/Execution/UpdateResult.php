@@ -7,6 +7,9 @@ namespace Tamiroh\Phmake\Makefile\Execution;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
+/**
+ * @internal
+ */
 final readonly class UpdateResult
 {
     public function __construct(

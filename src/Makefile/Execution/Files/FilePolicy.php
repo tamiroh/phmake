@@ -12,6 +12,8 @@ use function in_array;
 
 /**
  * Special targets govern intermediate lifetime independently of recipe selection.
+ *
+ * @internal
  */
 final readonly class FilePolicy
 {

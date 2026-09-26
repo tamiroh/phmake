@@ -9,6 +9,9 @@ use Fiber;
 use LogicException;
 use Throwable;
 
+/**
+ * @internal
+ */
 final class Suspension
 {
     /**

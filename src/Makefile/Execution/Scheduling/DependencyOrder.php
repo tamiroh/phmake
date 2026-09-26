@@ -12,6 +12,9 @@ use function in_array;
 use function strcmp;
 use function usort;
 
+/**
+ * @internal
+ */
 final class DependencyOrder
 {
     /**

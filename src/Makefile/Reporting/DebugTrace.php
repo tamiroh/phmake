@@ -11,6 +11,8 @@ use function str_repeat;
 
 /**
  * Emit diagnostic events from the actual traversal, independently of recipe silence.
+ *
+ * @internal
  */
 final class DebugTrace
 {

@@ -6,6 +6,8 @@ namespace Tamiroh\Phmake\Makefile\Execution\Files;
 
 /**
  * Preserve file-table traversal order for intermediate cleanup diagnostics.
+ *
+ * @internal
  */
 final class FileTable
 {

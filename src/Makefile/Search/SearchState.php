@@ -8,6 +8,8 @@ use Tamiroh\Phmake\Makefile\Rule\Target;
 
 /**
  * Candidate searches clone this state; only an accepted branch is committed.
+ *
+ * @internal
  */
 final class SearchState
 {

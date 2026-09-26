@@ -10,6 +10,8 @@ use Tamiroh\Phmake\Makefile\Rule\Target;
 
 /**
  * Merge rule declarations when directory search identifies the same file.
+ *
+ * @internal
  */
 final class TargetAlias
 {

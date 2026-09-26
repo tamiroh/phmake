@@ -31,6 +31,9 @@ use function in_array;
 use function preg_match;
 use function preg_replace;
 
+/**
+ * @internal
+ */
 final readonly class RecipeRunner
 {
     public function __construct(

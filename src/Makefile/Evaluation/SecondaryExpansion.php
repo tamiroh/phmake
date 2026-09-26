@@ -17,6 +17,9 @@ use function preg_replace_callback;
 use function str_contains;
 use function str_replace;
 
+/**
+ * @internal
+ */
 final class SecondaryExpansion
 {
     /**

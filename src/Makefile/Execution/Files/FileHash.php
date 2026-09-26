@@ -6,6 +6,8 @@ namespace Tamiroh\Phmake\Makefile\Execution\Files;
 
 /**
  * Jenkins lookup3 string hashing used by GNU make's file table.
+ *
+ * @internal
  */
 final class FileHash
 {

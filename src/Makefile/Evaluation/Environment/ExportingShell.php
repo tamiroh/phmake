@@ -11,6 +11,9 @@ use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\IO\ShellResult;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
+/**
+ * @internal
+ */
 final readonly class ExportingShell implements Shell
 {
     public function __construct(
