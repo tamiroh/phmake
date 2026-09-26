@@ -29,6 +29,7 @@ use function intdiv;
 use function ltrim;
 use function preg_match;
 use function preg_split;
+use function str_contains;
 use function str_repeat;
 use function str_starts_with;
 use function strlen;
@@ -59,6 +60,9 @@ final readonly class MakefileParser
 
     private static function removeComment(string $line): string
     {
+        if (!str_contains($line, '#')) {
+            return $line;
+        }
         $result = '';
         $depth = 0;
         for ($index = 0; $index < strlen($line); $index++) {
@@ -125,6 +129,9 @@ final readonly class MakefileParser
      */
     private static function splitRecipe(string $line): array
     {
+        if (!str_contains($line, ';')) {
+            return [self::removeComment($line), null];
+        }
         $depth = 0;
         for ($index = 0; $index < strlen($line); $index++) {
             if ($line[$index] === '\\') {

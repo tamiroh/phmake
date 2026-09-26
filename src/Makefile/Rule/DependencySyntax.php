@@ -20,6 +20,9 @@ final class DependencySyntax
 {
     public static function delimiter(string $text, string $delimiter): ?int
     {
+        if (!str_contains($text, $delimiter)) {
+            return null;
+        }
         $depth = 0;
         for ($index = 0; $index < strlen($text); $index++) {
             if ($text[$index] === '\\') {

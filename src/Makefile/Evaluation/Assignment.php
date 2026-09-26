@@ -29,6 +29,9 @@ final readonly class Assignment
 
     public static function parse(string $text, bool $allowWhitespace = false): ?self
     {
+        if (!str_contains($text, '=')) {
+            return null;
+        }
         $text = ltrim($text);
         $depth = 0;
         for ($index = 0; $index < strlen($text); $index++) {
@@ -47,7 +50,10 @@ final readonly class Assignment
                     }
                 }
                 $matches = [];
-                if (preg_match('/^(:::=|::=|:=|!=|\+=|\?=|=)/', substr($text, $index), $matches) === 1) {
+                if (
+                    str_contains(':!+?=', $text[$index])
+                    && preg_match('/^(:::=|::=|:=|!=|\+=|\?=|=)/', substr($text, $index), $matches) === 1
+                ) {
                     /** @var array{non-falsy-string, ':::='|'::='|':='|'!='|'+='|'?='|'='} $matches */
                     return new self(
                         trim(substr($text, 0, $index)),
