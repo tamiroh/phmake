@@ -13,6 +13,7 @@ use function rtrim;
 use function str_contains;
 use function str_replace;
 use function str_starts_with;
+use function strcspn;
 use function strlen;
 use function substr;
 
@@ -71,7 +72,8 @@ final class LineReader
             return false;
         }
         $hasColon = false;
-        for ($index = 0; $index < strlen($line); $index++) {
+        $length = strlen($line);
+        for ($index = strcspn($line, '\\#:;'); $index < $length; $index += 1 + strcspn($line, '\\#:;', $index + 1)) {
             if ($line[$index] === '\\') {
                 $index++;
             } elseif ($line[$index] === '#') {

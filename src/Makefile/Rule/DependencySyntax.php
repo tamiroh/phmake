@@ -6,10 +6,14 @@ namespace Tamiroh\Phmake\Makefile\Rule;
 
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 
+use function preg_split;
 use function str_contains;
+use function strcspn;
 use function strlen;
 use function strpbrk;
 use function substr;
+
+use const PREG_SPLIT_NO_EMPTY;
 
 /**
  * Tokenization shared by first and secondary prerequisite expansion.
@@ -27,7 +31,10 @@ final class DependencySyntax
             return null;
         }
         $depth = 0;
-        for ($index = 0; $index < strlen($text); $index++) {
+        $length = strlen($text);
+        // Skip in C to the next character that can matter; long paths rarely contain one.
+        $stops = '\\(){}' . $delimiter;
+        for ($index = strcspn($text, $stops); $index < $length; $index += 1 + strcspn($text, $stops, $index + 1)) {
             if ($text[$index] === '\\') {
                 $index++;
             } elseif (
@@ -98,6 +105,11 @@ final class DependencySyntax
      */
     public static function words(string $text): array
     {
+        // Without backslashes only whitespace separates words, so split in C.
+        if (!str_contains($text, '\\')) {
+            $words = preg_split('/[ \t\r\n]+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+            return $words === false ? [] : $words;
+        }
         $result = [];
         $word = '';
         for ($index = 0; $index < strlen($text); $index++) {
