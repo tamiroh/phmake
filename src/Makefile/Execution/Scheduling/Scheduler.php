@@ -14,8 +14,6 @@ use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use WeakMap;
 
-use function usleep;
-
 /**
  * Cooperatively run dependency traversals while recipe processes are waiting.
  *
@@ -179,6 +177,6 @@ final class Scheduler
                 $this->error ??= $task->error;
             }
         }
-        usleep(1000);
+        $this->slots?->waitForJobs();
     }
 }

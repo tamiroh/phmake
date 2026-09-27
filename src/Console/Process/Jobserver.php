@@ -31,6 +31,7 @@ use function substr;
 use function sys_get_temp_dir;
 use function sys_getloadavg;
 use function unlink;
+use function usleep;
 
 use const STREAM_PF_UNIX;
 use const STREAM_SOCK_STREAM;
@@ -147,6 +148,12 @@ final class Jobserver implements JobSlots
         } elseif ($this->writer !== null) {
             fwrite($this->writer, $slot);
         }
+    }
+
+    #[Override]
+    public function waitForJobs(): void
+    {
+        usleep(1000);
     }
 
     private function adopt(string $auth, Output $output): bool

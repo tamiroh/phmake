@@ -256,6 +256,18 @@ deny-from = ['Tamiroh\Phmake\Makefile\', 'Tamiroh\Phmake\Parser\']
 
 # Clock and randomness
 [[guard.perimeter.restrictions]]
+dependency = '**\sleep'
+deny-from = ['Tamiroh\Phmake\Makefile\', 'Tamiroh\Phmake\Parser\']
+
+[[guard.perimeter.restrictions]]
+dependency = '**\usleep'
+deny-from = ['Tamiroh\Phmake\Makefile\', 'Tamiroh\Phmake\Parser\']
+
+[[guard.perimeter.restrictions]]
+dependency = '**\time_nanosleep'
+deny-from = ['Tamiroh\Phmake\Makefile\', 'Tamiroh\Phmake\Parser\']
+
+[[guard.perimeter.restrictions]]
 dependency = '**\time'
 deny-from = ['Tamiroh\Phmake\Makefile\', 'Tamiroh\Phmake\Parser\']
 

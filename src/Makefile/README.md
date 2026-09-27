@@ -96,8 +96,8 @@ These folders group responsibilities rather than independent layers. For
 example, stored rules refer to commands, and evaluation can invoke shell
 services. The enforced outer boundary is that `Makefile` does not depend on
 `Parser`, `Console`, or concrete process libraries. `mago guard` also rejects
-native functions for output, processes, files, the environment, the clock, and
-randomness here and in `Parser`; use the interfaces in `IO/` instead.
+native functions for output, processes, files, the environment, the clock,
+sleeping, and randomness here and in `Parser`; use the interfaces in `IO/` instead.
 
 ## Reading order
 
@@ -109,6 +109,7 @@ Then follow the subsystem relevant to the behavior being changed:
   `VariableExpander` → `Functions`.
 - Parallel builds: `Scheduler` → `BuildTask` → `Suspension`; process waiting is
   implemented by `Console/Process/RecipeProcess` through this suspension contract.
+  When no task can advance, `Scheduler` waits through `IO/JobSlots::waitForJobs()`.
 - File lifetime: `BuildFiles` → `FilePolicy`; `FileTable` and `FileHash` preserve
   GNU make's traversal order for intermediate-file cleanup messages.
 
