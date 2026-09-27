@@ -13,6 +13,7 @@ use function ltrim;
 use function preg_match;
 use function str_contains;
 use function str_replace;
+use function strcspn;
 use function strlen;
 use function strpos;
 use function strspn;
@@ -34,7 +35,10 @@ final readonly class Assignment
         }
         $text = ltrim($text);
         $depth = 0;
-        for ($index = 0; $index < strlen($text); $index++) {
+        $length = strlen($text);
+        // Skip in C to the next character that can matter; names and values rarely contain one.
+        $stops = "(){} \t:!+?=#";
+        for ($index = strcspn($text, $stops); $index < $length; $index += 1 + strcspn($text, $stops, $index + 1)) {
             if (
                 ($text[$index] === '(' || $text[$index] === '{')
                 && ($depth > 0 || $index > 0 && $text[$index - 1] === '$')
