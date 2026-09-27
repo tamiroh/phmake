@@ -63,6 +63,22 @@ final class MakefileSources
     }
 
     /**
+     * Whether one of the main makefiles, rather than only generated or optional input, was read.
+     */
+    public function foundMain(): bool
+    {
+        foreach ($this->read as $file) {
+            if (
+                $file->text !== null
+                && (in_array($file->path, $this->main, true) || !$file->rebuild && in_array('-', $this->main, true))
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @return list<string>
      */
     public function matching(string $pattern): array

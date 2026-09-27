@@ -18,6 +18,7 @@ use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\Configuration;
 
+use function array_map;
 use function array_values;
 use function count;
 use function ctype_digit;
@@ -130,14 +131,8 @@ final class CommandLine implements Configuration
         $variables['GNUMAKEFLAGS'] = new Variable('GNUMAKEFLAGS', '', false, 'override');
         $this->updateMakeflags($variables, $expander, 'environment');
         $this->noBuiltinRules = $this->noBuiltinRules || $this->noBuiltinVariables;
-        foreach ($variables as $name => $variable) {
-            if (
-                $this->noBuiltinVariables
-                && $variable->origin === 'default'
-                && !in_array($name, Builtins::INTERNAL_VARIABLES, true)
-            ) {
-                unset($variables[$name]);
-            }
+        if ($this->noBuiltinVariables) {
+            $variables = Builtins::withoutVariables($variables);
         }
         if ($this->noBuiltinRules) {
             new Assignment('SUFFIXES', ':=', '')->apply($variables, 'default');
@@ -170,16 +165,11 @@ final class CommandLine implements Configuration
                 $expander->output->buffer->directory = null;
             }
         }
-        foreach ($variables as $name => $variable) {
-            if ($this->environmentOverrides && $variable->origin === 'environment') {
-                $variables[$name] = new Variable(
-                    $name,
-                    $variable->expression,
-                    $variable->recursive,
-                    'environment',
-                    environmentOverrides: true,
-                );
-            }
+        if ($this->environmentOverrides) {
+            $variables = array_map(
+                static fn(Variable $variable): Variable => $variable->withEnvironmentOverrides(),
+                $variables,
+            );
         }
         MakeFlags::define($this, $variables, $expander?->context->posix ?? false);
     }

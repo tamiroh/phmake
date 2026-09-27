@@ -9,7 +9,8 @@ Start with [`Makefile.php`](Makefile.php), which holds the parsed definitions,
 then [`Execution/Build.php`](Execution/Build.php), which coordinates a build.
 [`MakefileBuilder.php`](MakefileBuilder.php) merges the rules read by the
 parser: special targets, suffix rules, recipe overrides, and the default goal.
-`Builtins.php` supplies default variables and rules. `MakefileErrorException.php`
+`Builtins.php` supplies default makefile names, variables, and rules, and the
+variables describing an invocation. `MakefileErrorException.php`
 is the common semantic error type.
 
 ## Responsibilities

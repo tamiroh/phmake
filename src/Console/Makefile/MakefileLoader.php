@@ -29,14 +29,11 @@ use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
 use Tamiroh\Phmake\Parser\Source\MakefileSources;
 
+use function array_map;
 use function array_values;
 use function function_exists;
-use function getcwd;
-use function implode;
 use function in_array;
-use function is_file;
 use function ltrim;
-use function scandir;
 
 /**
  * Each restart reconstructs parser and build state from the original invocation.
@@ -69,10 +66,13 @@ final readonly class MakefileLoader
             $configuration = clone $this->commandLine;
             $filesystem = new Filesystem();
             $filesystem->options = $configuration->execution->files;
+            $files = new SourceFiles();
             $sources = new MakefileSources(
-                new SourceFiles(),
+                $files,
                 $filesystem,
-                $configuration->input->makefiles === [] ? $this->defaultMakefiles() : $configuration->input->makefiles,
+                $configuration->input->makefiles === []
+                    ? Builtins::makefiles($files)
+                    : $configuration->input->makefiles,
                 $configuration,
                 $stdin === null ? null : new ReadFile($stdin->path, $stdin->text, null, rebuild: false),
                 $configuration->input->makefiles === [],
@@ -84,7 +84,7 @@ final readonly class MakefileLoader
             try {
                 $makefile = new MakefileParser(
                     $sources,
-                    $this->variables($configuration, $restarts),
+                    $this->variables($configuration, $filesystem->workingDirectory(), $restarts),
                     $configuration->variables,
                     $configuration->noBuiltinRules ? [] : Builtins::rules(),
                     $this->output,
@@ -118,6 +118,7 @@ final readonly class MakefileLoader
                 $configuration->execution,
                 $restarts,
                 $slots,
+                $sources->foundMain(),
             );
             if ($makefile->context !== null) {
                 MakeFlags::define($configuration, $makefile->context->variables, $makefile->context->posix, $restarts);
@@ -149,43 +150,8 @@ final readonly class MakefileLoader
                 }
                 continue;
             }
-            if ($this->commandLine->targets === [] && $makefile->defaultGoal === null && !$this->hasMain($sources)) {
-                throw new MakefileErrorException('No targets specified and no makefile found');
-            }
             return $build;
         }
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function defaultMakefiles(): array
-    {
-        $entries = scandir('.');
-        if ($entries !== false) {
-            foreach (['GNUmakefile', 'makefile', 'Makefile'] as $path) {
-                if (in_array($path, $entries, true) && is_file($path)) {
-                    return [$path];
-                }
-            }
-        }
-        return ['GNUmakefile', 'makefile', 'Makefile'];
-    }
-
-    private function hasMain(MakefileSources $sources): bool
-    {
-        foreach ($sources->read as $file) {
-            if (
-                $file->text !== null
-                && (
-                    in_array($file->path, $sources->main, true)
-                    || !$file->rebuild && in_array('-', $sources->main, true)
-                )
-            ) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -193,28 +159,20 @@ final readonly class MakefileLoader
      *
      * @return list<Variable>
      */
-    private function variables(CommandLine $commandLine, int $restarts): array
+    private function variables(CommandLine $commandLine, string $directory, int $restarts): array
     {
         $defaults = CommandVariables::definitions($commandLine->variables, [
             ...$this->defaults,
             ...$commandLine->variables,
         ]);
-        foreach ($defaults as $name => $variable) {
-            if (
-                $commandLine->noBuiltinVariables
-                && $variable->origin === 'default'
-                && !in_array($name, Builtins::INTERNAL_VARIABLES, true)
-            ) {
-                unset($defaults[$name]);
-            } elseif ($commandLine->environmentOverrides && $variable->origin === 'environment') {
-                $defaults[$name] = new Variable(
-                    $name,
-                    $variable->expression,
-                    $variable->recursive,
-                    'environment',
-                    environmentOverrides: true,
-                );
-            }
+        if ($commandLine->noBuiltinVariables) {
+            $defaults = Builtins::withoutVariables($defaults);
+        }
+        if ($commandLine->environmentOverrides) {
+            $defaults = array_map(
+                static fn(Variable $variable): Variable => $variable->withEnvironmentOverrides(),
+                $defaults,
+            );
         }
         if ($commandLine->noBuiltinRules && ($defaults['SUFFIXES']->origin ?? '') === 'default') {
             $defaults['SUFFIXES'] = new Variable('SUFFIXES', '', false, 'default');
@@ -222,20 +180,7 @@ final readonly class MakefileLoader
         MakeFlags::define($commandLine, $defaults);
         return [
             ...array_values($defaults),
-            new Variable('.DEFAULT_GOAL', '', false),
-            ...(
-                isset($defaults['GNUMAKEFLAGS'])
-                    ? [new Variable('GNUMAKEFLAGS', '', true, $defaults['GNUMAKEFLAGS']->origin)]
-                    : []
-            ),
-            new Variable('MAKELEVEL', (string) $this->level, false, 'environment'),
-            new Variable('CURDIR', (string) getcwd(), false),
-            ...(
-                $commandLine->targets === []
-                    ? []
-                    : [new Variable('MAKECMDGOALS', implode(' ', $commandLine->targets), false, 'default')]
-            ),
-            ...($restarts === 0 ? [] : [new Variable('MAKE_RESTARTS', (string) $restarts, false, export: false)]),
+            ...Builtins::invocationVariables($defaults, $commandLine->targets, $this->level, $directory, $restarts),
         ];
     }
 }

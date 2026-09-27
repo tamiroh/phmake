@@ -11,15 +11,20 @@ use Tamiroh\Phmake\Makefile\IO\SourceFiles as SourceFilesInterface;
 use Tamiroh\Phmake\Makefile\IO\SourceText;
 
 use function array_chunk;
+use function basename;
 use function clearstatcache;
 use function count;
+use function dirname;
 use function error_get_last;
 use function explode;
 use function file_get_contents;
 use function filemtime;
+use function in_array;
 use function is_dir;
+use function is_file;
 use function preg_replace;
 use function rtrim;
+use function scandir;
 use function trim;
 
 use const PHP_OS_FAMILY;
@@ -44,6 +49,13 @@ final class SourceFiles implements SourceFilesInterface
     public function isDirectory(string $path): bool
     {
         return is_dir($path);
+    }
+
+    #[Override]
+    public function isFile(string $path): bool
+    {
+        $entries = scandir(dirname($path));
+        return $entries !== false && in_array(basename($path), $entries, true) && is_file($path);
     }
 
     #[Override]

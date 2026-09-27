@@ -62,6 +62,7 @@ final class Build
         private readonly ExecutionOptions $options = new ExecutionOptions(),
         int $restarts = 0,
         ?JobSlots $slots = null,
+        private readonly bool $makefileFound = true,
     ) {
         $this->state = new BuildState($restarts);
         $this->search = new RuleSearch($makefile, $filesystem, $output);
@@ -166,14 +167,15 @@ final class Build
      */
     public function run(array $names): int
     {
-        DebugTrace::write($this->options->reporting, $this->output, 'b', 'Updating goal targets....');
         try {
             if ($names === []) {
-                if ($this->makefile->defaultGoal === null) {
-                    throw new MakefileErrorException('No targets');
-                }
-                $names = [$this->makefile->defaultGoal];
+                $names = [
+                    $this->makefile->defaultGoal ?? throw new MakefileErrorException(
+                        $this->makefileFound ? 'No targets' : 'No targets specified and no makefile found',
+                    ),
+                ];
             }
+            DebugTrace::write($this->options->reporting, $this->output, 'b', 'Updating goal targets....');
             $names = array_map(FileName::normalize(...), $names);
             $this->files->goals = $names;
             $names = DependencyOrder::arrange($names, $this->options->parallel, $this->makefile);

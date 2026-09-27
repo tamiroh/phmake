@@ -37,4 +37,15 @@ final readonly class Variable
             true,
         );
     }
+
+    /**
+     * Let an environment variable override makefile assignments, as -e requests.
+     */
+    public function withEnvironmentOverrides(): self
+    {
+        if ($this->origin !== 'environment') {
+            return $this;
+        }
+        return new self($this->name, $this->expression, $this->recursive, 'environment', environmentOverrides: true);
+    }
 }
