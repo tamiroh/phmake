@@ -73,3 +73,28 @@ installed compilers to compile and run C and C++ programs, including C++ standar
 library and exception handling. It links the C++ runtime statically so it does
 not accidentally load the host's older libstdc++. This is not a GCC bootstrap
 validation or the upstream compiler test suite.
+
+## Profiles
+
+phmake's rebuild phases can be profiled locally. `e2e/profile/Dockerfile`
+extends a project image with the Excimer sampling profiler and a `phase`
+wrapper: the clean build runs with GNU make, and the `no-op-rebuild` and
+`touched-rebuild` phases run with phmake while `PHMAKE_PROFILE` is set. An
+`auto_prepend_file` hook then samples each phmake process every millisecond of
+wall-clock time and writes its collapsed stacks to `/profiles/PHASE/PID.folded`.
+phmake itself is unchanged.
+
+```sh
+docker build -f e2e/make/Dockerfile -t phmake-make-build .
+docker build -f e2e/profile/Dockerfile \
+  --build-arg BASE_IMAGE=phmake-make-build -t phmake-make-profile .
+docker run --rm --init --network none -v /tmp/profiles:/profiles phmake-make-profile
+python3 e2e/summarize-profiles.py make /tmp/profiles
+```
+
+The images are built for the host architecture here to avoid emulation; add
+`--platform linux/amd64` to match CI. `summarize-profiles.py` prints the
+functions with the most self and inclusive time per phase. speedscope can open
+the `.folded` files as flame graphs. Samples are summed over processes, so a
+parent waiting for a recursive make overlaps with the child. A process that
+restarts itself through `pcntl_exec` loses the samples taken before the restart.

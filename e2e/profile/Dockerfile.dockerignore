@@ -1,0 +1,5 @@
+**
+!e2e/
+!e2e/profile/
+!e2e/profile/prepend.php
+!e2e/profile/phase.sh
