@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Makefile;
 
-use LogicException;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Input\CommandVariables;
@@ -20,15 +19,15 @@ use Tamiroh\Phmake\Makefile\Evaluation\Module\Modules;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Execution\Build;
+use Tamiroh\Phmake\Makefile\Execution\MakefileRemake;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
-use Tamiroh\Phmake\Makefile\Execution\UnremadeMakefileException;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
 use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
 use Tamiroh\Phmake\Parser\Source\MakefileSources;
-use Tamiroh\Phmake\Parser\Source\ReadFile;
 
 use function array_values;
 use function function_exists;
@@ -124,7 +123,12 @@ final readonly class MakefileLoader
                 MakeFlags::define($configuration, $makefile->context->variables, $makefile->context->posix, $restarts);
             }
             try {
-                $remade = $this->remake($sources, $build, $configuration->execution->keepGoing);
+                $remade = new MakefileRemake(
+                    $build,
+                    $sources->files,
+                    $this->output,
+                    $configuration->execution->keepGoing,
+                )->run($sources->read);
                 if (!$remade && $makefile->context !== null) {
                     $makefile->context->modules->reload(new VariableExpander($makefile->context, $this->output));
                 }
@@ -179,76 +183,6 @@ final readonly class MakefileLoader
                 )
             ) {
                 return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * @throws MakefileErrorException
-     * @throws CommandFailedException
-     */
-    private function remake(MakefileSources $sources, Build $build, bool $keepGoing): bool
-    {
-        $names = [];
-        $inputs = [];
-        $unreadable = [];
-        foreach ($sources->read as $file) {
-            if ($file->rebuild) {
-                $inputs[$file->path] = $file;
-            }
-        }
-        foreach ($inputs as $file) {
-            $names[] = $file->path;
-            if ($file->text === null) {
-                $unreadable[] = $file->path;
-            }
-        }
-        $errors = $build->remake($names, $unreadable);
-        foreach ($sources->files->readMany($names) as $path => $contents) {
-            $file = $inputs[$path] ?? throw new LogicException('Unexpected makefile in batch read');
-            if (
-                $contents->text !== null
-                && ($contents->text !== $file->text || $contents->modifiedAt !== $file->modifiedAt)
-            ) {
-                return true;
-            }
-        }
-        foreach ($sources->read as $file) {
-            if (
-                !$file->optional
-                && $file->text === null
-                && $file->modifiedAt !== null
-                && $sources->files->read($file->path)->text === null
-                && !isset($errors[$file->path])
-            ) {
-                $errors[$file->path] = new MakefileErrorException("No rule to make target '{$file->path}'");
-            }
-            if (!$file->optional && isset($errors[$file->path])) {
-                if (
-                    $errors[$file->path] instanceof CommandFailedException
-                    && $errors[$file->path]->target !== $file->path
-                    && ($inputs[$errors[$file->path]->target]->optional ?? false)
-                ) {
-                    $this->output->writeWarning("Failed to remake makefile '{$file->path}'.", $file->source);
-                    $errors[$file->path]->reported = true;
-                    throw $errors[$file->path];
-                }
-                if ($file->text === null && $file->source !== null) {
-                    $this->output->writeWarning(
-                        $file->path . ': ' . ($file->error ?? 'No such file or directory'),
-                        $file->source,
-                    );
-                }
-                if ($errors[$file->path] instanceof UnremadeMakefileException) {
-                    $errors[$file->path]->reported = true;
-                    throw $errors[$file->path];
-                }
-                if ($keepGoing) {
-                    Diagnostics::report($errors[$file->path], $this->output, false);
-                    $this->output->writeWarning("Failed to remake makefile '{$file->path}'.", $file->source);
-                }
-                throw $errors[$file->path];
             }
         }
         return false;

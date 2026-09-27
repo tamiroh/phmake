@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser\Source;
+namespace Tamiroh\Phmake\Makefile\IO;
 
 interface SourceFiles
 {

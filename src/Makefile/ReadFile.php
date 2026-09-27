@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser\Source;
+namespace Tamiroh\Phmake\Makefile;
 
 /**
  * One makefile read, including missing files which may be generated later.

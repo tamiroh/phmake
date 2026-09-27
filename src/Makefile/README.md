@@ -21,12 +21,12 @@ is the common semantic error type.
 | `Evaluation/Module/` | How do loaded functions and Guile participate in evaluation? | `Modules`, `LoadedModule`, `ModuleFunction` |
 | `Rule/` | What are a target, its prerequisites, and its recipe? | `Target`, `BuildRule`, `PatternRule`, `Prerequisites`, `Recipe` |
 | `Search/` | Which rule and file path can satisfy this target? | `RuleSearch`, `ImplicitCandidate`, `SearchPaths`, `SearchState` |
-| `Execution/` | Which dependencies need updating, and what is the overall result? | `Build`, `BuildState`, `BuildPath`, `UpdateResult`, `ExecutionOptions` |
+| `Execution/` | Which dependencies need updating, and what is the overall result? | `Build`, `BuildState`, `BuildPath`, `UpdateResult`, `MakefileRemake`, `ExecutionOptions` |
 | `Execution/Files/` | Is a file out of date, and should it survive the build? | `BuildFiles`, `FilePolicy`, `FileTable`, `FileOptions` |
 | `Execution/Recipe/` | How is a recipe expanded and executed? | `RecipeRunner`, `Command`, `ExpandedCommand`, `CommandResult` |
 | `Execution/Scheduling/` | Which dependency tasks may advance or wait? | `Scheduler`, `BuildTask`, `Suspension`, `DependencyOrder`, `ParallelOptions` |
 | `Reporting/` | How are failures, debug events, and rebuild reasons explained? | `Diagnostics`, `DebugTrace`, `RecipeTrace`, `ReportingOptions` |
-| `IO/` | What services does the engine need from its host? | `Filesystem`, `Shell`, `Output`, `RecipeOutput`, `JobSlots`, `ModuleHost` |
+| `IO/` | What services does the engine need from its host? | `Filesystem`, `SourceFiles`, `Shell`, `Output`, `RecipeOutput`, `JobSlots`, `ModuleHost` |
 
 ## Following a build
 
@@ -55,8 +55,9 @@ flowchart TD
 1. `Parser/MakefileParser` reads definitions using `Evaluation` and passes each
    `Rule/RuleDefinition` to `MakefileBuilder`, which constructs a `Makefile`. This is not a fully expanded build plan: recursive variables and
    secondary prerequisite expressions can remain deferred.
-2. `Build::run()` starts from the requested goals. `Build::remake()` uses the same
-   engine to update input Makefiles before ordinary goals are built.
+2. `Build::run()` starts from the requested goals. Before that, `MakefileRemake`
+   uses `Build::remake()` to update the `ReadFile` inputs and decides whether make
+   must restart and read them again.
 3. `Build::update()` walks dependencies. `RuleSearch::resolve()` selects explicit
    or implicit rules and consults search paths. `SecondaryExpansion` and
    `ExtraPrerequisites` evaluate prerequisites in their applicable contexts.
