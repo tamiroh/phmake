@@ -17,7 +17,12 @@ jobs:
         run: docker build --platform linux/amd64 -f e2e/php/Dockerfile -t phmake-php-build .
 
       - name: Compare PHP builds with GNU make and phmake
-        run: python3 e2e/compare-builds.py php
+        id: compare
+        run: python3 e2e/compare-builds.py php "$RUNNER_TEMP/build-results.json"
+
+      - name: Summarize PHP build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
   build-lua:
     runs-on: ubuntu-24.04
@@ -30,7 +35,12 @@ jobs:
         run: docker build --platform linux/amd64 -f e2e/lua/Dockerfile -t phmake-lua-build .
 
       - name: Compare Lua builds with GNU make and phmake
-        run: python3 e2e/compare-builds.py lua
+        id: compare
+        run: python3 e2e/compare-builds.py lua "$RUNNER_TEMP/build-results.json"
+
+      - name: Summarize Lua build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
   build-make:
     runs-on: ubuntu-24.04
@@ -43,7 +53,12 @@ jobs:
         run: docker build --platform linux/amd64 -f e2e/make/Dockerfile -t phmake-make-build .
 
       - name: Compare GNU make builds with GNU make and phmake
-        run: python3 e2e/compare-builds.py make
+        id: compare
+        run: python3 e2e/compare-builds.py make "$RUNNER_TEMP/build-results.json"
+
+      - name: Summarize GNU make build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
   build-git:
     runs-on: ubuntu-24.04
@@ -56,7 +71,12 @@ jobs:
         run: docker build --platform linux/amd64 -f e2e/git/Dockerfile -t phmake-git-build .
 
       - name: Compare Git builds with GNU make and phmake
-        run: python3 e2e/compare-builds.py git
+        id: compare
+        run: python3 e2e/compare-builds.py git "$RUNNER_TEMP/build-results.json"
+
+      - name: Summarize Git build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
   build-ffmpeg:
     runs-on: ubuntu-24.04
@@ -69,7 +89,12 @@ jobs:
         run: docker build --platform linux/amd64 -f e2e/ffmpeg/Dockerfile -t phmake-ffmpeg-build .
 
       - name: Compare FFmpeg builds with GNU make and phmake
-        run: python3 e2e/compare-builds.py ffmpeg
+        id: compare
+        run: python3 e2e/compare-builds.py ffmpeg "$RUNNER_TEMP/build-results.json"
+
+      - name: Summarize FFmpeg build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
   build-gcc:
     runs-on: ubuntu-24.04
@@ -82,7 +107,12 @@ jobs:
         run: docker build --platform linux/amd64 -f e2e/gcc/Dockerfile -t phmake-gcc-build .
 
       - name: Compare GCC builds with GNU make and phmake
-        run: python3 e2e/compare-builds.py gcc
+        id: compare
+        run: python3 e2e/compare-builds.py gcc "$RUNNER_TEMP/build-results.json"
+
+      - name: Summarize GCC build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
   build-linux:
     runs-on: ubuntu-24.04
@@ -95,7 +125,12 @@ jobs:
         run: docker build --platform linux/amd64 -f e2e/linux/Dockerfile -t phmake-linux-build .
 
       - name: Compare Linux builds with GNU make and phmake
-        run: python3 e2e/compare-builds.py linux
+        id: compare
+        run: python3 e2e/compare-builds.py linux "$RUNNER_TEMP/build-results.json"
+
+      - name: Summarize Linux build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
   test-gnu-make:
     runs-on: ubuntu-24.04

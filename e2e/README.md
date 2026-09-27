@@ -10,7 +10,8 @@ From the repository root, for example:
 
 ```sh
 docker build --platform linux/amd64 -f e2e/lua/Dockerfile -t phmake-lua-build .
-python3 e2e/compare-builds.py lua
+python3 e2e/compare-builds.py lua /tmp/lua-results.json
+python3 e2e/summarize-builds.py /tmp/lua-results.json
 ```
 
 Replace `lua` with `php`, `make`, `git`, `linux`, `ffmpeg`, or `gcc` to run another project.
@@ -21,9 +22,11 @@ symlink selects the implementation for direct and recursive invocations; build
 targets, flags, and parallelism are identical for each pair.
 
 Both implementations run even if the first fails. Any failure makes the runner
-and CI job fail. Output is streamed to the job log. A table with exit status and
-elapsed seconds is printed and appended to `GITHUB_STEP_SUMMARY` when available.
-The phmake/GNU make time ratio is shown only when both runs pass.
+and CI job fail. Output is streamed to the job log, and the results are written
+to the given JSON file. `summarize-builds.py` prints a table with exit status
+and elapsed seconds from that file and appends it to `GITHUB_STEP_SUMMARY` when
+available; CI runs it as a separate step, also after a failed comparison. The
+phmake/GNU make time ratio is shown only when both runs pass.
 
 The timer is monotonic and surrounds the entire `docker run`: it includes
 container startup, build, installation where applicable, and smoke verification
@@ -36,7 +39,7 @@ use repeated runs and make-only workloads when investigating smaller changes.
 Each verifier also times its main build in three phases through `e2e/phase.sh`,
 before installation and smoke verification: `clean-build`, `no-op-rebuild`
 (the same command again), and `touched-rebuild` (after touching one source
-file). The runner adds a per-phase table. The rebuild phases involve little
+file). The summary adds a per-phase table. The rebuild phases involve little
 compiler work, so they mostly measure reading makefiles, resolving
 dependencies, and checking timestamps.
 
