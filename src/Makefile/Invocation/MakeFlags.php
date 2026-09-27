@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console\Input;
+namespace Tamiroh\Phmake\Makefile\Invocation;
 
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
+use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 use function array_map;
@@ -25,53 +26,52 @@ final class MakeFlags
      * @throws MakefileErrorException
      */
     public static function define(
-        CommandLine $commandLine,
+        InvocationOptions $options,
+        ExecutionOptions $execution,
         array &$variables,
         bool $posix = false,
         ?int $makefileRestart = null,
     ): void {
-        new Assignment('MFLAGS', '=', self::expression($commandLine, $makefileRestart, legacy: true))->apply(
+        $execution = $makefileRestart === null ? $execution : $execution->forMakefiles($makefileRestart);
+        new Assignment('MFLAGS', '=', self::expression($options, $execution, legacy: true))->apply(
             $variables,
-            $commandLine->environmentOverrides ? 'environment override' : 'environment',
+            $options->environmentOverrides ? 'environment override' : 'environment',
         );
         new Assignment(
             'MAKEFLAGS',
             '=',
-            self::expression($commandLine, $makefileRestart, variables: $variables, posix: $posix),
-        )->apply($variables, $commandLine->environmentOverrides ? 'environment override' : 'file');
+            self::expression($options, $execution, variables: $variables, posix: $posix),
+        )->apply($variables, $options->environmentOverrides ? 'environment override' : 'file');
     }
 
     /**
      * @param array<string, Variable> $variables
      */
     private static function expression(
-        CommandLine $commandLine,
-        ?int $makefileRestart = null,
+        InvocationOptions $options,
+        ExecutionOptions $execution,
         bool $legacy = false,
         array $variables = [],
         bool $posix = false,
     ): string {
-        $execution = $makefileRestart === null
-            ? $commandLine->execution
-            : $commandLine->execution->forMakefiles($makefileRestart);
         $flags =
             ($execution->alwaysMake ? 'B' : '')
             . ($execution->reporting->debugAll ? 'd' : '')
-            . ($commandLine->environmentOverrides ? 'e' : '')
+            . ($options->environmentOverrides ? 'e' : '')
             . ($execution->ignoreErrors ? 'i' : '')
             . ($execution->keepGoing ? 'k' : '')
             . ($execution->files->checkSymlinkTimes ? 'L' : '')
             . ($execution->dryRun ? 'n' : '')
             . ($execution->question ? 'q' : '')
-            . ($commandLine->noBuiltinRules ? 'r' : '')
-            . ($commandLine->noBuiltinVariables ? 'R' : '')
+            . ($options->noBuiltinRules ? 'r' : '')
+            . ($options->noBuiltinVariables ? 'R' : '')
             . ($execution->reporting->silent ? 's' : '')
-            . ($commandLine->switches->value('keepGoing') === false ? 'S' : '')
+            . ($options->switches->value('keepGoing') === false ? 'S' : '')
             . ($execution->touch ? 't' : '')
-            . ($commandLine->switches->value('printDirectory') === true ? 'w' : '')
+            . ($options->switches->value('printDirectory') === true ? 'w' : '')
             . implode('', array_map(
                 static fn(string $path): string => ' -I' . str_replace(['\\', ' '], ['\\\\', '\\ '], $path),
-                $commandLine->input->includes,
+                $options->includes,
             ))
             . (
                 $execution->parallel->jobs === 1
@@ -90,14 +90,14 @@ final class MakeFlags
             ))
             . ($execution->parallel->auth === null ? '' : ' --jobserver-auth=' . $execution->parallel->auth)
             . ($execution->reporting->trace ? ' --trace' : '')
-            . ($commandLine->switches->value('printDirectory') === false ? ' --no-print-directory' : '')
-            . ($commandLine->switches->value('silent') === false ? ' --no-silent' : '')
+            . ($options->switches->value('printDirectory') === false ? ' --no-print-directory' : '')
+            . ($options->switches->value('silent') === false ? ' --no-silent' : '')
             . ($execution->reporting->warnUndefinedVariables ? ' --warn-undefined-variables' : '')
             . ($execution->parallel->mutex === null ? '' : ' --sync-mutex=' . $execution->parallel->mutex)
             . implode('', array_map(
                 static fn(string $text): string => ' --eval='
                 . str_replace(['\\', '$', ' ', "\t", "\n"], ['\\\\', '$$', '\\ ', "\\\t", "\\\n"], $text),
-                $commandLine->input->evaluations,
+                $options->evaluations,
             ))
             . ($execution->parallel->shuffle === null ? '' : ' --shuffle=' . $execution->parallel->shuffle);
         if ($legacy) {

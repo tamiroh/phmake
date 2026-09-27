@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console\Input;
+namespace Tamiroh\Phmake\Makefile\Invocation;
 
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 

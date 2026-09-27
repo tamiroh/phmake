@@ -25,10 +25,4 @@ final class InputOptions
 
     /** @var list<string> */
     public array $directories = [];
-
-    /** @var list<string> */
-    public array $includes = [];
-
-    /** @var list<string> */
-    public array $evaluations = [];
 }

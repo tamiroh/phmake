@@ -26,6 +26,7 @@ is the common semantic error type.
 | `Execution/Files/` | Is a file out of date, and should it survive the build? | `BuildFiles`, `FilePolicy`, `FileTable`, `FileOptions` |
 | `Execution/Recipe/` | How is a recipe expanded and executed? | `RecipeRunner`, `Command`, `ExpandedCommand`, `CommandResult` |
 | `Execution/Scheduling/` | Which dependency tasks may advance or wait? | `Scheduler`, `BuildTask`, `Suspension`, `DependencyOrder`, `ParallelOptions` |
+| `Invocation/` | Which options change reading, and how are they passed to sub-makes through `MAKEFLAGS`? | `InvocationOptions`, `MakeFlags`, `CommandVariables`, `ReversibleOptions` |
 | `Reporting/` | How are failures, debug events, and rebuild reasons explained? | `Diagnostics`, `DebugTrace`, `RecipeTrace`, `ReportingOptions` |
 | `IO/` | What services does the engine need from its host? | `Filesystem`, `SourceFiles`, `Shell`, `Output`, `RecipeOutput`, `JobSlots`, `ModuleHost` |
 
@@ -83,6 +84,9 @@ flowchart TD
   Actual filesystem access goes through `IO/Filesystem` to `Console/Filesystem`.
 - `ExportingShell` belongs with environment evaluation because both `$(shell ...)`
   and recipes need it. It does not launch operating-system processes itself.
+- `Invocation` owns the meaning of options such as `-e`, `-r`, and `-R`, and how
+  `MAKEFLAGS` is built from them. Reading command-line arguments and `MAKEFLAGS`
+  text into those options stays in `Console/Input/CommandLine`.
 - `Evaluation/Module` implements make's extension semantics. `IO/ModuleHost` is
   the transport contract, implemented by `Console/Process/ModuleHost`.
 - Exceptions stay with the operation they describe. `Reporting` formats them;

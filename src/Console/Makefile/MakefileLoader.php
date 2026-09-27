@@ -6,8 +6,6 @@ namespace Tamiroh\Phmake\Console\Makefile;
 
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Console\Input\CommandLine;
-use Tamiroh\Phmake\Console\Input\CommandVariables;
-use Tamiroh\Phmake\Console\Input\MakeFlags;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Process\Jobserver;
 use Tamiroh\Phmake\Console\Process\ModuleHost;
@@ -21,6 +19,8 @@ use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Execution\Build;
 use Tamiroh\Phmake\Makefile\Execution\MakefileRemake;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
+use Tamiroh\Phmake\Makefile\Invocation\CommandVariables;
+use Tamiroh\Phmake\Makefile\Invocation\MakeFlags;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
@@ -29,7 +29,6 @@ use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
 use Tamiroh\Phmake\Parser\Source\MakefileSources;
 
-use function array_map;
 use function array_values;
 use function function_exists;
 use function in_array;
@@ -76,7 +75,7 @@ final readonly class MakefileLoader
                 $configuration,
                 $stdin === null ? null : new ReadFile($stdin->path, $stdin->text, null, rebuild: false),
                 $configuration->input->makefiles === [],
-                $configuration->input->evaluations,
+                $configuration->options->evaluations,
                 $restarts > 0,
             );
             DebugTrace::write($configuration->execution->reporting, $this->output, 'b', 'Reading makefiles...');
@@ -121,7 +120,13 @@ final readonly class MakefileLoader
                 $sources->foundMain(),
             );
             if ($makefile->context !== null) {
-                MakeFlags::define($configuration, $makefile->context->variables, $makefile->context->posix, $restarts);
+                MakeFlags::define(
+                    $configuration->options,
+                    $configuration->execution,
+                    $makefile->context->variables,
+                    $makefile->context->posix,
+                    $restarts,
+                );
             }
             try {
                 $remade = new MakefileRemake(
@@ -138,7 +143,12 @@ final readonly class MakefileLoader
                 throw $error;
             } finally {
                 if ($makefile->context !== null) {
-                    MakeFlags::define($configuration, $makefile->context->variables, $makefile->context->posix);
+                    MakeFlags::define(
+                        $configuration->options,
+                        $configuration->execution,
+                        $makefile->context->variables,
+                        $makefile->context->posix,
+                    );
                 }
             }
             if ($remade) {
@@ -165,19 +175,8 @@ final readonly class MakefileLoader
             ...$this->defaults,
             ...$commandLine->variables,
         ]);
-        if ($commandLine->noBuiltinVariables) {
-            $defaults = Builtins::withoutVariables($defaults);
-        }
-        if ($commandLine->environmentOverrides) {
-            $defaults = array_map(
-                static fn(Variable $variable): Variable => $variable->withEnvironmentOverrides(),
-                $defaults,
-            );
-        }
-        if ($commandLine->noBuiltinRules && ($defaults['SUFFIXES']->origin ?? '') === 'default') {
-            $defaults['SUFFIXES'] = new Variable('SUFFIXES', '', false, 'default');
-        }
-        MakeFlags::define($commandLine, $defaults);
+        $defaults = $commandLine->options->beforeReading($defaults);
+        MakeFlags::define($commandLine->options, $commandLine->execution, $defaults);
         return [
             ...array_values($defaults),
             ...Builtins::invocationVariables($defaults, $commandLine->targets, $this->level, $directory, $restarts),

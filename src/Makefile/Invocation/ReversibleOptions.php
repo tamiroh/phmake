@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console\Input;
+namespace Tamiroh\Phmake\Makefile\Invocation;
 
 /**
  * Preserve explicit negative switches and the precedence of their sources.

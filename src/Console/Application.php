@@ -98,7 +98,7 @@ final readonly class Application
                 $program,
             );
             $printDirectory =
-                $commandLine->switches->value('printDirectory')
+                $commandLine->options->switches->value('printDirectory')
                 ?? !$commandLine->execution->reporting->silent
                     && !$commandLine->execution->question
                     && ($level > 0 || $commandLine->input->directories !== []);

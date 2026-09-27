@@ -9,16 +9,16 @@ use Random\RandomException;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Process\Shell;
-use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
+use Tamiroh\Phmake\Makefile\Invocation\InvocationOptions;
+use Tamiroh\Phmake\Makefile\Invocation\MakeFlags;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Parser\Configuration;
 
-use function array_map;
 use function array_values;
 use function count;
 use function ctype_digit;
@@ -48,19 +48,17 @@ final class CommandLine implements Configuration
 
     public private(set) bool $version = false;
 
+    public readonly InvocationOptions $options;
+
     #[Override]
-    public private(set) bool $noBuiltinRules = false;
-
-    public private(set) bool $noBuiltinVariables = false;
-
-    public private(set) bool $environmentOverrides = false;
-
-    public readonly ReversibleOptions $switches;
+    public bool $noBuiltinRules {
+        get => $this->options->noBuiltinRules;
+    }
 
     /** @var list<string> */
     #[Override]
     public array $includeDirectories {
-        get => $this->input->includes;
+        get => $this->options->includes;
     }
 
     /**
@@ -80,7 +78,7 @@ final class CommandLine implements Configuration
         $this->input->directory = (string) getcwd();
         $this->input->restarts = (int) getenv('MAKE_RESTARTS');
         putenv('MAKE_RESTARTS');
-        $this->switches = new ReversibleOptions();
+        $this->options = new InvocationOptions();
         $this->execution = new ExecutionOptions();
         // Inherited flags have command-line priority, but actual arguments are read last.
         $this->readFlags($gnumakeflags, $defaults, 'command line');
@@ -89,7 +87,7 @@ final class CommandLine implements Configuration
         }
         $this->readFlags($makeflags, $defaults, 'command line');
         $this->readArguments($arguments, false, $defaults, 'command line');
-        $this->noBuiltinRules = $this->noBuiltinRules || $this->noBuiltinVariables;
+        $this->options->noBuiltinRules = $this->options->noBuiltinRules || $this->options->noBuiltinVariables;
     }
 
     /**
@@ -130,14 +128,8 @@ final class CommandLine implements Configuration
         }
         $variables['GNUMAKEFLAGS'] = new Variable('GNUMAKEFLAGS', '', false, 'override');
         $this->updateMakeflags($variables, $expander, 'environment');
-        $this->noBuiltinRules = $this->noBuiltinRules || $this->noBuiltinVariables;
-        if ($this->noBuiltinVariables) {
-            $variables = Builtins::withoutVariables($variables);
-        }
-        if ($this->noBuiltinRules) {
-            new Assignment('SUFFIXES', ':=', '')->apply($variables, 'default');
-        }
-        MakeFlags::define($this, $variables, $expander->context->posix);
+        $this->options->afterReading($variables);
+        MakeFlags::define($this->options, $this->execution, $variables, $expander->context->posix);
     }
 
     /**
@@ -158,20 +150,15 @@ final class CommandLine implements Configuration
         );
         if ($expander?->output instanceof Output) {
             $expander->output->silent = $this->execution->reporting->silent;
-            if ($this->switches->value('printDirectory') === true && $expander->output->directory === null) {
+            if ($this->options->switches->value('printDirectory') === true && $expander->output->directory === null) {
                 $expander->output->writeDirectory(true, (string) getcwd());
-            } elseif ($this->switches->value('printDirectory') === false) {
+            } elseif ($this->options->switches->value('printDirectory') === false) {
                 $expander->output->directory = null;
                 $expander->output->buffer->directory = null;
             }
         }
-        if ($this->environmentOverrides) {
-            $variables = array_map(
-                static fn(Variable $variable): Variable => $variable->withEnvironmentOverrides(),
-                $variables,
-            );
-        }
-        MakeFlags::define($this, $variables, $expander?->context->posix ?? false);
+        $variables = $this->options->overrideEnvironment($variables);
+        MakeFlags::define($this->options, $this->execution, $variables, $expander?->context->posix ?? false);
     }
 
     /**
@@ -336,11 +323,11 @@ final class CommandLine implements Configuration
             return;
         }
         if ($argument === '--no-print-directory') {
-            $this->switches->set('printDirectory', false, $origin);
+            $this->options->switches->set('printDirectory', false, $origin);
             return;
         }
         if ($argument === '--no-silent' || $argument === '--no-quiet') {
-            $this->execution->reporting->silent = $this->switches->set('silent', false, $origin);
+            $this->execution->reporting->silent = $this->options->switches->set('silent', false, $origin);
             return;
         }
         foreach ([
@@ -431,31 +418,31 @@ final class CommandLine implements Configuration
                     $this->execution->alwaysMake = true;
                     break;
                 case 'k':
-                    $this->execution->keepGoing = $this->switches->set('keepGoing', true, $origin);
+                    $this->execution->keepGoing = $this->options->switches->set('keepGoing', true, $origin);
                     break;
                 case 'S':
-                    $this->execution->keepGoing = $this->switches->set('keepGoing', false, $origin);
+                    $this->execution->keepGoing = $this->options->switches->set('keepGoing', false, $origin);
                     break;
                 case 'i':
                     $this->execution->ignoreErrors = true;
                     break;
                 case 's':
-                    $this->execution->reporting->silent = $this->switches->set('silent', true, $origin);
+                    $this->execution->reporting->silent = $this->options->switches->set('silent', true, $origin);
                     break;
                 case 'v':
                     $this->version = true;
                     break;
                 case 'r':
-                    $this->noBuiltinRules = true;
+                    $this->options->noBuiltinRules = true;
                     break;
                 case 'R':
-                    $this->noBuiltinVariables = true;
+                    $this->options->noBuiltinVariables = true;
                     break;
                 case 'e':
-                    $this->environmentOverrides = true;
+                    $this->options->environmentOverrides = true;
                     break;
                 case 'w':
-                    $this->switches->set('printDirectory', true, $origin);
+                    $this->options->switches->set('printDirectory', true, $origin);
                     break;
                 case 'f':
                 case 'C':
@@ -475,14 +462,14 @@ final class CommandLine implements Configuration
                     }
                     if ($option === 'I') {
                         if ($path === '-') {
-                            $this->input->includes = ['-'];
-                        } elseif (!in_array($path, $this->input->includes, true)) {
-                            $this->input->includes[] = $path;
+                            $this->options->includes = ['-'];
+                        } elseif (!in_array($path, $this->options->includes, true)) {
+                            $this->options->includes[] = $path;
                         }
                     } elseif ($option === 'E') {
                         $path = $inherited ? str_replace('$$', '$', $path) : $path;
-                        if (!$inherited || !in_array($path, $this->input->evaluations, true)) {
-                            $this->input->evaluations[] = $path;
+                        if (!$inherited || !in_array($path, $this->options->evaluations, true)) {
+                            $this->options->evaluations[] = $path;
                         }
                     } elseif (!$inherited) {
                         if ($option === 'W') {
@@ -508,7 +495,7 @@ final class CommandLine implements Configuration
     public function __clone(): void
     {
         $this->input = clone $this->input;
-        $this->switches = clone $this->switches;
+        $this->options = clone $this->options;
         $this->execution = clone $this->execution;
     }
 }
