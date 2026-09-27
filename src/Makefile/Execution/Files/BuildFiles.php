@@ -76,21 +76,20 @@ final class BuildFiles
 
     public function cleanup(): void
     {
-        if ($this->created === []) {
+        $removable = [];
+        foreach ($this->created as [$name, $path]) {
+            if ($this->intermediate($name) && !$this->policy->keep($name)) {
+                $removable[$name] = $path;
+            }
+        }
+        // Only removals need the file-table order, so most builds never hash their names.
+        if ($removable === []) {
             return;
         }
         $removed = [];
         foreach ($this->table->names() as $name) {
-            if (!isset($this->created[$name])) {
-                continue;
-            }
-            [, $path] = $this->created[$name];
-            if (
-                $this->intermediate($name)
-                && !$this->policy->keep($name)
-                && $this->filesystem->exists($path)
-                && $this->filesystem->remove($path)
-            ) {
+            $path = $removable[$name] ?? null;
+            if ($path !== null && $this->filesystem->exists($path) && $this->filesystem->remove($path)) {
                 $removed[] = $path;
             }
         }
