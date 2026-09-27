@@ -18,12 +18,17 @@ interface SourceFiles
      */
     public function matching(string $pattern): array;
 
-    public function read(string $path): SourceText;
-
     /**
+     * Precise modification times, null for missing files; equal strings mean an unchanged file.
+     *
      * @param list<string> $paths
      *
-     * @return iterable<string, SourceText>
+     * @return array<string, ?string>
      */
-    public function readMany(array $paths): iterable;
+    public function modifiedTimes(array $paths): array;
+
+    /**
+     * The text's modification time only tells whether the file existed; compare times from modifiedTimes().
+     */
+    public function read(string $path): SourceText;
 }

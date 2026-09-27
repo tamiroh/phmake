@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
-use LogicException;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\SourceFiles;
@@ -48,13 +47,11 @@ final readonly class MakefileRemake
                 $unreadable[] = $file->path;
             }
         }
+        // As in GNU make, only makefiles whose times change while remaking restart make.
+        $before = $this->files->modifiedTimes($names);
         $errors = $this->build->remake($names, $unreadable);
-        foreach ($this->files->readMany($names) as $path => $contents) {
-            $file = $inputs[$path] ?? throw new LogicException('Unexpected makefile in batch read');
-            if (
-                $contents->text !== null
-                && ($contents->text !== $file->text || $contents->modifiedAt !== $file->modifiedAt)
-            ) {
+        foreach ($this->files->modifiedTimes($names) as $path => $modifiedAt) {
+            if ($modifiedAt !== null && $modifiedAt !== ($before[$path] ?? null)) {
                 return true;
             }
         }

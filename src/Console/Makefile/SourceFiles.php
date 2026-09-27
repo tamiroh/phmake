@@ -17,6 +17,7 @@ use function count;
 use function dirname;
 use function error_get_last;
 use function explode;
+use function file_exists;
 use function file_get_contents;
 use function filemtime;
 use function in_array;
@@ -31,6 +32,11 @@ use const PHP_OS_FAMILY;
 
 final class SourceFiles implements SourceFilesInterface
 {
+    /**
+     * Paths per stat command: few processes for thousands of makefiles, far below argument length limits.
+     */
+    private const int BATCH_SIZE = 1024;
+
     /**
      * @param list<string> $paths
      *
@@ -65,32 +71,37 @@ final class SourceFiles implements SourceFilesInterface
     }
 
     #[Override]
-    public function read(string $path): SourceText
+    public function modifiedTimes(array $paths): array
     {
-        return $this->readWithTime($path, $this->modifiedAt($path));
-    }
-
-    /**
-     * @param list<string> $paths
-     *
-     * @return iterable<string, SourceText>
-     */
-    #[Override]
-    public function readMany(array $paths): iterable
-    {
-        // Bound command size; a failed batch falls back to individual reads.
-        foreach (array_chunk($paths, 32) as $batch) {
-            foreach ($batch as $path) {
-                clearstatcache(true, $path);
-            }
-            $stat = CapturedProcess::run(self::statCommand($batch));
-            $times = explode("\n", rtrim($stat->output, "\n"));
-            foreach ($batch as $index => $path) {
-                yield $path => $stat->status === 0 && count($times) === count($batch) && isset($times[$index])
-                    ? $this->readWithTime($path, trim($times[$index]))
-                    : $this->read($path);
+        $times = [];
+        $existing = [];
+        foreach ($paths as $path) {
+            clearstatcache(true, $path);
+            $times[$path] = null;
+            // One missing path would fail the whole stat command.
+            if (file_exists($path)) {
+                $existing[] = $path;
             }
         }
+        // A failed batch falls back to one command per path.
+        foreach (array_chunk($existing, self::BATCH_SIZE) as $batch) {
+            $stat = CapturedProcess::run(self::statCommand($batch));
+            $lines = explode("\n", rtrim($stat->output, "\n"));
+            foreach ($batch as $index => $path) {
+                $times[$path] = $stat->status === 0 && count($lines) === count($batch) && isset($lines[$index])
+                    ? trim($lines[$index])
+                    : $this->modifiedAt($path);
+            }
+        }
+        return $times;
+    }
+
+    #[Override]
+    public function read(string $path): SourceText
+    {
+        clearstatcache(true, $path);
+        $seconds = @filemtime($path);
+        return $this->readWithTime($path, $seconds === false ? null : (string) $seconds);
     }
 
     /**
