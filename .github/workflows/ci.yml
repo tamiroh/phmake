@@ -24,6 +24,13 @@ jobs:
         if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
         run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
+      - name: Upload PHP build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-results-php
+          path: ${{ runner.temp }}/build-results.json
+
   build-lua:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -41,6 +48,13 @@ jobs:
       - name: Summarize Lua build comparison
         if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
         run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
+
+      - name: Upload Lua build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-results-lua
+          path: ${{ runner.temp }}/build-results.json
 
   build-make:
     runs-on: ubuntu-24.04
@@ -60,6 +74,13 @@ jobs:
         if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
         run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
+      - name: Upload GNU make build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-results-make
+          path: ${{ runner.temp }}/build-results.json
+
   build-git:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -78,6 +99,13 @@ jobs:
         if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
         run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
 
+      - name: Upload Git build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-results-git
+          path: ${{ runner.temp }}/build-results.json
+
   build-ffmpeg:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -95,6 +123,13 @@ jobs:
       - name: Summarize FFmpeg build comparison
         if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
         run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
+
+      - name: Upload FFmpeg build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-results-ffmpeg
+          path: ${{ runner.temp }}/build-results.json
 
   build-gcc:
     runs-on: ubuntu-24.04
@@ -131,6 +166,23 @@ jobs:
       - name: Summarize Linux build comparison
         if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
         run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
+
+  performance-check:
+    needs: [build-php, build-lua, build-make, build-git, build-ffmpeg]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download build comparisons
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: build-results-*
+          path: ${{ runner.temp }}/build-results
+
+      - name: Check no-op rebuild times
+        run: python3 e2e/check-no-op.py 1 "$RUNNER_TEMP/build-results" php lua make git ffmpeg
 
   test-gnu-make:
     runs-on: ubuntu-24.04
