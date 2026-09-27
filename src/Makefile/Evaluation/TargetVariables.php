@@ -21,8 +21,11 @@ final class TargetVariables
     /** @var array<array-key, array<string, Variable>> */
     private array $definitions = [];
 
-    /** @var list<array{string, Variable}> */
+    /** @var list<array{Pattern, Variable}> */
     private array $patterns = [];
+
+    /** @var array<string, array<string, Variable>>|null */
+    private ?array $exact = null;
 
     /**
      * @throws MakefileErrorException
@@ -36,7 +39,8 @@ final class TargetVariables
         ?bool $export,
         ?Output $output,
     ): void {
-        $pattern = new Pattern($target)->hasWildcard();
+        $targetPattern = new Pattern($target);
+        $pattern = $targetPattern->hasWildcard();
         $variables = $this->definitions[$target] ?? [];
         $scope = $pattern ? $expander : $this->definitionScope($variables, $expander);
         $assignment = $assignment->resolveName($scope);
@@ -74,8 +78,9 @@ final class TargetVariables
             $pattern && $assignment->operator === '?=',
         );
         $this->definitions[$target] = $variables;
+        $this->exact = null;
         if ($pattern) {
-            $this->patterns[] = [$target, $variables[$assignment->name]];
+            $this->patterns[] = [$targetPattern, $variables[$assignment->name]];
         }
     }
 
@@ -107,15 +112,8 @@ final class TargetVariables
     public function scope(string $name, VariableScope $parent, ?Output $output = null): VariableScope
     {
         $patterns = [];
-        $exact = [];
-        foreach ($this->definitions as $text => $variables) {
-            $pattern = new Pattern((string) $text);
-            if (!$pattern->hasWildcard() && $pattern->substitute('%') === $name) {
-                $exact = $variables;
-            }
-        }
-        foreach ($this->patterns as [$text, $variable]) {
-            $stem = new Pattern($text)->match($name);
+        foreach ($this->patterns as [$pattern, $variable]) {
+            $stem = $pattern->match($name);
             if ($stem !== null) {
                 $patterns[] = [strlen($stem), $variable];
             }
@@ -136,7 +134,8 @@ final class TargetVariables
             }
             $parent = $parent->with([$variable->name => $variable]);
         }
-        return $parent->with($exact);
+        $this->exact ??= $this->exactDefinitions();
+        return $parent->with($this->exact[$name] ?? []);
     }
 
     /**
@@ -155,5 +154,22 @@ final class TargetVariables
             }
         }
         return $expander->withVariables(array_values($variables));
+    }
+
+    /**
+     * Index definitions without wildcards by target name; the last matching definition wins.
+     *
+     * @return array<string, array<string, Variable>>
+     */
+    private function exactDefinitions(): array
+    {
+        $exact = [];
+        foreach ($this->definitions as $text => $variables) {
+            $pattern = new Pattern((string) $text);
+            if (!$pattern->hasWildcard()) {
+                $exact[$pattern->substitute('%')] = $variables;
+            }
+        }
+        return $exact;
     }
 }
