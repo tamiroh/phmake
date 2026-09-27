@@ -58,7 +58,7 @@ def compare(project, results_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("project", choices=("php", "lua", "make", "git", "linux", "ffmpeg", "gcc"))
+    parser.add_argument("project", choices=("php", "lua", "make", "git", "linux", "ffmpeg", "gcc", "llama-cpp"))
     parser.add_argument("results", help="JSON file to write for summarize-builds.py")
     arguments = parser.parse_args()
     raise SystemExit(compare(arguments.project, arguments.results))

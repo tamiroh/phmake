@@ -3,7 +3,7 @@ set -eu
 
 project=${1:?Usage: run-build PROJECT}
 case "$project" in
-    php|lua|make|git|linux|ffmpeg|gcc) ;;
+    php|lua|make|git|linux|ffmpeg|gcc|llama-cpp) ;;
     *) echo "Unknown build project: $project" >&2; exit 2 ;;
 esac
 

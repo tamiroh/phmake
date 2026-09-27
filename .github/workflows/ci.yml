@@ -181,6 +181,24 @@ jobs:
           name: build-results-linux
           path: ${{ runner.temp }}/build-results.json
 
+  build-llama-cpp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare llama.cpp build environment
+        run: docker build --platform linux/amd64 -f e2e/llama-cpp/Dockerfile -t phmake-llama-cpp-build .
+
+      - name: Compare llama.cpp builds with GNU make and phmake
+        id: compare
+        run: python3 e2e/compare-builds.py llama-cpp "$RUNNER_TEMP/build-results.json"
+
+      - name: Summarize llama.cpp build comparison
+        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
+        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
+
   performance-check-small:
     needs: [build-php, build-lua, build-make, build-ffmpeg]
     if: ${{ !cancelled() }}
