@@ -20,8 +20,8 @@ RUN curl -fsSL https://github.com/ggml-org/llama.cpp/archive/refs/tags/v0.5.0.ta
 # Generate CMake's Unix Makefiles; portable CPU flags keep the build independent of the runner.
 RUN cmake -S /opt/llama.cpp -B /opt/llama.cpp-build -G 'Unix Makefiles' \
     -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_CCACHE=OFF -DLLAMA_OPENSSL=OFF \
-    -DLLAMA_BUILD_TESTS=ON -DLLAMA_BUILD_TOOLS=ON \
-    -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_SERVER=OFF -DLLAMA_BUILD_APP=OFF
+    -DLLAMA_BUILD_TESTS=ON -DLLAMA_BUILD_TOOLS=ON -DLLAMA_BUILD_SERVER=ON \
+    -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_APP=OFF
 
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 

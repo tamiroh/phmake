@@ -6,6 +6,7 @@ phase clean-build make -j2
 phase no-op-rebuild make -j2
 touch /opt/llama.cpp/tools/tokenize/tokenize.cpp
 phase touched-rebuild make -j2
+./bin/llama-cli --version
 
 # The tokenizer tests compare bundled vocabularies with their expected tokens, without models or network.
 ctest --output-on-failure -R '^test-tokenizer-0-' | tee /tmp/ctest.log
