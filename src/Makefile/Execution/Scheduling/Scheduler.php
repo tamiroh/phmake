@@ -33,11 +33,18 @@ final class Scheduler
 
     public private(set) int $running = 0;
 
+    /** Whether a slot probe failed since the last tick or release. */
+    private bool $exhausted = false;
+
+    /** @var Closure(): bool */
+    private readonly Closure $slotReady;
+
     public function __construct(
         private readonly ?JobSlots $slots = null,
         private readonly ?Output $output = null,
     ) {
         $this->fibers = new WeakMap();
+        $this->slotReady = fn(): bool => $this->error !== null || !$this->exhausted;
     }
 
     /**
@@ -55,7 +62,9 @@ final class Scheduler
                 $this->running++;
                 return $slot;
             }
-            Suspension::until(static fn(): bool => true);
+            // Later waiters would fail the same probe, so only one of them retries per tick.
+            $this->exhausted = true;
+            Suspension::until($this->slotReady);
         } while (true);
     }
 
@@ -151,11 +160,20 @@ final class Scheduler
     {
         $this->slots?->release($slot);
         $this->running--;
+        $this->exhausted = false;
     }
 
     private function tick(): void
     {
+        $this->exhausted = false;
         foreach ($this->tasks as $task) {
+            // Skip readiness calls for dependency and slot waiters that would fail them.
+            if (
+                $task->waiting !== null && !$task->waiting->fiber->isTerminated()
+                || $task->ready === $this->slotReady && $this->exhausted && $this->error === null
+            ) {
+                continue;
+            }
             if (!$task->fiber->isTerminated() && ($task->ready === null || ($task->ready)())) {
                 $task->advance();
                 $this->error ??= $task->error;
