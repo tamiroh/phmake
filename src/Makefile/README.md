@@ -95,7 +95,9 @@ flowchart TD
 These folders group responsibilities rather than independent layers. For
 example, stored rules refer to commands, and evaluation can invoke shell
 services. The enforced outer boundary is that `Makefile` does not depend on
-`Parser`, `Console`, or concrete process libraries.
+`Parser`, `Console`, or concrete process libraries. `mago guard` also rejects
+native functions for output, processes, files, the environment, the clock, and
+randomness here and in `Parser`; use the interfaces in `IO/` instead.
 
 ## Reading order
 
