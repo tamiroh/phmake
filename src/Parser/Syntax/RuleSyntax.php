@@ -62,7 +62,6 @@ final class RuleSyntax
                 $order === null ? [] : self::paths(substr($dependencies, $order + 1), $files),
                 [new PrerequisiteExpression($dependencies, source: $source)],
             ),
-            $line,
             $double,
             $grouped,
             $pattern,

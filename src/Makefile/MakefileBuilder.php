@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Makefile;
 
 use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
@@ -10,18 +10,15 @@ use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
-use Tamiroh\Phmake\Makefile\Makefile;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 use Tamiroh\Phmake\Makefile\Rule\PrerequisiteExpression;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
-use Tamiroh\Phmake\Makefile\Rule\Recipe;
+use Tamiroh\Phmake\Makefile\Rule\RuleDefinition;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 use Tamiroh\Phmake\Makefile\Search\SearchPaths;
-use Tamiroh\Phmake\Parser\Syntax\Rule;
 
 use function array_filter;
 use function array_map;
@@ -65,9 +62,9 @@ final class MakefileBuilder
     }
 
     /**
-     * @throws ParseException
+     * @throws MakefileErrorException
      */
-    public function addRule(Rule $rule): void
+    public function addRule(RuleDefinition $rule): void
     {
         if (in_array('.SECONDEXPANSION', $rule->targetNames, true)) {
             $this->secondary = true;
@@ -75,10 +72,10 @@ final class MakefileBuilder
         if ($rule->targetNames === []) {
             return;
         }
-        if ($rule->grouped && !$rule->hasRecipe) {
-            throw new ParseException($rule->lineNumber, 'grouped targets must provide a recipe');
+        $recipe = $rule->recipe;
+        if ($rule->grouped && $recipe === null) {
+            throw new MakefileErrorException('grouped targets must provide a recipe', $rule->source);
         }
-        $recipe = $rule->hasRecipe ? new Recipe($rule->commands, $rule->commands[0]->source ?? $rule->source) : null;
         if ($rule->targetPattern === null && new Pattern($rule->targetNames[0])->hasWildcard()) {
             $this->patterns = array_values(array_filter(
                 $this->patterns,
@@ -98,7 +95,7 @@ final class MakefileBuilder
                             fn(PrerequisiteExpression $expression): PrerequisiteExpression => new PrerequisiteExpression(
                                 $expression->text,
                                 null,
-                                $rule->hasRecipe,
+                                $recipe !== null,
                                 $expression->source,
                                 $this->secondary,
                             ),
@@ -158,7 +155,7 @@ final class MakefileBuilder
                     fn(PrerequisiteExpression $expression): PrerequisiteExpression => new PrerequisiteExpression(
                         $expression->text,
                         $rule->targetPattern === null ? null : $stem,
-                        $rule->hasRecipe,
+                        $recipe !== null,
                         $expression->source,
                         $this->secondary,
                         new Prerequisites(
@@ -256,7 +253,7 @@ final class MakefileBuilder
         );
     }
 
-    public function selectDefault(Rule $rule, VariableExpander $expander): void
+    public function selectDefault(RuleDefinition $rule, VariableExpander $expander): void
     {
         if (($expander->variable('.DEFAULT_GOAL')->expression ?? '') !== '') {
             return;
@@ -275,13 +272,13 @@ final class MakefileBuilder
     }
 
     /**
-     * @throws ParseException
+     * @throws MakefileErrorException
      */
-    private function addTarget(string $name, BuildRule $rule, Rule $declaration): void
+    private function addTarget(string $name, BuildRule $rule, RuleDefinition $declaration): void
     {
         $previous = $this->targets[$name]->rules[0] ?? null;
         if ($previous !== null && $previous->doubleColon !== $rule->doubleColon) {
-            throw new ParseException($declaration->lineNumber, "target file '{$name}' has both : and :: entries");
+            throw new MakefileErrorException("target file '{$name}' has both : and :: entries", $declaration->source);
         }
         if ($previous === null || $rule->doubleColon) {
             $this->targets[$name] = new Target($name, [...($this->targets[$name]->rules ?? []), $rule]);

@@ -7,6 +7,8 @@ dependency updates, and recipe execution. Text parsing lives in
 
 Start with [`Makefile.php`](Makefile.php), which holds the parsed definitions,
 then [`Execution/Build.php`](Execution/Build.php), which coordinates a build.
+[`MakefileBuilder.php`](MakefileBuilder.php) merges the rules read by the
+parser: special targets, suffix rules, recipe overrides, and the default goal.
 `Builtins.php` supplies default variables and rules. `MakefileErrorException.php`
 is the common semantic error type.
 
@@ -50,8 +52,8 @@ flowchart TD
     Reporting --> Output[IO/Output]
 ```
 
-1. `Parser/MakefileParser` reads definitions using `Evaluation` and constructs a
-   `Makefile`. This is not a fully expanded build plan: recursive variables and
+1. `Parser/MakefileParser` reads definitions using `Evaluation` and passes each
+   `Rule/RuleDefinition` to `MakefileBuilder`, which constructs a `Makefile`. This is not a fully expanded build plan: recursive variables and
    secondary prerequisite expressions can remain deferred.
 2. `Build::run()` starts from the requested goals. `Build::remake()` uses the same
    engine to update input Makefiles before ordinary goals are built.

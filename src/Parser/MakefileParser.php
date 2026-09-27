@@ -17,6 +17,7 @@ use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Makefile;
+use Tamiroh\Phmake\Makefile\MakefileBuilder;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
@@ -419,7 +420,7 @@ final readonly class MakefileParser
             }
 
             if ($rule !== null) {
-                $builder->addRule($rule);
+                $builder->addRule($rule->definition());
                 $rule = null;
             }
 
@@ -614,7 +615,7 @@ final readonly class MakefileParser
                 }
             }
             if ($this->sources->defaultGoal) {
-                $builder->selectDefault($rule, $scope);
+                $builder->selectDefault($rule->definition(), $scope);
             }
             if ($recipe !== null) {
                 $rule->addRecipe(ltrim($recipe), $location);
@@ -623,7 +624,7 @@ final readonly class MakefileParser
 
         $conditionals->finish($reader->lineNumber);
         if ($rule !== null) {
-            $builder->addRule($rule);
+            $builder->addRule($rule->definition());
         }
     }
 
