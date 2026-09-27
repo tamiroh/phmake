@@ -48,12 +48,14 @@ final readonly class MakefileRemake
                 $unreadable[] = $file->path;
             }
         }
+        // Take subsecond times in one batch rather than once per file while parsing.
+        $modifiedTimes = $this->files->modifiedTimes($names);
         $errors = $this->build->remake($names, $unreadable);
         foreach ($this->files->readMany($names) as $path => $contents) {
             $file = $inputs[$path] ?? throw new LogicException('Unexpected makefile in batch read');
             if (
                 $contents->text !== null
-                && ($contents->text !== $file->text || $contents->modifiedAt !== $file->modifiedAt)
+                && ($contents->text !== $file->text || $contents->modifiedAt !== ($modifiedTimes[$path] ?? null))
             ) {
                 return true;
             }

@@ -31,6 +31,13 @@ use const PHP_OS_FAMILY;
 
 final class SourceFiles implements SourceFilesInterface
 {
+    private static function seconds(string $path): ?string
+    {
+        clearstatcache(true, $path);
+        $seconds = @filemtime($path);
+        return $seconds === false ? null : (string) $seconds;
+    }
+
     /**
      * @param list<string> $paths
      *
@@ -64,10 +71,39 @@ final class SourceFiles implements SourceFilesInterface
         return new Filesystem()->matching($pattern);
     }
 
+    /**
+     * @param list<string> $paths
+     *
+     * @return array<string, ?string>
+     */
+    #[Override]
+    public function modifiedTimes(array $paths): array
+    {
+        $times = [];
+        $existing = [];
+        foreach ($paths as $path) {
+            $times[$path] = self::seconds($path);
+            if ($times[$path] !== null) {
+                $existing[] = $path;
+            }
+        }
+        // Bound command size; a failed batch falls back to individual checks.
+        foreach (array_chunk($existing, 32) as $batch) {
+            $stat = CapturedProcess::run(self::statCommand($batch));
+            $lines = explode("\n", rtrim($stat->output, "\n"));
+            foreach ($batch as $index => $path) {
+                $times[$path] = $stat->status === 0 && count($lines) === count($batch) && isset($lines[$index])
+                    ? trim($lines[$index])
+                    : $this->modifiedAt($path);
+            }
+        }
+        return $times;
+    }
+
     #[Override]
     public function read(string $path): SourceText
     {
-        return $this->readWithTime($path, $this->modifiedAt($path));
+        return $this->readWithTime($path, self::seconds($path));
     }
 
     /**
@@ -78,18 +114,8 @@ final class SourceFiles implements SourceFilesInterface
     #[Override]
     public function readMany(array $paths): iterable
     {
-        // Bound command size; a failed batch falls back to individual reads.
-        foreach (array_chunk($paths, 32) as $batch) {
-            foreach ($batch as $path) {
-                clearstatcache(true, $path);
-            }
-            $stat = CapturedProcess::run(self::statCommand($batch));
-            $times = explode("\n", rtrim($stat->output, "\n"));
-            foreach ($batch as $index => $path) {
-                yield $path => $stat->status === 0 && count($times) === count($batch) && isset($times[$index])
-                    ? $this->readWithTime($path, trim($times[$index]))
-                    : $this->read($path);
-            }
+        foreach ($this->modifiedTimes($paths) as $path => $modifiedAt) {
+            yield $path => $this->readWithTime($path, $modifiedAt);
         }
     }
 
@@ -98,13 +124,12 @@ final class SourceFiles implements SourceFilesInterface
      */
     private function modifiedAt(string $path): ?string
     {
-        clearstatcache(true, $path);
-        $seconds = @filemtime($path);
-        if ($seconds === false) {
+        $seconds = self::seconds($path);
+        if ($seconds === null) {
             return null;
         }
         $stat = CapturedProcess::run(self::statCommand([$path]));
-        return $stat->status === 0 ? trim($stat->output) : (string) $seconds;
+        return $stat->status === 0 ? trim($stat->output) : $seconds;
     }
 
     private function readWithTime(string $path, ?string $modifiedAt): SourceText

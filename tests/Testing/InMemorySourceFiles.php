@@ -51,6 +51,16 @@ final readonly class InMemorySourceFiles implements SourceFiles
     }
 
     #[Override]
+    public function modifiedTimes(array $paths): array
+    {
+        $times = [];
+        foreach ($paths as $path) {
+            $times[$path] = $this->read($path)->modifiedAt;
+        }
+        return $times;
+    }
+
+    #[Override]
     public function read(string $path): SourceText
     {
         return array_key_exists($path, $this->files)
