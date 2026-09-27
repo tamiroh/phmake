@@ -76,6 +76,9 @@ final class BuildFiles
 
     public function cleanup(): void
     {
+        if ($this->created === []) {
+            return;
+        }
         $removed = [];
         foreach ($this->table->names() as $name) {
             if (!isset($this->created[$name])) {
