@@ -10,6 +10,8 @@ use function count;
 use function preg_match;
 use function preg_quote;
 use function preg_replace;
+use function str_contains;
+use function strcspn;
 use function strlen;
 use function substr;
 
@@ -29,7 +31,13 @@ final class ExpansionSyntax
         $start = 0;
         $depth = 0;
         $closing = $opening === '(' ? ')' : '}';
-        for ($index = 0; $index < strlen($text) && count($arguments) < ($limit - 1); $index++) {
+        $length = strlen($text);
+        $stops = $opening . $closing . ',';
+        for (
+            $index = strcspn($text, $stops);
+            $index < $length && count($arguments) < ($limit - 1);
+            $index += 1 + strcspn($text, $stops, $index + 1)
+        ) {
             if ($text[$index] === $opening) {
                 $depth++;
             } elseif ($text[$index] === $closing) {
@@ -52,15 +60,23 @@ final class ExpansionSyntax
         $closing = $opening === '(' ? ')' : '}';
         $start = ++$index;
         $depth = 1;
-        while ($index < strlen($expression)) {
+        $length = strlen($expression);
+        $stops = $opening . $closing;
+        for (
+            $index += strcspn($expression, $stops, $index);
+            $index < $length;
+            $index += 1 + strcspn($expression, $stops, $index + 1)
+        ) {
             if ($expression[$index] === $opening) {
                 $depth++;
-            } elseif ($expression[$index] === $closing && --$depth === 0) {
+            } elseif (--$depth === 0) {
                 $reference = substr($expression, $start, $index - $start);
-                return preg_replace('/[ \t]*' . preg_quote("\\\n", '/') . '[ \t]*/', ' ', $reference) ?? $reference;
+                return str_contains($reference, "\\\n")
+                    ? preg_replace('/[ \t]*' . preg_quote("\\\n", '/') . '[ \t]*/', ' ', $reference) ?? $reference
+                    : $reference;
             }
-            $index++;
         }
+        $index = $length;
         $matches = [];
         if (
             preg_match('/^([a-z]+)(?:[ \t\r\n\v\f]|$)/', substr($expression, $start), $matches) === 1

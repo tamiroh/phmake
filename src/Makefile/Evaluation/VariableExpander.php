@@ -75,12 +75,13 @@ final readonly class VariableExpander
     {
         $expanding ??= $this->expanding;
         $result = '';
-        for ($index = 0; $index < strlen($expression); $index++) {
-            if ($expression[$index] !== '$') {
-                $result .= $expression[$index];
-                continue;
-            }
-            $next = $expression[++$index] ?? '';
+        $length = strlen($expression);
+        $index = 0;
+        // Copy the text between references at once.
+        while ($index < $length && ($dollar = strpos($expression, '$', $index)) !== false) {
+            $result .= substr($expression, $index, $dollar - $index);
+            $index = $dollar + 1;
+            $next = $expression[$index] ?? '';
             if ($next === '$') {
                 $result .= '$';
             } elseif ($next === '(' || $next === '{') {
@@ -92,8 +93,9 @@ final readonly class VariableExpander
             } elseif ($next !== '') {
                 $result .= $this->value($next, $expanding);
             }
+            $index++;
         }
-        return $result;
+        return $result . substr($expression, $index);
     }
 
     /**
