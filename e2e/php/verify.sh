@@ -2,7 +2,10 @@
 set -eu
 
 cd /opt/php-src
-make
+phase clean-build make
+phase no-op-rebuild make
+touch sapi/cli/php_cli.c
+phase touched-rebuild make
 ./sapi/cli/php -n -v
 ./sapi/cli/php -n -r '
     if (PHP_VERSION !== "8.5.0" || PHP_SAPI !== "cli" || 6 * 7 !== 42) {

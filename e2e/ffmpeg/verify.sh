@@ -2,7 +2,10 @@
 set -eu
 
 cd /opt/ffmpeg
-make -j2 all
+phase clean-build make -j2 all
+phase no-op-rebuild make -j2 all
+touch fftools/ffmpeg.c
+phase touched-rebuild make -j2 all
 make -j2 install
 
 PATH=/opt/ffmpeg-install/bin:$PATH

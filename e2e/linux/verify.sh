@@ -4,7 +4,10 @@ set -eu
 cd /opt/linux
 # Configuration and recursive Kbuild invocations use the selected make.
 make ARCH=x86_64 KCONFIG_ALLCONFIG=/opt/kernel.config allnoconfig
-make ARCH=x86_64 bzImage
+phase clean-build make ARCH=x86_64 bzImage
+phase no-op-rebuild make ARCH=x86_64 bzImage
+touch init/main.c
+phase touched-rebuild make ARCH=x86_64 bzImage
 test -s vmlinux
 test -s arch/x86/boot/bzImage
 

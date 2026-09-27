@@ -59,5 +59,6 @@ RUN patch -d /opt/make -p1 < /tmp/test-runner.patch \
     && chmod -R a+rwX /opt/make/tests
 
 COPY e2e/run-build.sh /usr/local/bin/run-build
+COPY --chmod=755 e2e/phase.sh /usr/local/bin/phase
 
 CMD ["sh", "/usr/local/bin/run-build", "make"]

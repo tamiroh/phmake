@@ -33,6 +33,13 @@ end-to-end comparisons, not isolated make-engine benchmarks. Compiler work,
 filesystem caches, the fixed run order, and CI runner load affect the results;
 use repeated runs and make-only workloads when investigating smaller changes.
 
+Each verifier also times its main build in three phases through `e2e/phase.sh`,
+before installation and smoke verification: `clean-build`, `no-op-rebuild`
+(the same command again), and `touched-rebuild` (after touching one source
+file). The runner adds a per-phase table. The rebuild phases involve little
+compiler work, so they mostly measure reading makefiles, resolving
+dependencies, and checking timestamps.
+
 To run only one implementation:
 
 ```sh

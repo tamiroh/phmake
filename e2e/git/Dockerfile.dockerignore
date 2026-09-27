@@ -8,3 +8,4 @@
 !e2e/git/
 !e2e/git/verify.sh
 !e2e/run-build.sh
+!e2e/phase.sh

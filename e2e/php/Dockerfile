@@ -33,5 +33,6 @@ WORKDIR /opt/php-src
 COPY e2e/php/verify.sh /usr/local/bin/verify-php-build
 
 COPY e2e/run-build.sh /usr/local/bin/run-build
+COPY --chmod=755 e2e/phase.sh /usr/local/bin/phase
 
 CMD ["sh", "/usr/local/bin/run-build", "php"]

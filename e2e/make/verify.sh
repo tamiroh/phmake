@@ -2,7 +2,10 @@
 set -eu
 
 cd /opt/make
-make
+phase clean-build make
+phase no-op-rebuild make
+touch src/main.c
+phase touched-rebuild make
 ./make --version
 ./make --version | grep -Fx 'GNU Make 4.4.1'
 

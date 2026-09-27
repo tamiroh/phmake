@@ -39,5 +39,6 @@ COPY e2e/linux/verify.sh /usr/local/bin/verify-linux-build
 
 WORKDIR /opt/linux
 COPY e2e/run-build.sh /usr/local/bin/run-build
+COPY --chmod=755 e2e/phase.sh /usr/local/bin/phase
 
 CMD ["sh", "/usr/local/bin/run-build", "linux"]

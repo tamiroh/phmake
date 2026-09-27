@@ -40,5 +40,6 @@ WORKDIR /opt/gcc-build
 COPY e2e/gcc/verify.sh /usr/local/bin/verify-gcc-build
 
 COPY e2e/run-build.sh /usr/local/bin/run-build
+COPY --chmod=755 e2e/phase.sh /usr/local/bin/phase
 
 CMD ["sh", "/usr/local/bin/run-build", "gcc"]

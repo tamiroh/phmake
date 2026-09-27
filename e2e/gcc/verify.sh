@@ -2,7 +2,10 @@
 set -eu
 
 cd /opt/gcc-build
-make -j2 MAKE=/usr/local/bin/make all
+phase clean-build make -j2 MAKE=/usr/local/bin/make all
+phase no-op-rebuild make -j2 MAKE=/usr/local/bin/make all
+touch /opt/gcc-source/gcc/gcc.cc
+phase touched-rebuild make -j2 MAKE=/usr/local/bin/make all
 make -j2 MAKE=/usr/local/bin/make install
 
 PATH=/opt/gcc-install/bin:$PATH

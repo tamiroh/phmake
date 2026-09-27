@@ -30,5 +30,6 @@ WORKDIR /opt/lua
 COPY e2e/lua/verify.sh /usr/local/bin/verify-lua-build
 
 COPY e2e/run-build.sh /usr/local/bin/run-build
+COPY --chmod=755 e2e/phase.sh /usr/local/bin/phase
 
 CMD ["sh", "/usr/local/bin/run-build", "lua"]

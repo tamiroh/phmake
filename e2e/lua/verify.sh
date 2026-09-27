@@ -2,7 +2,10 @@
 set -eu
 
 cd /opt/lua
-make linux
+phase clean-build make linux
+phase no-op-rebuild make linux
+touch src/lua.c
+phase touched-rebuild make linux
 ./src/lua -v
 ./src/luac -v
 ./src/lua -e '

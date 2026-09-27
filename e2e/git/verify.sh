@@ -2,7 +2,10 @@
 set -eu
 
 cd /opt/git
-make -j2 NO_TCLTK=YesPlease prefix=/opt/git-install all
+phase clean-build make -j2 NO_TCLTK=YesPlease prefix=/opt/git-install all
+phase no-op-rebuild make -j2 NO_TCLTK=YesPlease prefix=/opt/git-install all
+touch builtin/add.c
+phase touched-rebuild make -j2 NO_TCLTK=YesPlease prefix=/opt/git-install all
 make -j2 NO_TCLTK=YesPlease prefix=/opt/git-install install
 
 PATH=/opt/git-install/bin:$PATH

@@ -18,3 +18,4 @@
 !native/guile.c
 !native/module-api.h
 !e2e/run-build.sh
+!e2e/phase.sh
