@@ -10,6 +10,7 @@ use Tamiroh\Phmake\Parser\Syntax\ScopedAssignment;
 use function explode;
 use function ltrim;
 use function rtrim;
+use function str_contains;
 use function str_replace;
 use function str_starts_with;
 use function strlen;
@@ -54,7 +55,7 @@ final class LineReader
                 $line .= "\n" . (str_starts_with($next, $recipePrefix) ? substr($next, offset: 1) : $next);
             } else {
                 $line = ($posix ? substr($line, 0, -1) : rtrim(substr($line, 0, -1))) . ' ' . ltrim($next);
-                $recipe = !$definition && $this->isRecipe($line, $recipePrefix, $hasRule);
+                $recipe = !$definition && str_contains($next, ';') && $this->isRecipe($line, $recipePrefix, $hasRule);
             }
         }
 
