@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Makefile;
 
+use LogicException;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Input\CommandVariables;
@@ -204,10 +205,10 @@ final readonly class MakefileLoader
             }
         }
         $errors = $build->remake($names, $unreadable);
-        foreach ($inputs as $file) {
+        foreach ($sources->files->readMany($names) as $path => $contents) {
+            $file = $inputs[$path] ?? throw new LogicException('Unexpected makefile in batch read');
             if (
-                $file->rebuild
-                && ($contents = $sources->files->read($file->path))->text !== null
+                $contents->text !== null
                 && ($contents->text !== $file->text || $contents->modifiedAt !== $file->modifiedAt)
             ) {
                 return true;

@@ -14,4 +14,11 @@ interface SourceFiles
     public function matching(string $pattern): array;
 
     public function read(string $path): SourceText;
+
+    /**
+     * @param list<string> $paths
+     *
+     * @return iterable<string, SourceText>
+     */
+    public function readMany(array $paths): iterable;
 }
