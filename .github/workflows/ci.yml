@@ -223,7 +223,7 @@ jobs:
       - name: Check no-op rebuild times
         run: >-
           python3 e2e/check-no-op.py "$RUNNER_TEMP/build-results"
-          lua=1 make=1 php=1 ffmpeg=1 git=6 llama-cpp=9 gcc=32 linux=90
+          lua=1 make=1 php=1.5 ffmpeg=1.5 git=6 llama-cpp=9 gcc=32 linux=90
 
   test-gnu-make:
     runs-on: ubuntu-24.04
