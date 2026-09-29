@@ -309,3 +309,23 @@ jobs:
 
       - name: Run tests
         run: make test
+
+  phar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # master
+        with:
+          php-version: '8.5'
+          extensions: pcntl, posix
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress --no-scripts
+
+      - name: Build and verify PHAR
+        run: make test-phar VERSION=v0.0.0-ci

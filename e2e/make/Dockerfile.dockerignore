@@ -1,5 +1,6 @@
 **
 !GNU_MAKE_VERSION
+!LICENSE
 !composer.json
 !composer.lock
 !phmake

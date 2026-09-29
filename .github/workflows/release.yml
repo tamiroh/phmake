@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag (for example, v0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Validate release tag
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9][A-Za-z0-9.+-]*$ ]]; then
+            echo 'Use a version tag such as v0.1.0.' >&2
+            exit 1
+          fi
+          git check-ref-format "refs/tags/$RELEASE_TAG"
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            if [ "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" != "$GITHUB_SHA" ]; then
+              echo 'The existing tag points to a different commit. Select that tag to retry.' >&2
+              exit 1
+            fi
+          fi
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # master
+        with:
+          php-version: '8.5'
+          extensions: pcntl, posix
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress --no-scripts
+
+      - name: Build and verify PHAR
+        run: make test-phar VERSION="$RELEASE_TAG"
+
+      - name: Create or update draft release
+        shell: bash
+        run: |
+          if draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft'); then
+            if [ "$draft" != true ]; then
+              echo 'Refusing to change an already published release.' >&2
+              exit 1
+            fi
+            gh release edit "$RELEASE_TAG" --target "$GITHUB_SHA"
+          else
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --draft --generate-notes --title "$RELEASE_TAG"
+          fi
+          gh release upload "$RELEASE_TAG" dist/phmake.phar dist/phmake.phar.sha256 --clobber

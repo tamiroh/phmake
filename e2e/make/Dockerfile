@@ -30,7 +30,7 @@ RUN /usr/bin/make -j2 \
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 
 WORKDIR /opt/phmake
-COPY composer.json composer.lock ./
+COPY composer.json composer.lock LICENSE ./
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
 COPY src/ src/
 COPY native/module-host.c native/guile.c native/module-api.h /tmp/

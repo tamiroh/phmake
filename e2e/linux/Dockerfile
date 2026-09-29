@@ -19,7 +19,7 @@ RUN curl -fsSL https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.12.tar.xz -o
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 
 WORKDIR /opt/phmake
-COPY composer.json composer.lock ./
+COPY composer.json composer.lock LICENSE ./
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
 COPY src/ src/
 COPY --chmod=755 phmake ./phmake

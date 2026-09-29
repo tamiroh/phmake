@@ -1,5 +1,6 @@
 /.vscode/
 /vendor/
+/dist/
 /.local/
 
 # PHP CS Fixer configuration

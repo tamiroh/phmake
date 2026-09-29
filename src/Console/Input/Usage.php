@@ -9,6 +9,8 @@ use const PHP_VERSION;
 
 final class Usage
 {
+    private const string VERSION = 'development';
+
     /**
      * @pure
      */
@@ -36,6 +38,6 @@ final class Usage
      */
     public static function version(): string
     {
-        return 'phmake (development)' . "\nBuilt for PHP " . PHP_VERSION . ' on ' . PHP_OS_FAMILY . "\n";
+        return 'phmake (' . self::VERSION . ')' . "\nBuilt for PHP " . PHP_VERSION . ' on ' . PHP_OS_FAMILY . "\n";
     }
 }
