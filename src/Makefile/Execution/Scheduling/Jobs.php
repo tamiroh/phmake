@@ -11,6 +11,7 @@ use Tamiroh\Phmake\Makefile\Execution\UpdateResult;
 use Tamiroh\Phmake\Makefile\IO\JobSlots;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use WeakMap;
 
 /**
  * Let target updates proceed while running jobs are waiting.
@@ -21,6 +22,13 @@ final class Jobs
 {
     /** @var array<string, TargetUpdate> */
     private array $updates = [];
+
+    /**
+     * Updates started here and not yet collected, to tell them from other builds' updates.
+     *
+     * @var WeakMap<TargetUpdate, true>
+     */
+    private readonly WeakMap $started;
 
     private MakefileErrorException|CommandFailedException|null $error = null;
 
@@ -36,6 +44,7 @@ final class Jobs
         private readonly ?JobSlots $slots = null,
         private readonly ?Output $output = null,
     ) {
+        $this->started = new WeakMap();
         $this->slotAvailable = fn(): bool => $this->error !== null || !$this->slotsTaken;
     }
 
@@ -89,15 +98,15 @@ final class Jobs
     public function updateAll(array $work): array
     {
         $current = TargetUpdate::current();
-        $owner = $current !== null && ($this->updates[$current->name] ?? null) === $current ? $current : null;
+        $owner = $current !== null && isset($this->started[$current]) ? $current : null;
         $pending = [];
         foreach ($work as $name => $callback) {
             if ($this->error !== null) {
                 throw $this->error;
             }
             if (!isset($this->updates[$name]) || $this->updates[$name]->finished()) {
-                // Numeric target names arrive as integer keys.
-                $this->updates[$name] = new TargetUpdate((string) $name, $callback);
+                $this->updates[$name] = new TargetUpdate($callback);
+                $this->started[$this->updates[$name]] = true;
                 $this->updates[$name]->proceed();
                 $this->error ??= $this->updates[$name]->error;
             }
@@ -106,7 +115,12 @@ final class Jobs
         $results = [];
         foreach ($pending as $name => $update) {
             if ($owner !== null && $update->waitsFor($owner)) {
-                $this->output?->writeWarning("Circular {$owner->name} <- {$name} dependency dropped.");
+                foreach ($this->updates as $parent => $candidate) {
+                    if ($candidate === $owner) {
+                        $this->output?->writeWarning("Circular {$parent} <- {$name} dependency dropped.");
+                        break;
+                    }
+                }
                 $results[$name] = new UpdateResult(circular: true);
                 continue;
             }
@@ -128,7 +142,7 @@ final class Jobs
             }
             $results[$name] = $update->result ?? throw new LogicException('Target update finished without a result');
             if (($this->updates[$name] ?? null) === $update) {
-                unset($this->updates[$name]);
+                unset($this->updates[$name], $this->started[$update]);
             }
         }
         return $results;

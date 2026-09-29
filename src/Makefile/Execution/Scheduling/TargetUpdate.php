@@ -38,10 +38,8 @@ final class TargetUpdate
     /**
      * @param Closure(): UpdateResult $work
      */
-    public function __construct(
-        public readonly string $name,
-        Closure $work,
-    ) {
+    public function __construct(Closure $work)
+    {
         $this->fiber = new Fiber(function () use ($work): void {
             try {
                 $this->result = $work();
