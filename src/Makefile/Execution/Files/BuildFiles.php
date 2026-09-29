@@ -39,7 +39,7 @@ final class BuildFiles
 
     private readonly FilePolicy $policy;
 
-    private readonly FileTable $table;
+    private readonly DeletionOrder $deletionOrder;
 
     /**
      * @throws MakefileErrorException
@@ -53,12 +53,12 @@ final class BuildFiles
         private readonly BuildState $state,
     ) {
         $this->policy = new FilePolicy($makefile->targetsByName);
-        $this->table = new FileTable();
+        $this->deletionOrder = new DeletionOrder();
         foreach ($makefile->targets as $target) {
-            $this->table->enter($target->name);
+            $this->deletionOrder->enter($target->name);
             foreach ($target->rules as $rule) {
                 foreach ($rule->prerequisites->sequence as $dependency) {
-                    $this->table->enter($dependency);
+                    $this->deletionOrder->enter($dependency);
                 }
             }
         }
@@ -82,12 +82,12 @@ final class BuildFiles
                 $removable[$name] = $path;
             }
         }
-        // Only removals need the file-table order, so most builds never hash their names.
+        // Only deletions need this order, so most builds never compute it.
         if ($removable === []) {
             return;
         }
         $removed = [];
-        foreach ($this->table->names() as $name) {
+        foreach ($this->deletionOrder->names() as $name) {
             $path = $removable[$name] ?? null;
             if ($path !== null && $this->filesystem->exists($path) && $this->filesystem->remove($path)) {
                 $removed[] = $path;
@@ -147,7 +147,7 @@ final class BuildFiles
      */
     public function prepare(string $name, VariableExpander $expander): void
     {
-        $this->table->enter($name);
+        $this->deletionOrder->enter($name);
         $path = $this->path($name);
         if (
             $path !== $name

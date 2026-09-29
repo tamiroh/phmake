@@ -12,9 +12,11 @@ use Throwable;
 /**
  * @internal
  */
-final class Suspension
+final class Waiting
 {
     /**
+     * Let other target updates proceed until the condition holds.
+     *
      * @param Closure(): bool $ready
      */
     public static function until(Closure $ready): void
@@ -22,8 +24,8 @@ final class Suspension
         try {
             Fiber::suspend($ready);
         } catch (Throwable $error) {
-            // The scheduler resumes fibers normally; it never injects exceptions.
-            throw new LogicException('Unexpected exception injected into a build task', previous: $error);
+            // Jobs resumes target updates normally; it never injects exceptions.
+            throw new LogicException('Unexpected exception injected into a target update', previous: $error);
         }
     }
 }

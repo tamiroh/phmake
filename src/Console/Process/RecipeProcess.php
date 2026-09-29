@@ -7,7 +7,7 @@ namespace Tamiroh\Phmake\Console\Process;
 use Closure;
 use Fiber;
 use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
-use Tamiroh\Phmake\Makefile\Execution\Scheduling\Suspension;
+use Tamiroh\Phmake\Makefile\Execution\Scheduling\Waiting;
 
 use function fclose;
 use function fopen;
@@ -59,7 +59,7 @@ final class RecipeProcess
                     $stopped = true;
                 }
                 if (Fiber::getCurrent() !== null) {
-                    Suspension::until(static fn(): bool => true);
+                    Waiting::until(static fn(): bool => true);
                 } else {
                     usleep(1000);
                 }

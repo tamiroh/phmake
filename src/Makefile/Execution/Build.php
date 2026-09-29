@@ -13,7 +13,7 @@ use Tamiroh\Phmake\Makefile\Execution\Files\BuildFiles;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\RecipeRunner;
 use Tamiroh\Phmake\Makefile\Execution\Scheduling\DependencyOrder;
-use Tamiroh\Phmake\Makefile\Execution\Scheduling\Scheduler;
+use Tamiroh\Phmake\Makefile\Execution\Scheduling\Jobs;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\JobSlots;
 use Tamiroh\Phmake\Makefile\IO\Output;
@@ -47,7 +47,7 @@ final class Build
 
     private readonly BuildPath $path;
 
-    private readonly Scheduler $scheduler;
+    private readonly Jobs $jobs;
 
     private readonly BuildFiles $files;
 
@@ -71,7 +71,7 @@ final class Build
         $this->path = new BuildPath(
             new VariableScope($makefile->context ?? new EvaluationContext($makefile->variables)),
         );
-        $this->scheduler = new Scheduler($slots, $output);
+        $this->jobs = new Jobs($slots, $output);
     }
 
     public function cleanup(): void
@@ -133,7 +133,7 @@ final class Build
         }
         try {
             if ($this->parallel()) {
-                $results = $this->scheduler->join($work);
+                $results = $this->jobs->updateAll($work);
             } else {
                 $results = [];
                 foreach ($work as $name => $callback) {
@@ -146,7 +146,7 @@ final class Build
                 }
             }
         } finally {
-            $this->scheduler->drain();
+            $this->jobs->waitForUnfinishedJobs();
         }
         foreach ($this->state->results as $name => $result) {
             if ($result->failure !== null) {
@@ -209,10 +209,10 @@ final class Build
                 }
             }
             if ($this->parallel()) {
-                $this->scheduler->join($work);
+                $this->jobs->updateAll($work);
             }
         } finally {
-            $this->scheduler->drain();
+            $this->jobs->waitForUnfinishedJobs();
             $this->files->cleanup();
         }
         return $this->state->failed ? 2 : ($this->state->needsUpdate ? 1 : 0);
@@ -237,7 +237,7 @@ final class Build
             return $this->state->recipes[$key];
         }
         if (!$checking && $rule->group !== [] && !$grouped && $this->parallel()) {
-            return $this->scheduler->await(
+            return $this->jobs->update(
                 '@group:' . $key,
                 /**
                  * @throws MakefileErrorException
@@ -337,7 +337,7 @@ final class Build
                     function () use ($dependency, &$executed, $path, $target): UpdateResult {
                         return $this->update($dependency, $executed, clone $path, $target->name);
                     };
-                $result = $this->parallel() ? $this->scheduler->await($dependency, $update) : $update();
+                $result = $this->parallel() ? $this->jobs->update($dependency, $update) : $update();
                 if ($result->failure !== null) {
                     return new UpdateResult(failure: $result->failure, blocked: true);
                 }
@@ -362,7 +362,7 @@ final class Build
                 new VariableExpander($path->scope->context, $this->output, scope: $path->scope),
             );
         }
-        $slot = $this->parallel() ? $this->scheduler->acquire() : '';
+        $slot = $this->parallel() ? $this->jobs->acquire() : '';
         try {
             if ($this->state->remaking) {
                 $this->makefile->context?->loadedObjects->unload($target->name);
@@ -383,7 +383,7 @@ final class Build
             throw $error;
         } finally {
             if ($this->parallel()) {
-                $this->scheduler->release($slot);
+                $this->jobs->release($slot);
             }
         }
         $this->search->refresh($target, $path->scope);
@@ -456,7 +456,7 @@ final class Build
         ) as $dependency) {
             if ($dependency === '.WAIT') {
                 if ($work !== []) {
-                    $updates += $this->scheduler->join($work);
+                    $updates += $this->jobs->updateAll($work);
                     $work = [];
                 }
                 continue;
@@ -480,13 +480,13 @@ final class Build
                 };
             if ($serial) {
                 $updates[$dependency] = $this->parallel()
-                    ? $this->scheduler->await($dependency, $work[$dependency])
+                    ? $this->jobs->update($dependency, $work[$dependency])
                     : $work[$dependency]();
                 $work = [];
             }
         }
         if ($work !== []) {
-            $updates += $this->scheduler->join($work);
+            $updates += $this->jobs->updateAll($work);
         }
         foreach ($updates as $dependency => $updated) {
             if ($updated->circular) {
@@ -699,7 +699,7 @@ final class Build
                         if (!$this->options->keepGoing && !$this->state->remaking) {
                             if ($this->parallel() && $error instanceof CommandFailedException) {
                                 $this->state->failure($error, $this->output);
-                                if ($this->scheduler->running > 0 && !$this->state->waiting) {
+                                if ($this->jobs->running > 0 && !$this->state->waiting) {
                                     $this->state->waiting = true;
                                     $this->output->writeWarning('*** Waiting for unfinished jobs....');
                                 }

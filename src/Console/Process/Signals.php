@@ -110,7 +110,7 @@ final class Signals
         }
         pcntl_async_signals($this->asynchronous);
         if (self::$received !== 0) {
-            // Release cycles containing scheduler fibers before restoring default termination.
+            // Release cycles containing target update fibers before restoring default termination.
             gc_collect_cycles();
             pcntl_signal(self::$received, SIG_DFL);
             if (($pid = getmypid()) !== false) {

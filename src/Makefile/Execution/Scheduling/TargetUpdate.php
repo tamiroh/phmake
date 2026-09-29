@@ -11,14 +11,20 @@ use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Execution\UpdateResult;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Throwable;
+use WeakMap;
 
 /**
+ * The update of one target and its prerequisites, which can wait while other updates proceed.
+ *
  * @internal
  */
-final class BuildTask
+final class TargetUpdate
 {
+    /** @var WeakMap<Fiber<null, Closure(): bool, null, void>, self>|null */
+    private static ?WeakMap $updates = null;
+
     /** @var Fiber<null, Closure(): bool, null, void> */
-    public readonly Fiber $fiber;
+    private readonly Fiber $fiber;
 
     /** @var (Closure(): bool)|null */
     public ?Closure $ready = null;
@@ -27,18 +33,15 @@ final class BuildTask
 
     public ?self $waiting = null;
 
-    public function waitsFor(self $other): bool
-    {
-        return $this === $other || ($this->waiting?->waitsFor($other) ?? false);
-    }
-
     public MakefileErrorException|CommandFailedException|null $error = null;
 
     /**
      * @param Closure(): UpdateResult $work
      */
-    public function __construct(Closure $work)
-    {
+    public function __construct(
+        public readonly string $name,
+        Closure $work,
+    ) {
         $this->fiber = new Fiber(function () use ($work): void {
             try {
                 $this->result = $work();
@@ -46,14 +49,35 @@ final class BuildTask
                 $this->error = $error;
             }
         });
+        self::$updates ??= new WeakMap();
+        self::$updates[$this->fiber] = $this;
     }
 
-    public function advance(): void
+    /**
+     * The target update that is running now, or null outside of any.
+     */
+    public static function current(): ?self
+    {
+        $fiber = Fiber::getCurrent();
+        return $fiber === null ? null : self::$updates[$fiber] ?? null;
+    }
+
+    public function finished(): bool
+    {
+        return $this->fiber->isTerminated();
+    }
+
+    public function proceed(): void
     {
         try {
             $this->ready = $this->fiber->isStarted() ? $this->fiber->resume() : $this->fiber->start();
         } catch (Throwable $error) {
-            throw new LogicException('Unexpected failure in build task', previous: $error);
+            throw new LogicException('Unexpected failure in target update', previous: $error);
         }
+    }
+
+    public function waitsFor(self $other): bool
+    {
+        return $this === $other || ($this->waiting?->waitsFor($other) ?? false);
     }
 }

@@ -23,9 +23,9 @@ is the common semantic error type.
 | `Rule/` | What are a target, its prerequisites, and its recipe? | `Target`, `BuildRule`, `PatternRule`, `Prerequisites`, `Recipe` |
 | `Search/` | Which rule and file path can satisfy this target? | `RuleSearch`, `ImplicitCandidate`, `SearchPaths`, `SearchState` |
 | `Execution/` | Which dependencies need updating, and what is the overall result? | `Build`, `BuildState`, `BuildPath`, `UpdateResult`, `MakefileRemake`, `ExecutionOptions` |
-| `Execution/Files/` | Is a file out of date, and should it survive the build? | `BuildFiles`, `FilePolicy`, `FileTable`, `FileOptions` |
+| `Execution/Files/` | Is a file out of date, and should it survive the build? | `BuildFiles`, `FilePolicy`, `DeletionOrder`, `FileOptions` |
 | `Execution/Recipe/` | How is a recipe expanded and executed? | `RecipeRunner`, `Command`, `ExpandedCommand`, `CommandResult` |
-| `Execution/Scheduling/` | Which dependency tasks may advance or wait? | `Scheduler`, `BuildTask`, `Suspension`, `DependencyOrder`, `ParallelOptions` |
+| `Execution/Scheduling/` | Which target updates may proceed or wait? | `Jobs`, `TargetUpdate`, `Waiting`, `DependencyOrder`, `ParallelOptions` |
 | `Invocation/` | Which options change reading, and how are they passed to sub-makes through `MAKEFLAGS`? | `InvocationOptions`, `MakeFlags`, `CommandVariables`, `ReversibleOptions` |
 | `Reporting/` | How are failures, debug events, and rebuild reasons explained? | `Diagnostics`, `DebugTrace`, `RecipeTrace`, `ReportingOptions` |
 | `IO/` | What are the contracts at the boundary with the host? | `Filesystem`, `SourceFiles`, `Shell`, `Output`, `RecipeOutput`, `JobSlots`, `DynamicObject`, `LoadedObjectApi` |
@@ -42,7 +42,7 @@ flowchart TD
     Parser --> Evaluation[Evaluation/VariableExpander]
     Build --> Search[Search/RuleSearch]
     Build --> Files[Execution/Files/BuildFiles]
-    Build --> Scheduling[Execution/Scheduling/Scheduler]
+    Build --> Scheduling[Execution/Scheduling/Jobs]
     Build --> Recipe[Execution/Recipe/RecipeRunner]
     Search --> Evaluation
     Build --> Evaluation
@@ -65,7 +65,7 @@ flowchart TD
    `ExtraPrerequisites` evaluate prerequisites in their applicable contexts.
 4. `BuildFiles` supplies timestamps and rebuild decisions. `BuildState` records
    shared results; each `BuildPath` carries a branch's ancestors and variable
-   scope. `Scheduler` coordinates concurrent traversals and job slots.
+   scope. `Jobs` coordinates concurrent target updates and job slots.
 5. `RecipeRunner::run()` sets automatic variables and applies recipe options.
    `Command` retains the original expression; `ExpandedCommand` handles its
    expanded text and command prefixes. `ExportingShell` supplies the environment
@@ -110,11 +110,11 @@ Then follow the subsystem relevant to the behavior being changed:
 
 - Variable behavior: `Variable` → `EvaluationContext` → `VariableScope` →
   `VariableExpander` → `Functions`.
-- Parallel builds: `Scheduler` → `BuildTask` → `Suspension`; process waiting is
-  implemented by `Console/Process/RecipeProcess` through this suspension contract.
-  When no task can advance, `Scheduler` waits through `IO/JobSlots::waitForJobs()`.
-- File lifetime: `BuildFiles` → `FilePolicy`; `FileTable` and `FileHash` preserve
-  GNU make's traversal order for intermediate-file cleanup messages.
+- Parallel builds: `Jobs` → `TargetUpdate` → `Waiting`; process waiting is
+  implemented by `Console/Process/RecipeProcess` through `Waiting`.
+  When no target update can proceed, `Jobs` waits through `IO/JobSlots::waitForJobs()`.
+- File lifetime: `BuildFiles` → `FilePolicy`; `DeletionOrder` preserves GNU make's
+  order for deleting intermediate files.
 
 Keep broad build coordination in `Execution/Build.php`, and put subsystem
 helpers and options next to the behavior they control. Add new folders when a
