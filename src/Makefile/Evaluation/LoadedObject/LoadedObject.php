@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation\Module;
+namespace Tamiroh\Phmake\Makefile\Evaluation\LoadedObject;
 
-use Tamiroh\Phmake\Makefile\IO\ModuleHost;
+use Tamiroh\Phmake\Makefile\IO\DynamicObject;
 
 /**
  * @internal
  */
-final class LoadedModule
+final class LoadedObject
 {
-    public ?ModuleHost $host = null;
+    public ?DynamicObject $instance = null;
 
     public bool $keep = false;
 

@@ -19,7 +19,7 @@ is the common semantic error type.
 | --- | --- | --- |
 | `Evaluation/` | What does an expression mean in the current variable scope? | `VariableExpander`, `Functions`, `EvaluationContext`, `VariableScope` |
 | `Evaluation/Environment/` | Which variables reach a shell command? | `Exports`, `EnvironmentState`, `ExportingShell` |
-| `Evaluation/Module/` | How do loaded functions and Guile participate in evaluation? | `Modules`, `LoadedModule`, `ModuleFunction` |
+| `Evaluation/LoadedObject/` | How do loaded objects and Guile participate in evaluation? | `LoadedObjects`, `LoadedObject`, `LoadedFunction`, `ExpansionApi` |
 | `Rule/` | What are a target, its prerequisites, and its recipe? | `Target`, `BuildRule`, `PatternRule`, `Prerequisites`, `Recipe` |
 | `Search/` | Which rule and file path can satisfy this target? | `RuleSearch`, `ImplicitCandidate`, `SearchPaths`, `SearchState` |
 | `Execution/` | Which dependencies need updating, and what is the overall result? | `Build`, `BuildState`, `BuildPath`, `UpdateResult`, `MakefileRemake`, `ExecutionOptions` |
@@ -28,7 +28,7 @@ is the common semantic error type.
 | `Execution/Scheduling/` | Which dependency tasks may advance or wait? | `Scheduler`, `BuildTask`, `Suspension`, `DependencyOrder`, `ParallelOptions` |
 | `Invocation/` | Which options change reading, and how are they passed to sub-makes through `MAKEFLAGS`? | `InvocationOptions`, `MakeFlags`, `CommandVariables`, `ReversibleOptions` |
 | `Reporting/` | How are failures, debug events, and rebuild reasons explained? | `Diagnostics`, `DebugTrace`, `RecipeTrace`, `ReportingOptions` |
-| `IO/` | What services does the engine need from its host? | `Filesystem`, `SourceFiles`, `Shell`, `Output`, `RecipeOutput`, `JobSlots`, `ModuleHost`, `ModuleRequests` |
+| `IO/` | What are the contracts at the boundary with the host? | `Filesystem`, `SourceFiles`, `Shell`, `Output`, `RecipeOutput`, `JobSlots`, `DynamicObject`, `LoadedObjectApi` |
 
 ## Following a build
 
@@ -87,10 +87,11 @@ flowchart TD
 - `Invocation` owns the meaning of options such as `-e`, `-r`, and `-R`, and how
   `MAKEFLAGS` is built from them. Reading command-line arguments and `MAKEFLAGS`
   text into those options stays in `Console/Input/CommandLine`.
-- `Evaluation/Module` implements make's extension semantics. `IO/ModuleHost`
-  loads objects and calls their functions; `IO/ModuleRequests` is what a loaded
-  object may ask of make (`gmk_add_function`, `gmk_expand`, `gmk_eval`). Their
-  encoding for the host process lives in `Console/Process/ModuleHost`.
+- `Evaluation/LoadedObject` implements the `load` directive and `guile`.
+  `IO/DynamicObject` loads an object and calls its functions. `IO/LoadedObjectApi`
+  is the Loaded Object API (`gmk_add_function`, `gmk_expand`, `gmk_eval`); unlike
+  the other `IO` contracts, the engine implements it and the host calls it back.
+  Their encoding for the host process lives in `Console/Process/ModuleHost`.
 - Exceptions stay with the operation they describe. `Reporting` formats them;
   it does not own build failures or interruption control flow.
 

@@ -13,7 +13,7 @@ use Tamiroh\Phmake\Console\Process\ProcessRestart;
 use Tamiroh\Phmake\Console\Process\Shell;
 use Tamiroh\Phmake\Console\Process\Signals;
 use Tamiroh\Phmake\Makefile\Builtins;
-use Tamiroh\Phmake\Makefile\Evaluation\Module\Modules;
+use Tamiroh\Phmake\Makefile\Evaluation\LoadedObject\LoadedObjects;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Execution\Build;
@@ -91,7 +91,7 @@ final readonly class MakefileLoader
                     new Shell(output: $this->output, reporting: $configuration->execution->reporting),
                     $filesystem,
                     $configuration->execution->reporting,
-                    new Modules(
+                    new LoadedObjects(
                         ($moduleHost = ModuleHost::executable()) === null
                             ? null
                             : fn(): ModuleHost => new ModuleHost($moduleHost, $this->output),
@@ -136,7 +136,7 @@ final readonly class MakefileLoader
                     $configuration->execution->keepGoing,
                 )->run($sources->read);
                 if (!$remade && $makefile->context !== null) {
-                    $makefile->context->modules->reload(new VariableExpander($makefile->context, $this->output));
+                    $makefile->context->loadedObjects->reload(new VariableExpander($makefile->context, $this->output));
                 }
             } catch (MakefileErrorException|CommandFailedException $error) {
                 $build->cleanup();

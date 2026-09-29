@@ -365,7 +365,7 @@ final class Build
         $token = $this->parallel() ? $this->scheduler->acquire() : '';
         try {
             if ($this->state->remaking) {
-                $this->makefile->context?->modules->unload($target->name);
+                $this->makefile->context?->loadedObjects->unload($target->name);
             }
             $ran = $this->runner->run(
                 $target,

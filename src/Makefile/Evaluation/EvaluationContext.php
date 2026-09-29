@@ -7,7 +7,7 @@ namespace Tamiroh\Phmake\Makefile\Evaluation;
 use Closure;
 use Tamiroh\Phmake\Makefile\Evaluation\Environment\EnvironmentState;
 use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
-use Tamiroh\Phmake\Makefile\Evaluation\Module\Modules;
+use Tamiroh\Phmake\Makefile\Evaluation\LoadedObject\LoadedObjects;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
@@ -39,7 +39,7 @@ final class EvaluationContext
 
     public EnvironmentState $environment;
 
-    public Modules $modules;
+    public LoadedObjects $loadedObjects;
 
     /**
      * @param list<Variable> $variables
@@ -47,7 +47,7 @@ final class EvaluationContext
     public function __construct(array $variables = [])
     {
         $this->environment = new EnvironmentState();
-        $this->modules = new Modules();
+        $this->loadedObjects = new LoadedObjects();
         $this->exports = new Exports();
         $this->reporting = new ReportingOptions();
         foreach ($variables as $variable) {

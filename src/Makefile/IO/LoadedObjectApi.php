@@ -7,9 +7,11 @@ namespace Tamiroh\Phmake\Makefile\IO;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 /**
- * What a loaded object may ask make to do while it runs.
+ * The Loaded Object API: what a loaded object may ask make to do while it runs.
+ *
+ * The make engine implements this interface; the host calls it back during DynamicObject requests.
  */
-interface ModuleRequests
+interface LoadedObjectApi
 {
     /**
      * Define a function that makefiles can call (gmk_add_function).

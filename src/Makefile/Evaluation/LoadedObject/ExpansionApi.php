@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation\Module;
+namespace Tamiroh\Phmake\Makefile\Evaluation\LoadedObject;
 
 use Override;
 use Tamiroh\Phmake\Makefile\Evaluation\Functions;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
-use Tamiroh\Phmake\Makefile\IO\ModuleRequests;
+use Tamiroh\Phmake\Makefile\IO\LoadedObjectApi;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 /**
@@ -15,11 +15,11 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
  *
  * @internal
  */
-final readonly class ExpansionRequests implements ModuleRequests
+final readonly class ExpansionApi implements LoadedObjectApi
 {
     public function __construct(
-        private Modules $modules,
-        private LoadedModule $module,
+        private LoadedObjects $loadedObjects,
+        private LoadedObject $object,
         private VariableExpander $expander,
     ) {}
 
@@ -32,7 +32,7 @@ final readonly class ExpansionRequests implements ModuleRequests
         if (preg_match('/^[A-Za-z0-9_.-]+$/D', $name) !== 1) {
             throw new MakefileErrorException("Invalid loaded function name '{$name}'");
         }
-        $this->modules->functions[$name] = new ModuleFunction($this->module, $minimum, $maximum, $expand);
+        $this->loadedObjects->functions[$name] = new LoadedFunction($this->object, $minimum, $maximum, $expand);
     }
 
     /**

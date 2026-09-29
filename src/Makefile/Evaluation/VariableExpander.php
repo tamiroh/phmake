@@ -112,7 +112,7 @@ final readonly class VariableExpander
     ): ?string {
         $maximum = Functions::ARGUMENT_COUNTS[$name] ?? null;
         if ($maximum === null) {
-            return $this->context->modules->invoke($name, $arguments, $this, $expanding, $argumentsExpanded);
+            return $this->context->loadedObjects->invoke($name, $arguments, $this, $expanding, $argumentsExpanded);
         }
         $arguments = array_slice($arguments, 0, $maximum);
         if (in_array($name, ['if', 'and', 'or', 'intcmp'], true)) {
@@ -280,7 +280,7 @@ final readonly class VariableExpander
             /** @var array{non-falsy-string, non-empty-string} $matches */
             $argumentCount =
                 Functions::ARGUMENT_COUNTS[$matches[1]]
-                ?? $this->context->modules->functions[$matches[1]]->maximum
+                ?? $this->context->loadedObjects->functions[$matches[1]]->maximum
                 ?? null;
             if ($argumentCount === 0) {
                 $argumentCount = PHP_INT_MAX;

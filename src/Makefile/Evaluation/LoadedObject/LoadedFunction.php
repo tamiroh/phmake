@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation\Module;
+namespace Tamiroh\Phmake\Makefile\Evaluation\LoadedObject;
 
 /**
  * @internal
  */
-final readonly class ModuleFunction
+final readonly class LoadedFunction
 {
     public function __construct(
-        public LoadedModule $module,
+        public LoadedObject $object,
         public int $minimum,
         public int $maximum,
         public bool $expand,

@@ -592,7 +592,7 @@ final class Functions
      */
     public static function guile(string $expression, VariableExpander $expander): string
     {
-        return $expander->context->modules->guile($expression, $expander);
+        return $expander->context->loadedObjects->guile($expression, $expander);
     }
 
     /**

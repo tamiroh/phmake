@@ -9,7 +9,7 @@ use Tamiroh\Phmake\Makefile\Builtins;
 use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
 use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
 use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
-use Tamiroh\Phmake\Makefile\Evaluation\Module\Modules;
+use Tamiroh\Phmake\Makefile\Evaluation\LoadedObject\LoadedObjects;
 use Tamiroh\Phmake\Makefile\Evaluation\UndefinedVariable;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
@@ -62,7 +62,7 @@ final readonly class MakefileParser
         private ?Shell $shell = null,
         private ?Filesystem $filesystem = null,
         private ReportingOptions $reporting = new ReportingOptions(),
-        private Modules $modules = new Modules(),
+        private LoadedObjects $loadedObjects = new LoadedObjects(),
     ) {}
 
     /**
@@ -196,7 +196,7 @@ final readonly class MakefileParser
     {
         $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false), $this->output);
         $context = new EvaluationContext();
-        $context->modules = $this->modules;
+        $context->loadedObjects = $this->loadedObjects;
         $context->reporting = $this->reporting;
         $context->shell = $this->shell;
         $context->filesystem = $this->filesystem;
@@ -552,16 +552,16 @@ final readonly class MakefileParser
 
             if (preg_match('/^(-?load)(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
                 foreach (self::words($expander->expand($matches[2] ?? '')) as $name) {
-                    $module = $scope->context->modules->load($name, $matches[1] === '-load', $expander);
-                    $contents = $this->sources->files->read($module->path);
+                    $object = $scope->context->loadedObjects->load($name, $matches[1] === '-load', $expander);
+                    $contents = $this->sources->files->read($object->path);
                     $this->sources->read[] = new ReadFile(
-                        $module->path,
+                        $object->path,
                         $contents->text,
                         $contents->modifiedAt,
-                        $module->optional,
+                        $object->optional,
                         false,
-                        $module->source,
-                        !$module->keep,
+                        $object->source,
+                        !$object->keep,
                     );
                 }
                 continue;

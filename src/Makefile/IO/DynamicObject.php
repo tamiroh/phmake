@@ -6,7 +6,10 @@ namespace Tamiroh\Phmake\Makefile\IO;
 
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
-interface ModuleHost
+/**
+ * A dynamic object loaded by the load directive, or the Guile interpreter.
+ */
+interface DynamicObject
 {
     /**
      * Call a function defined by the loaded object.
@@ -15,19 +18,19 @@ interface ModuleHost
      *
      * @throws MakefileErrorException
      */
-    public function call(string $name, array $arguments, ModuleRequests $requests): string;
+    public function call(string $name, array $arguments, LoadedObjectApi $api): string;
 
     /**
      * Evaluate a Guile expression.
      *
      * @throws MakefileErrorException
      */
-    public function guile(string $expression, ModuleRequests $requests): string;
+    public function guile(string $expression, LoadedObjectApi $api): string;
 
     /**
      * Load the object and run its setup function, returning the setup function's result.
      *
      * @throws MakefileErrorException
      */
-    public function load(string $path, string $setup, ?string $file, int $line, ModuleRequests $requests): int;
+    public function load(string $path, string $setup, ?string $file, int $line, LoadedObjectApi $api): int;
 }

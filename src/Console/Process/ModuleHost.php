@@ -6,14 +6,14 @@ namespace Tamiroh\Phmake\Console\Process;
 
 use Override;
 use Tamiroh\Phmake\Console\Output\Output;
-use Tamiroh\Phmake\Makefile\IO\ModuleHost as ModuleHostInterface;
-use Tamiroh\Phmake\Makefile\IO\ModuleRequests;
+use Tamiroh\Phmake\Makefile\IO\DynamicObject;
+use Tamiroh\Phmake\Makefile\IO\LoadedObjectApi;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 /**
  * Transport native plugin calls without requiring PHP's FFI extension.
  */
-final readonly class ModuleHost implements ModuleHostInterface
+final readonly class ModuleHost implements DynamicObject
 {
     private ModuleChannel $channel;
 
@@ -55,18 +55,18 @@ final readonly class ModuleHost implements ModuleHostInterface
      *
      * @throws MakefileErrorException
      */
-    private static function answer(ModuleRequests $requests, string $kind, array $values): ?string
+    private static function answer(LoadedObjectApi $api, string $kind, array $values): ?string
     {
         if ($kind === 'F' && count($values) === 4) {
             // Bit 0 is GMK_FUNC_NOEXPAND.
-            $requests->define($values[0], (int) $values[1], (int) $values[2], ((int) $values[3] & 1) === 0);
+            $api->define($values[0], (int) $values[1], (int) $values[2], ((int) $values[3] & 1) === 0);
             return null;
         }
         if ($kind === 'V' && count($values) === 1) {
-            return $requests->expand($values[0]);
+            return $api->expand($values[0]);
         }
         if ($kind === 'A' && count($values) === 3) {
-            $requests->eval($values[0], $values[1] === '' ? null : $values[1], (int) $values[2]);
+            $api->eval($values[0], $values[1] === '' ? null : $values[1], (int) $values[2]);
             return '';
         }
         throw new MakefileErrorException('Invalid native module callback');
@@ -78,27 +78,27 @@ final readonly class ModuleHost implements ModuleHostInterface
      * @throws MakefileErrorException
      */
     #[Override]
-    public function call(string $name, array $arguments, ModuleRequests $requests): string
+    public function call(string $name, array $arguments, LoadedObjectApi $api): string
     {
-        return $this->request('C', [$name, ...$arguments], $requests);
+        return $this->request('C', [$name, ...$arguments], $api);
     }
 
     /**
      * @throws MakefileErrorException
      */
     #[Override]
-    public function guile(string $expression, ModuleRequests $requests): string
+    public function guile(string $expression, LoadedObjectApi $api): string
     {
-        return $this->request('G', [$expression], $requests);
+        return $this->request('G', [$expression], $api);
     }
 
     /**
      * @throws MakefileErrorException
      */
     #[Override]
-    public function load(string $path, string $setup, ?string $file, int $line, ModuleRequests $requests): int
+    public function load(string $path, string $setup, ?string $file, int $line, LoadedObjectApi $api): int
     {
-        return (int) $this->request('L', [$path, $setup, $file ?? '', (string) $line], $requests);
+        return (int) $this->request('L', [$path, $setup, $file ?? '', (string) $line], $api);
     }
 
     /**
@@ -106,13 +106,13 @@ final readonly class ModuleHost implements ModuleHostInterface
      *
      * @throws MakefileErrorException
      */
-    private function request(string $operation, array $arguments, ModuleRequests $requests): string
+    private function request(string $operation, array $arguments, LoadedObjectApi $api): string
     {
         return $this->channel->request(
             $operation,
             $arguments,
             /** @throws MakefileErrorException */
-            static fn(string $kind, array $values): ?string => self::answer($requests, $kind, $values),
+            static fn(string $kind, array $values): ?string => self::answer($api, $kind, $values),
         );
     }
 }
