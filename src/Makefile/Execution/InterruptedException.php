@@ -12,7 +12,7 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 final class InterruptedException extends MakefileErrorException
 {
     /**
-     * @param string $signal The signal's description, as reported for interrupted targets.
+     * @param string $signal the signal's description, as reported for interrupted targets
      */
     public function __construct(
         public readonly string $signal,
