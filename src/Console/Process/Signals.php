@@ -58,7 +58,13 @@ final class Signals
     public static function check(): void
     {
         if (self::$received !== 0) {
-            throw new InterruptedException(self::$received);
+            throw new InterruptedException(match (self::$received) {
+                SIGHUP => 'Hangup',
+                SIGINT => 'Interrupt',
+                SIGQUIT => 'Quit',
+                SIGTERM => 'Terminated',
+                default => 'Interrupted',
+            });
         }
     }
 

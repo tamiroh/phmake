@@ -162,15 +162,11 @@ final readonly class RecipeRunner
             return new CommandResult($active, $simulated, needsUpdate: $needsUpdate);
         } catch (InterruptedException $error) {
             $this->output->writeWarning(
-                '*** [' . (
-                    $rule->recipe?->source === null ? '' : $rule->recipe->source . ': '
-                ) . $target->name . '] ' . match ($error->signal) {
-                    1 => 'Hangup',
-                    2 => 'Interrupt',
-                    3 => 'Quit',
-                    15 => 'Terminated',
-                    default => 'Interrupted',
-                },
+                '*** ['
+                . ($rule->recipe?->source === null ? '' : $rule->recipe->source . ': ')
+                . $target->name
+                . '] '
+                . $error->signal,
             );
             foreach ($timestamps ?? [] as $name => $timestamp) {
                 if (

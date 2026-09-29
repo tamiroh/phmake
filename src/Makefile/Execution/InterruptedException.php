@@ -11,8 +11,11 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
  */
 final class InterruptedException extends MakefileErrorException
 {
+    /**
+     * @param string $signal The signal's description, as reported for interrupted targets.
+     */
     public function __construct(
-        public readonly int $signal,
+        public readonly string $signal,
     ) {
         parent::__construct('Build interrupted');
     }
