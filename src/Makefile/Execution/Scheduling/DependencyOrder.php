@@ -36,11 +36,7 @@ final class DependencyOrder
         if ($options->shuffle === 'reverse') {
             return array_reverse($names);
         }
-        usort($names, static fn(string $left, string $right): int => strcmp(
-            hash('sha256', $options->shuffle . "\0" . $left),
-            hash('sha256', $options->shuffle . "\0" . $right),
-        ));
-        return $names;
+        return self::shuffle($names, $options->shuffle);
     }
 
     public static function serial(Makefile $makefile, ?string $name = null): bool
@@ -51,5 +47,21 @@ final class DependencyOrder
             }
         }
         return false;
+    }
+
+    /**
+     * Order names randomly; the same seed always gives the same order.
+     *
+     * @param list<string> $names
+     *
+     * @return list<string>
+     */
+    private static function shuffle(array $names, string $seed): array
+    {
+        usort($names, static fn(string $left, string $right): int => strcmp(
+            hash('sha256', $seed . "\0" . $left),
+            hash('sha256', $seed . "\0" . $right),
+        ));
+        return $names;
     }
 }
