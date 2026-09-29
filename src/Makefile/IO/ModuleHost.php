@@ -4,16 +4,30 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\IO;
 
-use Closure;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 interface ModuleHost
 {
     /**
+     * Call a function defined by the loaded object.
+     *
      * @param list<string> $arguments
-     * @param Closure(string, list<string>): ?string $callback
      *
      * @throws MakefileErrorException
      */
-    public function request(string $operation, array $arguments, Closure $callback): string;
+    public function call(string $name, array $arguments, ModuleRequests $requests): string;
+
+    /**
+     * Evaluate a Guile expression.
+     *
+     * @throws MakefileErrorException
+     */
+    public function guile(string $expression, ModuleRequests $requests): string;
+
+    /**
+     * Load the object and run its setup function, returning the setup function's result.
+     *
+     * @throws MakefileErrorException
+     */
+    public function load(string $path, string $setup, ?string $file, int $line, ModuleRequests $requests): int;
 }

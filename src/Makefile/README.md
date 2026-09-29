@@ -28,7 +28,7 @@ is the common semantic error type.
 | `Execution/Scheduling/` | Which dependency tasks may advance or wait? | `Scheduler`, `BuildTask`, `Suspension`, `DependencyOrder`, `ParallelOptions` |
 | `Invocation/` | Which options change reading, and how are they passed to sub-makes through `MAKEFLAGS`? | `InvocationOptions`, `MakeFlags`, `CommandVariables`, `ReversibleOptions` |
 | `Reporting/` | How are failures, debug events, and rebuild reasons explained? | `Diagnostics`, `DebugTrace`, `RecipeTrace`, `ReportingOptions` |
-| `IO/` | What services does the engine need from its host? | `Filesystem`, `SourceFiles`, `Shell`, `Output`, `RecipeOutput`, `JobSlots`, `ModuleHost` |
+| `IO/` | What services does the engine need from its host? | `Filesystem`, `SourceFiles`, `Shell`, `Output`, `RecipeOutput`, `JobSlots`, `ModuleHost`, `ModuleRequests` |
 
 ## Following a build
 
@@ -87,8 +87,10 @@ flowchart TD
 - `Invocation` owns the meaning of options such as `-e`, `-r`, and `-R`, and how
   `MAKEFLAGS` is built from them. Reading command-line arguments and `MAKEFLAGS`
   text into those options stays in `Console/Input/CommandLine`.
-- `Evaluation/Module` implements make's extension semantics. `IO/ModuleHost` is
-  the transport contract, implemented by `Console/Process/ModuleHost`.
+- `Evaluation/Module` implements make's extension semantics. `IO/ModuleHost`
+  loads objects and calls their functions; `IO/ModuleRequests` is what a loaded
+  object may ask of make (`gmk_add_function`, `gmk_expand`, `gmk_eval`). Their
+  encoding for the host process lives in `Console/Process/ModuleHost`.
 - Exceptions stay with the operation they describe. `Reporting` formats them;
   it does not own build failures or interruption control flow.
 

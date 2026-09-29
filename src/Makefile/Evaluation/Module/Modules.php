@@ -5,15 +5,11 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Evaluation\Module;
 
 use Closure;
-use Tamiroh\Phmake\Makefile\Evaluation\Functions;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\ModuleHost;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
-/**
- * Loaded functions use the current PHP expansion context, including nested eval.
- */
 final class Modules
 {
     /** @var array<string, ModuleFunction> */
@@ -45,7 +41,7 @@ final class Modules
             $module->host = ($this->factory)();
             $this->guileRuntime = $module;
         }
-        return $this->exchange($module, 'G', [$expression], $expander);
+        return $this->host($module)->guile($expression, new ExpansionRequests($this, $module, $expander));
     }
 
     /**
@@ -79,7 +75,11 @@ final class Modules
             }
             unset($argument);
         }
-        return $this->exchange($function->module, 'C', [$name, ...$arguments], $expander);
+        return $this->host($function->module)->call(
+            $name,
+            $arguments,
+            new ExpansionRequests($this, $function->module, $expander),
+        );
     }
 
     /**
@@ -132,49 +132,12 @@ final class Modules
     }
 
     /**
-     * @param list<string> $arguments
-     *
      * @throws MakefileErrorException
      */
-    private function exchange(
-        LoadedModule $module,
-        string $operation,
-        array $arguments,
-        VariableExpander $expander,
-    ): string {
-        if ($module->host === null) {
-            throw new MakefileErrorException("Module '{$module->path}' is not loaded", $module->source);
-        }
-        return $module->host->request(
-            $operation,
-            $arguments,
-            /** @throws MakefileErrorException */
-            function (string $kind, array $values) use ($module, $expander): ?string {
-                if ($kind === 'F' && count($values) === 4) {
-                    $name = $values[0];
-                    if (preg_match('/^[A-Za-z0-9_.-]+$/D', $name) !== 1) {
-                        throw new MakefileErrorException("Invalid loaded function name '{$name}'");
-                    }
-                    $this->functions[$name] = new ModuleFunction(
-                        $module,
-                        (int) $values[1],
-                        (int) $values[2],
-                        ((int) $values[3] & 1) === 0,
-                    );
-                    return null;
-                }
-                if ($kind === 'V' && count($values) === 1) {
-                    return $expander->expand($values[0]);
-                }
-                if ($kind === 'A' && count($values) === 3) {
-                    return Functions::eval(
-                        $values[0],
-                        $expander->context->evaluate,
-                        $values[1] === '' ? $expander : $expander->atSource($values[1] . ':' . $values[2]),
-                    );
-                }
-                throw new MakefileErrorException('Invalid native module callback');
-            },
+    private function host(LoadedModule $module): ModuleHost
+    {
+        return (
+            $module->host ?? throw new MakefileErrorException("Module '{$module->path}' is not loaded", $module->source)
         );
     }
 
@@ -192,24 +155,20 @@ final class Modules
         $module->host = ($this->factory)();
         $source = [];
         preg_match('/^(.*):([0-9]+)$/D', $module->source ?? '', $source);
-        $status = $this->exchange(
-            $module,
-            'L',
-            [
-                str_starts_with($module->path, '/') ? $module->path : './' . $module->path,
-                $module->setup,
-                $source[1] ?? '',
-                $source[2] ?? '0',
-            ],
-            $expander,
+        $status = $this->host($module)->load(
+            str_starts_with($module->path, '/') ? $module->path : './' . $module->path,
+            $module->setup,
+            $source[1] ?? null,
+            (int) ($source[2] ?? 0),
+            new ExpansionRequests($this, $module, $expander),
         );
-        if ($status === '0') {
+        if ($status === 0) {
             throw new MakefileErrorException(
                 "Failed to load symbol {$module->setup} from {$module->path}",
                 $module->source,
             );
         }
-        $module->keep = $status === '-1';
+        $module->keep = $status === -1;
         $module->reload = false;
         $names = [];
         foreach ($this->loaded as $loaded) {

@@ -4,27 +4,23 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Process;
 
-use Closure;
 use Override;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Makefile\IO\ModuleHost as ModuleHostInterface;
+use Tamiroh\Phmake\Makefile\IO\ModuleRequests;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 /**
  * Transport native plugin calls without requiring PHP's FFI extension.
  */
-final class ModuleHost implements ModuleHostInterface
+final readonly class ModuleHost implements ModuleHostInterface
 {
-    /** @var resource|null */
-    private $process;
+    private ModuleChannel $channel;
 
-    /** @var array<int, resource> */
-    private array $pipes = [];
-
-    public function __construct(
-        private readonly string $executable,
-        private readonly Output $output,
-    ) {}
+    public function __construct(string $executable, Output $output)
+    {
+        $this->channel = new ModuleChannel($executable, $output);
+    }
 
     /**
      * @throws MakefileErrorException
@@ -35,7 +31,11 @@ final class ModuleHost implements ModuleHostInterface
         return (
             $path === null
                 ? ''
-                : new self($path, $output)->request('P', [], static fn(string $kind, array $values): ?string => null)
+                : new ModuleChannel($path, $output)->request(
+                    'P',
+                    [],
+                    static fn(string $kind, array $values): ?string => null,
+                )
         );
     }
 
@@ -49,114 +49,70 @@ final class ModuleHost implements ModuleHostInterface
     }
 
     /**
-     * @param list<string> $arguments
-     * @param Closure(string, list<string>): ?string $callback
+     * Decode a loaded object's request; a non-null result is sent back as its reply.
      *
-     * @throws MakefileErrorException
-     */
-    #[Override]
-    public function request(string $operation, array $arguments, Closure $callback): string
-    {
-        if ($this->process === null) {
-            $pipes = [];
-            $process = @proc_open(
-                [$this->executable],
-                [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']],
-                $pipes,
-            );
-            if ($process === false) {
-                throw new MakefileErrorException('Cannot start native module host');
-            }
-            $this->process = $process;
-            $this->pipes = $pipes;
-        }
-        $this->send($operation, $arguments);
-        while (true) {
-            $kind = $this->read(1);
-            $count = $this->number();
-            if ($count > 65_536) {
-                throw new MakefileErrorException('Invalid native module response');
-            }
-            $values = [];
-            for ($index = 0; $index < $count; $index++) {
-                $values[] = $this->read($this->number());
-            }
-            if ($kind === 'R') {
-                return $values[0] ?? '';
-            }
-            if ($kind === 'E') {
-                throw new MakefileErrorException($values[0] ?? 'Native module failed');
-            }
-            if ($kind === 'O' || $kind === 'S') {
-                $this->output->buffer->write($values[0] ?? '', $kind === 'S');
-                continue;
-            }
-            $response = $callback($kind, $values);
-            if ($response !== null) {
-                $this->send('H', [$response]);
-            }
-        }
-    }
-
-    /**
-     * @throws MakefileErrorException
-     */
-    private function number(): int
-    {
-        $bytes = $this->read(4);
-        return (ord($bytes[0]) << 24) | (ord($bytes[1]) << 16) | (ord($bytes[2]) << 8) | ord($bytes[3]);
-    }
-
-    /**
-     * @throws MakefileErrorException
-     */
-    private function read(int $length): string
-    {
-        if ($length > (64 * 1024 * 1024) || !isset($this->pipes[1])) {
-            throw new MakefileErrorException('Invalid native module response');
-        }
-        $value = '';
-        while (($remaining = $length - strlen($value)) > 0) {
-            $part = fread($this->pipes[1], $remaining);
-            if ($part === false || $part === '') {
-                throw new MakefileErrorException('Native module host closed its response stream');
-            }
-            $value .= $part;
-        }
-        return $value;
-    }
-
-    /**
      * @param list<string> $values
      *
      * @throws MakefileErrorException
      */
-    private function send(string $kind, array $values): void
+    private static function answer(ModuleRequests $requests, string $kind, array $values): ?string
     {
-        if (!isset($this->pipes[0])) {
-            throw new MakefileErrorException('Native module host is not running');
+        if ($kind === 'F' && count($values) === 4) {
+            // Bit 0 is GMK_FUNC_NOEXPAND.
+            $requests->define($values[0], (int) $values[1], (int) $values[2], ((int) $values[3] & 1) === 0);
+            return null;
         }
-        $packet = $kind . pack('N', count($values));
-        foreach ($values as $value) {
-            $packet .= pack('N', strlen($value)) . $value;
+        if ($kind === 'V' && count($values) === 1) {
+            return $requests->expand($values[0]);
         }
-        while ($packet !== '') {
-            $written = @fwrite($this->pipes[0], $packet);
-            if ($written === false || $written === 0) {
-                throw new MakefileErrorException('Cannot write to native module host');
-            }
-            $packet = substr($packet, $written);
+        if ($kind === 'A' && count($values) === 3) {
+            $requests->eval($values[0], $values[1] === '' ? null : $values[1], (int) $values[2]);
+            return '';
         }
+        throw new MakefileErrorException('Invalid native module callback');
     }
 
-    public function __destruct()
+    /**
+     * @param list<string> $arguments
+     *
+     * @throws MakefileErrorException
+     */
+    #[Override]
+    public function call(string $name, array $arguments, ModuleRequests $requests): string
     {
-        foreach ($this->pipes as $pipe) {
-            fclose($pipe);
-        }
-        if ($this->process !== null) {
-            proc_terminate($this->process);
-            proc_close($this->process);
-        }
+        return $this->request('C', [$name, ...$arguments], $requests);
+    }
+
+    /**
+     * @throws MakefileErrorException
+     */
+    #[Override]
+    public function guile(string $expression, ModuleRequests $requests): string
+    {
+        return $this->request('G', [$expression], $requests);
+    }
+
+    /**
+     * @throws MakefileErrorException
+     */
+    #[Override]
+    public function load(string $path, string $setup, ?string $file, int $line, ModuleRequests $requests): int
+    {
+        return (int) $this->request('L', [$path, $setup, $file ?? '', (string) $line], $requests);
+    }
+
+    /**
+     * @param list<string> $arguments
+     *
+     * @throws MakefileErrorException
+     */
+    private function request(string $operation, array $arguments, ModuleRequests $requests): string
+    {
+        return $this->channel->request(
+            $operation,
+            $arguments,
+            /** @throws MakefileErrorException */
+            static fn(string $kind, array $values): ?string => self::answer($requests, $kind, $values),
+        );
     }
 }
