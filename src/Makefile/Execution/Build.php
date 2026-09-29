@@ -362,7 +362,7 @@ final class Build
                 new VariableExpander($path->scope->context, $this->output, scope: $path->scope),
             );
         }
-        $token = $this->parallel() ? $this->scheduler->acquire() : '';
+        $slot = $this->parallel() ? $this->scheduler->acquire() : '';
         try {
             if ($this->state->remaking) {
                 $this->makefile->context?->loadedObjects->unload($target->name);
@@ -383,7 +383,7 @@ final class Build
             throw $error;
         } finally {
             if ($this->parallel()) {
-                $this->scheduler->release($token);
+                $this->scheduler->release($slot);
             }
         }
         $this->search->refresh($target, $path->scope);
