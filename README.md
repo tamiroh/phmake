@@ -2,14 +2,26 @@
 
 Re-implementation of GNU Make written in PHP.
 
-See the [Makefile engine overview](src/Makefile/README.md) for its structure,
-runtime flow, and a suggested reading order.
+## Install
 
-The [E2E build comparisons](e2e/README.md) run real projects with GNU make and
-phmake, reporting correctness and elapsed time in CI.
+### Homebrew
+
+```bash
+brew install tamiroh/tap/phmake
+```
+
+### Manual
+
+Requires PHP 8.5 or later.
+
+```bash
+curl -fL https://github.com/tamiroh/phmake/releases/latest/download/phmake.phar -o phmake
+chmod +x phmake
+sudo mv phmake /usr/local/bin/phmake
+```
 
 ## Usage
 
 ```bash
-./phmake [target]
+phmake [target]
 ```
