@@ -35,7 +35,7 @@ check: lint format-check test
 PHAR_CONFIG = dist/.phar-config-$(shell printf '%s\n' "$(PHP)" "$(PHAR_INTERPRETER)" "$(VERSION)" "$(BOX)" | shasum -a 256 | cut -d ' ' -f 1)
 
 .PHONY: phar
-phar: dist/phmake.phar.sha256
+phar: dist/phmake.phar
 
 dist:
 	mkdir -p $@
@@ -54,10 +54,6 @@ dist/phmake.phar: box.json phmake Makefile LICENSE composer.json composer.lock $
 	$(PHP) -r '$$config = json_decode(file_get_contents("box.json"), true, flags: JSON_THROW_ON_ERROR); $$config["base-path"] = "."; $$config["shebang"] = "#!" . ($$argv[2] === "env" ? "/usr/bin/env php" : $$argv[2]); $$config["replacements"]["development"] = var_export($$argv[1], true); echo json_encode($$config, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);' "$(VERSION)" "$(PHAR_INTERPRETER)" > dist/box.json
 	$(PHP) -d phar.readonly=0 $(BOX) compile --config=dist/box.json --no-parallel --no-interaction
 	mv $@.tmp.phar $@
-
-dist/phmake.phar.sha256: dist/phmake.phar
-	$(PHP) -r 'echo hash_file("sha256", "dist/phmake.phar"), "  phmake.phar\n";' > $@.tmp
-	mv $@.tmp $@
 
 .PHONY: test-phar
 test-phar:

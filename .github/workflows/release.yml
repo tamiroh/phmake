@@ -77,4 +77,4 @@ jobs:
           else
             gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --draft --generate-notes --title "$RELEASE_TAG"
           fi
-          gh release upload "$RELEASE_TAG" dist/phmake.phar dist/phmake.phar.sha256 --clobber
+          gh release upload "$RELEASE_TAG" dist/phmake.phar --clobber
