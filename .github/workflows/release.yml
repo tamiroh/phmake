@@ -3,16 +3,21 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: Release tag (for example, v0.1.0)
+      bump:
+        description: Version increment
         required: true
-        type: string
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.version }}
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -22,7 +27,6 @@ jobs:
     permissions:
       contents: write
     env:
-      RELEASE_TAG: ${{ inputs.version }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
@@ -32,20 +36,15 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Validate release tag
-        shell: bash
-        run: |
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9][A-Za-z0-9.+-]*$ ]]; then
-            echo 'Use a version tag such as v0.1.0.' >&2
-            exit 1
-          fi
-          git check-ref-format "refs/tags/$RELEASE_TAG"
-          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
-            if [ "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" != "$GITHUB_SHA" ]; then
-              echo 'The existing tag points to a different commit. Select that tag to retry.' >&2
-              exit 1
-            fi
-          fi
+      - name: Calculate release version
+        id: version
+        uses: reecetech/version-increment@28d33de033e97a304f77238d6a5db26039ca15d6 # 2026.8.4
+        with:
+          scheme: semver
+          increment: ${{ inputs.bump }}
+          release_branch: ${{ github.ref_name }}
+          tag_prefix: v
+          use_api: true
 
       - name: Setup PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # master
@@ -58,9 +57,13 @@ jobs:
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress --no-scripts
 
       - name: Build and verify PHAR
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.v-version }}
         run: make test-phar VERSION="$RELEASE_TAG"
 
       - name: Create or update draft release
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.v-version }}
         shell: bash
         run: |
           if draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft'); then
