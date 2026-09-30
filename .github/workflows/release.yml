@@ -59,7 +59,9 @@ jobs:
       - name: Build and verify PHAR
         env:
           RELEASE_TAG: ${{ steps.version.outputs.v-version }}
-        run: make test-phar VERSION="$RELEASE_TAG"
+        run: |
+          make phar VERSION="$RELEASE_TAG"
+          make test-phar VERSION="$RELEASE_TAG"
 
       - name: Create or update draft release
         env:

@@ -328,4 +328,6 @@ jobs:
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress --no-scripts
 
       - name: Build and verify PHAR
-        run: make test-phar VERSION=v0.0.0-ci
+        run: |
+          make phar VERSION=v0.0.0-ci
+          make test-phar VERSION=v0.0.0-ci

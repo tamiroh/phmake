@@ -60,5 +60,5 @@ dist/phmake.phar.sha256: dist/phmake.phar
 	mv $@.tmp $@
 
 .PHONY: test-phar
-test-phar: phar
+test-phar:
 	sh tools/test-phar.sh "$(CURDIR)/dist/phmake.phar" "$(VERSION)"
