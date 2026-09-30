@@ -80,12 +80,13 @@ To test local changes without rebuilding the image, package a fixed source copy:
 ```sh
 snapshot_dir=$(mktemp -d)
 cp -R src "$snapshot_dir/src"
+cp phmake "$snapshot_dir/phmake"
 mkdir "$snapshot_dir/output"
 docker run --rm --platform linux/amd64 --network none \
   -v "$snapshot_dir/src:/opt/phmake/src:ro" \
+  -v "$snapshot_dir/phmake:/opt/phmake/phmake:ro" \
   -v "$snapshot_dir/output:/output" phmake-make-build \
-  php -d phar.readonly=0 /opt/phmake/tools/build-phar.php \
-  /output/phmake.phar /usr/local/bin/php
+  sh -c 'rm -f /opt/phmake/dist/phmake.phar && /usr/bin/make -C /opt/phmake phar PHAR_INTERPRETER=/usr/local/bin/php && cp /opt/phmake/dist/phmake.phar /output/phmake.phar'
 docker run --rm --init --platform linux/amd64 --network none --user nobody \
   -v "$snapshot_dir/output/phmake.phar:/opt/phmake/phmake:ro" \
   phmake-make-build sh /usr/local/bin/run-gnu-make-tests

@@ -1,0 +1,26 @@
+{
+    "main": "phmake",
+    "output": "dist/phmake.phar.tmp.phar",
+    "directories": [
+        "src"
+    ],
+    "finder": [
+        {
+            "in": "vendor",
+            "exclude": [
+                "bin"
+            ]
+        }
+    ],
+    "files": [
+        "LICENSE"
+    ],
+    "chmod": "0755",
+    "algorithm": "SHA256",
+    "shebang": "#!/usr/bin/env php",
+    "check-requirements": false,
+    "replacement-sigil": "'",
+    "replacements": {
+        "development": "'development'"
+    }
+}

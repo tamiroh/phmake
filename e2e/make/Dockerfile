@@ -39,11 +39,11 @@ RUN cc -std=c11 -O2 -Wall -Wextra -Werror -DPHMAKE_GUILE -Wl,--export-dynamic \
     && rm /tmp/module-host.c /tmp/guile.c /tmp/module-api.h
 ENV PHMAKE_MODULE_HOST=/usr/local/libexec/phmake-module-host
 COPY --chmod=755 phmake ./phmake
-COPY tools/build-phar.php tools/build-phar.php
+COPY Makefile box.json ./
 
 # A copied test executable must retain its dependencies and survive PATH changes.
-RUN php -d phar.readonly=0 tools/build-phar.php /tmp/phmake.phar /usr/local/bin/php \
-    && mv /tmp/phmake.phar /opt/phmake/phmake
+RUN /usr/bin/make phar PHAR_INTERPRETER=/usr/local/bin/php \
+    && mv dist/phmake.phar /opt/phmake/phmake
 
 # Default to phmake; run-build selects GNU make for reference builds.
 RUN ln -s /opt/phmake/phmake /usr/local/bin/make

@@ -13,6 +13,7 @@
 !e2e/linux/kernel.config
 
 !tools/
-!tools/build-phar.php
+!Makefile
+!box.json
 !e2e/run-build.sh
 !e2e/phase.sh

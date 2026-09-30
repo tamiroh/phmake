@@ -23,9 +23,9 @@ COPY composer.json composer.lock LICENSE ./
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --no-scripts --no-plugins
 COPY src/ src/
 COPY --chmod=755 phmake ./phmake
-COPY tools/build-phar.php tools/build-phar.php
-RUN php -d phar.readonly=0 tools/build-phar.php /tmp/phmake.phar /usr/local/bin/php \
-    && mv /tmp/phmake.phar /opt/phmake/phmake
+COPY Makefile box.json ./
+RUN /usr/bin/make phar PHAR_INTERPRETER=/usr/local/bin/php \
+    && mv dist/phmake.phar /opt/phmake/phmake
 
 # Default to phmake; run-build selects GNU make for reference builds.
 RUN ln -s /opt/phmake/phmake /usr/local/bin/make
