@@ -1,0 +1,33 @@
+class Phmake < Formula
+  desc "Reimplementation of GNU Make in PHP"
+  homepage "https://github.com/tamiroh/phmake"
+  url "https://github.com/tamiroh/phmake/releases/download/@TAG@/phmake.phar"
+  sha256 "@SHA256@"
+  license "MIT"
+
+  depends_on "php"
+
+  def install
+    libexec.install "phmake.phar"
+    chmod 0755, libexec/"phmake.phar"
+    (bin/"phmake").write_env_script libexec/"phmake.phar",
+                                  PATH: "#{formula_opt_bin("php")}:$PATH"
+  end
+
+  test do
+    assert_match "phmake (v#{version})", shell_output("#{bin}/phmake --version")
+    (testpath/"Makefile").write <<~MAKE
+      .PHONY: all child
+      all: result.txt
+      \t@$(MAKE) --no-print-directory child
+      result.txt:
+      \t@printf 'built\\n' > $@
+      child:
+      \t@test -f result.txt
+      \t@printf 'recursive\\n' > child.txt
+    MAKE
+    system bin/"phmake", "--no-print-directory", "-j2"
+    assert_equal "built\n", (testpath/"result.txt").read
+    assert_equal "recursive\n", (testpath/"child.txt").read
+  end
+end

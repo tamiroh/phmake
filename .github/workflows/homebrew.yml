@@ -1,0 +1,57 @@
+name: Update Homebrew tap
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homebrew-tap
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout tap
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tamiroh/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+          ref: main
+
+      - name: Download published PHAR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release download "$RELEASE_TAG" --pattern phmake.phar --dir "$RUNNER_TEMP/release"
+
+      - name: Generate Formula
+        run: |
+          make homebrew-formula VERSION="$RELEASE_TAG" \
+            HOMEBREW_PHAR="$RUNNER_TEMP/release/phmake.phar" \
+            HOMEBREW_FORMULA=homebrew-tap/Formula/phmake.rb
+
+      - name: Commit and push Formula
+        working-directory: homebrew-tap
+        run: |
+          git add Formula/phmake.rb
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "Update phmake to $RELEASE_TAG"
+          git push origin HEAD:main

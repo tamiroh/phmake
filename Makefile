@@ -6,6 +6,8 @@ PHP = php
 BOX = .local/box-4.7.0.phar
 PHAR_INTERPRETER = env
 VERSION = development
+HOMEBREW_PHAR = dist/phmake.phar
+HOMEBREW_FORMULA = dist/phmake.rb
 
 .PHONY: test
 test:
@@ -67,3 +69,13 @@ dist/phmake.phar: box.json phmake Makefile LICENSE composer.json composer.lock $
 .PHONY: test-phar
 test-phar:
 	sh tools/test-phar.sh "$(CURDIR)/dist/phmake.phar" "$(VERSION)"
+
+.PHONY: homebrew-formula
+homebrew-formula:
+	@printf '%s\n' "$(VERSION)" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$$' || \
+		{ echo 'Expected a stable version tag such as v1.2.3' >&2; exit 1; }
+	mkdir -p "$(dir $(HOMEBREW_FORMULA))"
+	sha256=$$(shasum -a 256 "$(HOMEBREW_PHAR)") && \
+		sed -e 's/@TAG@/$(VERSION)/g' -e "s/@SHA256@/$${sha256%% *}/g" \
+		phmake.rb.in > "$(HOMEBREW_FORMULA)"
+	ruby -c "$(HOMEBREW_FORMULA)"
