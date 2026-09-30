@@ -50,8 +50,17 @@ $(BOX):
 	printf '%s  %s\n' 3d390eeaec33288098fe83f8a54c60cc575cb6be295f38ff4482b4b4f26f8d52 "$@.tmp" | shasum -a 256 -c -
 	mv "$@.tmp" "$@"
 
+define box_configuration
+$$config = json_decode(file_get_contents("box.json"), true, flags: JSON_THROW_ON_ERROR);
+$$config["base-path"] = ".";
+$$config["shebang"] = "#!" . ($$argv[2] === "env" ? "/usr/bin/env php" : $$argv[2]);
+$$config["replacements"]["development"] = var_export($$argv[1], true);
+echo json_encode($$config, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
+endef
+
+dist/phmake.phar: export BOX_CONFIGURATION = $(box_configuration)
 dist/phmake.phar: box.json phmake Makefile LICENSE composer.json composer.lock $(shell find src vendor -type f -o -type d) $(PHAR_CONFIG) $(BOX) | dist
-	$(PHP) -r '$$config = json_decode(file_get_contents("box.json"), true, flags: JSON_THROW_ON_ERROR); $$config["base-path"] = "."; $$config["shebang"] = "#!" . ($$argv[2] === "env" ? "/usr/bin/env php" : $$argv[2]); $$config["replacements"]["development"] = var_export($$argv[1], true); echo json_encode($$config, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);' "$(VERSION)" "$(PHAR_INTERPRETER)" > dist/box.json
+	$(PHP) -r "$$BOX_CONFIGURATION" "$(VERSION)" "$(PHAR_INTERPRETER)" > dist/box.json
 	$(PHP) -d phar.readonly=0 $(BOX) compile --config=dist/box.json --no-parallel --no-interaction
 	mv $@.tmp.phar $@
 
