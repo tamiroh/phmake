@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution\Recipe;
 
+use Tamiroh\Phmake\Makefile\Evaluation\ExpandedCommand;
 use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\RecipeOutput;
@@ -23,13 +24,10 @@ use function trim;
 /**
  * @internal
  */
-final readonly class ExpandedCommand
+final readonly class CommandRunner
 {
     public function __construct(
-        public string $expression,
-        private string $prefix = '',
-        private bool $recursive = false,
-        public ?string $source = null,
+        private ExpandedCommand $command,
     ) {}
 
     /**
@@ -43,13 +41,13 @@ final readonly class ExpandedCommand
         ?string $target = null,
     ): CommandResult {
         if ($oneShell) {
-            return $this->runLine($this->expression, $shell, $output, $options, $target);
+            return $this->runLine($this->command->expression, $shell, $output, $options, $target);
         }
         $active = false;
         $simulated = false;
         $needsUpdate = false;
         $pending = '';
-        foreach (explode("\n", $this->expression) as $line) {
+        foreach (explode("\n", $this->command->expression) as $line) {
             $pending .= $line;
             if (((strlen($line) - strlen(rtrim($line, '\\'))) % 2) === 1) {
                 $pending .= "\n";
@@ -81,12 +79,12 @@ final readonly class ExpandedCommand
     ): CommandResult {
         $expanded = ltrim($line);
         $prefixLength = strspn($expanded, "@-+ \t");
-        $prefix = $this->prefix . substr($expanded, 0, $prefixLength);
+        $prefix = $this->command->prefix . substr($expanded, 0, $prefixLength);
         $expanded = ltrim(substr($expanded, $prefixLength));
         if (trim(str_replace("\\\n", '', $expanded)) === '') {
             return new CommandResult();
         }
-        $recursive = $this->recursive || str_contains($prefix, '+');
+        $recursive = $this->command->recursive || str_contains($prefix, '+');
         if ($output instanceof RecipeOutput) {
             $output->beginCommand($recursive);
         }
@@ -117,7 +115,7 @@ final readonly class ExpandedCommand
                     (
                         $target === null
                             ? "Error {$exitCode}"
-                            : new CommandFailedException($target, $exitCode, $this->source)->getMessage()
+                            : new CommandFailedException($target, $exitCode, $this->command->source)->getMessage()
                     ) . ' (ignored)',
                 );
                 return new CommandResult(true);

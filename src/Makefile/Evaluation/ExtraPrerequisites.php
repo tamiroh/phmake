@@ -26,11 +26,11 @@ final class ExtraPrerequisites
     public static function forTarget(
         string $name,
         Makefile $makefile,
+        EvaluationContext $context,
         Filesystem $filesystem,
         Output $output,
     ): Prerequisites {
         $local = $makefile->scopes->definitionsFor($name);
-        $context = $makefile->context ?? new EvaluationContext($makefile->variables);
         $variable = $local === null ? $context->variables['.EXTRA_PREREQS'] ?? null : $local['.EXTRA_PREREQS'] ?? null;
         if ($variable === null) {
             return new Prerequisites();

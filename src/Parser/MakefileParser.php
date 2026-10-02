@@ -16,7 +16,6 @@ use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
-use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileBuilder;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReadFile;
@@ -192,7 +191,7 @@ final readonly class MakefileParser
      * @throws MakefileErrorException
      * @throws ParseException
      */
-    public function parse(): Makefile
+    public function parse(): ParsedMakefile
     {
         $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false), $this->output);
         $context = new EvaluationContext();
@@ -265,11 +264,14 @@ final readonly class MakefileParser
         }
         $this->configuration?->finishReading($variables, $scope);
         $context->reading = false;
-        return $builder->build(
-            array_values($variables),
-            $this->configuration->noBuiltinRules ?? false ? [] : $this->builtinRules,
-            $exports,
-            !($this->configuration->noBuiltinRules ?? false),
+        return new ParsedMakefile(
+            $builder->build(
+                array_values($variables),
+                $this->configuration->noBuiltinRules ?? false ? [] : $this->builtinRules,
+                $exports,
+                !($this->configuration->noBuiltinRules ?? false),
+                $context,
+            ),
             $context,
         );
     }

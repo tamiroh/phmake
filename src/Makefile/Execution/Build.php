@@ -56,6 +56,7 @@ final class Build
      */
     public function __construct(
         private readonly Makefile $makefile,
+        private readonly EvaluationContext $context,
         Shell $shell,
         private readonly Filesystem $filesystem,
         private readonly Output $output,
@@ -68,9 +69,7 @@ final class Build
         $this->search = new RuleSearch($makefile, $filesystem, $output);
         $this->files = new BuildFiles($makefile, $this->search, $filesystem, $output, $options, $this->state);
         $this->runner = new RecipeRunner($makefile, $shell, $filesystem, $output, $this->files);
-        $this->path = new BuildPath(
-            new VariableScope($makefile->context ?? new EvaluationContext($makefile->variables)),
-        );
+        $this->path = new BuildPath(new VariableScope($context));
         $this->jobs = new Jobs($slots, $output);
     }
 
@@ -259,6 +258,7 @@ final class Build
             $rule->prerequisites->merge(ExtraPrerequisites::forTarget(
                 $target->name,
                 $this->makefile,
+                $this->context,
                 $this->filesystem,
                 $this->output,
             )),
@@ -365,7 +365,7 @@ final class Build
         $slot = $this->parallel() ? $this->jobs->acquire() : '';
         try {
             if ($this->state->remaking) {
-                $this->makefile->context?->loadedObjects->unload($target->name);
+                $this->context->loadedObjects->unload($target->name);
             }
             $ran = $this->runner->run(
                 $target,

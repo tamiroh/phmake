@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Execution\Recipe;
 
 use Tamiroh\Phmake\Makefile\Evaluation\AutomaticVariables;
+use Tamiroh\Phmake\Makefile\Evaluation\CommandExpander;
 use Tamiroh\Phmake\Makefile\Evaluation\Environment\ExportingShell;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
@@ -20,6 +21,7 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
 use Tamiroh\Phmake\Makefile\Reporting\RecipeTrace;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
+use Tamiroh\Phmake\Makefile\Rule\Command;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 
@@ -92,7 +94,7 @@ final readonly class RecipeRunner
             }
             $expanded = [];
             foreach ($commands as $command) {
-                $expanded[] = $command->expand($expander, $this->output);
+                $expanded[] = CommandExpander::expand($command, $expander);
             }
             if (
                 $options->reporting->why
@@ -116,7 +118,7 @@ final readonly class RecipeRunner
             $simulated = false;
             $needsUpdate = false;
             foreach ($expanded as $command) {
-                $result = $command->run($shell, $this->output, $options, $oneShell, $target->name);
+                $result = new CommandRunner($command)->run($shell, $this->output, $options, $oneShell, $target->name);
                 if ($result->exitCode !== 0) {
                     $error = new CommandFailedException($target->name, $result->exitCode, $command->source);
                     if ($reportFailure || isset($this->makefile->targetsByName['.DELETE_ON_ERROR'])) {

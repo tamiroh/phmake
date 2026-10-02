@@ -81,7 +81,7 @@ final readonly class MakefileLoader
             DebugTrace::write($configuration->execution->reporting, $this->output, 'b', 'Reading makefiles...');
             $this->output->beginTarget();
             try {
-                $makefile = new MakefileParser(
+                $parsed = new MakefileParser(
                     $sources,
                     $this->variables($configuration, $filesystem->workingDirectory(), $restarts),
                     $configuration->variables,
@@ -110,7 +110,8 @@ final readonly class MakefileLoader
             }
             $slots = new Jobserver($configuration->execution->parallel, $this->output);
             $build = new Build(
-                $makefile,
+                $parsed->makefile,
+                $parsed->context,
                 new Shell(jobserver: $slots, output: $this->output, reporting: $configuration->execution->reporting),
                 $filesystem,
                 $this->output,
@@ -119,15 +120,13 @@ final readonly class MakefileLoader
                 $slots,
                 $sources->foundMain(),
             );
-            if ($makefile->context !== null) {
-                MakeFlags::define(
-                    $configuration->options,
-                    $configuration->execution,
-                    $makefile->context->variables,
-                    $makefile->context->posix,
-                    $restarts,
-                );
-            }
+            MakeFlags::define(
+                $configuration->options,
+                $configuration->execution,
+                $parsed->context->variables,
+                $parsed->context->posix,
+                $restarts,
+            );
             try {
                 $remade = new MakefileRemake(
                     $build,
@@ -135,27 +134,25 @@ final readonly class MakefileLoader
                     $this->output,
                     $configuration->execution->keepGoing,
                 )->run($sources->read);
-                if (!$remade && $makefile->context !== null) {
-                    $makefile->context->loadedObjects->reload(new VariableExpander($makefile->context, $this->output));
+                if (!$remade) {
+                    $parsed->context->loadedObjects->reload(new VariableExpander($parsed->context, $this->output));
                 }
             } catch (MakefileErrorException|CommandFailedException $error) {
                 $build->cleanup();
                 throw $error;
             } finally {
-                if ($makefile->context !== null) {
-                    MakeFlags::define(
-                        $configuration->options,
-                        $configuration->execution,
-                        $makefile->context->variables,
-                        $makefile->context->posix,
-                    );
-                }
+                MakeFlags::define(
+                    $configuration->options,
+                    $configuration->execution,
+                    $parsed->context->variables,
+                    $parsed->context->posix,
+                );
             }
             if ($remade) {
                 $build->cleanup();
                 $restarts++;
                 if ($stdin !== null && function_exists('pcntl_exec')) {
-                    unset($build, $slots, $makefile);
+                    unset($build, $slots, $parsed);
                     ProcessRestart::execute($configuration, $stdin->path, $restarts, $this->output);
                 }
                 continue;

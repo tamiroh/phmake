@@ -8,14 +8,14 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
-use Tamiroh\Phmake\Makefile\Execution\Recipe\Command;
-use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
+use Tamiroh\Phmake\Makefile\Rule\Command;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 use Tamiroh\Phmake\Parser\Configuration;
 use Tamiroh\Phmake\Parser\MakefileParser;
+use Tamiroh\Phmake\Parser\ParsedMakefile;
 use Tamiroh\Phmake\Parser\ParseException;
 use Tamiroh\Phmake\Parser\Source\MakefileSources;
 use Tamiroh\Phmake\Tests\Testing\FakeConfiguration;
@@ -107,21 +107,21 @@ final class MakefileParserTest extends TestCase
     /**
      * @throws MakefileErrorException
      */
-    private static function expand(Makefile $makefile, string $expression): string
+    private static function expand(ParsedMakefile $parsed, string $expression): string
     {
-        return self::expander($makefile)->expand($expression);
+        return self::expander($parsed)->expand($expression);
     }
 
-    private static function expander(Makefile $makefile): VariableExpander
+    private static function expander(ParsedMakefile $parsed): VariableExpander
     {
-        return new VariableExpander($makefile->context ?? self::fail('The parser must keep its evaluation context.'));
+        return new VariableExpander($parsed->context);
     }
 
     /**
      * @throws MakefileErrorException
      * @throws ParseException
      */
-    private static function parse(MakefileSources|string $sources, ?FakeOutput $output = null): Makefile
+    private static function parse(MakefileSources|string $sources, ?FakeOutput $output = null): ParsedMakefile
     {
         return new MakefileParser(
             $sources instanceof MakefileSources ? $sources : self::sources(['Makefile' => $sources]),
@@ -168,9 +168,9 @@ final class MakefileParserTest extends TestCase
         );
     }
 
-    private static function target(Makefile $makefile, string $name): Target
+    private static function target(ParsedMakefile $parsed, string $name): Target
     {
-        return $makefile->targetsByName[$name] ?? self::fail("Target '{$name}' is missing.");
+        return $parsed->makefile->targetsByName[$name] ?? self::fail("Target '{$name}' is missing.");
     }
 
     /**
@@ -180,10 +180,10 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function commentsEndAtAnUnescapedHash(): void
     {
-        $makefile = self::parse("A = x \\# y # comment\nB = \$(subst x,#,axb)\n# C = hidden\n");
-        self::assertSame('x # y ', self::expand($makefile, '$(A)'));
-        self::assertSame('a#b', self::expand($makefile, '$(B)'));
-        self::assertSame('', self::expand($makefile, '$(C)'));
+        $parsed = self::parse("A = x \\# y # comment\nB = \$(subst x,#,axb)\n# C = hidden\n");
+        self::assertSame('x # y ', self::expand($parsed, '$(A)'));
+        self::assertSame('a#b', self::expand($parsed, '$(B)'));
+        self::assertSame('', self::expand($parsed, '$(C)'));
     }
 
     /**
@@ -203,9 +203,12 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function defaultGoalIsTheFirstOrdinaryTarget(): void
     {
-        self::assertSame('first', self::parse(".PHONY: first\n%.o: %.c\nfirst: second\nsecond:\n")->defaultGoal);
-        self::assertSame('second', self::parse("first:\nsecond:\n.DEFAULT_GOAL := second\n")->defaultGoal);
-        self::assertNull(self::parse("A = 1\n")->defaultGoal);
+        self::assertSame(
+            'first',
+            self::parse(".PHONY: first\n%.o: %.c\nfirst: second\nsecond:\n")->makefile->defaultGoal,
+        );
+        self::assertSame('second', self::parse("first:\nsecond:\n.DEFAULT_GOAL := second\n")->makefile->defaultGoal);
+        self::assertNull(self::parse("A = 1\n")->makefile->defaultGoal);
     }
 
     /**
@@ -215,11 +218,11 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function defineKeepsLinesAndNestedDefinitions(): void
     {
-        $makefile = self::parse("define OUTER\nfirst\ndefine INNER\nsecond\nendef\n\tthird # kept\nendef\n"
+        $parsed = self::parse("define OUTER\nfirst\ndefine INNER\nsecond\nendef\n\tthird # kept\nendef\n"
         . "define SIMPLE :=\n\$(OUTER)\nendef\n");
-        self::assertSame("first\ndefine INNER\nsecond\nendef\n\tthird # kept", self::expand($makefile, '$(OUTER)'));
+        self::assertSame("first\ndefine INNER\nsecond\nendef\n\tthird # kept", self::expand($parsed, '$(OUTER)'));
         self::assertSame("first\ndefine INNER\nsecond\nendef\n\tthird # kept", self::expand(
-            $makefile,
+            $parsed,
             '$(value SIMPLE)',
         ));
     }
@@ -242,8 +245,8 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function evaluationsAreReadBeforeMakefiles(): void
     {
-        $makefile = self::parse(self::sources(['Makefile' => "B := \$(A)\n"], evaluations: ['A = from-eval']));
-        self::assertSame('from-eval', self::expand($makefile, '$(B)'));
+        $parsed = self::parse(self::sources(['Makefile' => "B := \$(A)\n"], evaluations: ['A = from-eval']));
+        self::assertSame('from-eval', self::expand($parsed, '$(B)'));
     }
 
     /**
@@ -253,8 +256,8 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function exportDirectivesSelectEnvironmentVariables(): void
     {
-        $makefile = self::parse("export A = 1\nB = 2\nexport B\nC = 3\nexport D := 4\nunexport D\n");
-        $environment = $makefile->exports->environment(self::expander($makefile), null);
+        $parsed = self::parse("export A = 1\nB = 2\nexport B\nC = 3\nexport D := 4\nunexport D\n");
+        $environment = $parsed->makefile->exports->environment(self::expander($parsed), null);
         self::assertSame('1', $environment['A'] ?? null);
         self::assertSame('2', $environment['B'] ?? null);
         self::assertArrayNotHasKey('C', $environment);
@@ -268,12 +271,12 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function includeReadsFilesInPlace(): void
     {
-        $makefile = self::parse(self::sources([
+        $parsed = self::parse(self::sources([
             'Makefile' => "A = before\ninclude part.mk\nB := \$(A)\n",
             'part.mk' => "A = included\n",
         ]));
-        self::assertSame('included', self::expand($makefile, '$(B)'));
-        self::assertSame('Makefile part.mk', self::expand($makefile, '$(MAKEFILE_LIST)'));
+        self::assertSame('included', self::expand($parsed, '$(B)'));
+        self::assertSame('Makefile part.mk', self::expand($parsed, '$(MAKEFILE_LIST)'));
     }
 
     /**
@@ -389,10 +392,10 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function staticPatternRulesSubstituteEachTarget(): void
     {
-        $makefile = self::parse("a.o b.o: %.o: %.c %.h\n\tcc \$<\n");
-        self::assertSame(['a.c', 'a.h'], self::rule(self::target($makefile, 'a.o'))->prerequisites->normal);
-        self::assertSame(['b.c', 'b.h'], self::rule(self::target($makefile, 'b.o'))->prerequisites->normal);
-        self::assertSame('b', self::rule(self::target($makefile, 'b.o'))->stem);
+        $parsed = self::parse("a.o b.o: %.o: %.c %.h\n\tcc \$<\n");
+        self::assertSame(['a.c', 'a.h'], self::rule(self::target($parsed, 'a.o'))->prerequisites->normal);
+        self::assertSame(['b.c', 'b.h'], self::rule(self::target($parsed, 'b.o'))->prerequisites->normal);
+        self::assertSame('b', self::rule(self::target($parsed, 'b.o'))->stem);
     }
 
     /**
@@ -402,10 +405,10 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function targetSpecificVariablesStayOutOfTheGlobalScope(): void
     {
-        $makefile = self::parse("all: V = local\nall: override W += more\nall:\n");
-        self::assertSame('local', $makefile->scopes->definitionsFor('all')['V']->expression ?? null);
-        self::assertSame('override', $makefile->scopes->definitionsFor('all')['W']->origin ?? null);
-        self::assertSame('', self::expand($makefile, '$(V)'));
+        $parsed = self::parse("all: V = local\nall: override W += more\nall:\n");
+        self::assertSame('local', $parsed->makefile->scopes->definitionsFor('all')['V']->expression ?? null);
+        self::assertSame('override', $parsed->makefile->scopes->definitionsFor('all')['W']->origin ?? null);
+        self::assertSame('', self::expand($parsed, '$(V)'));
     }
 
     /**
@@ -415,16 +418,16 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function variableFlavorsControlWhenValuesExpand(): void
     {
-        $makefile = self::parse(
+        $parsed = self::parse(
             "A = \$(B)\nB = early\nC := \$(B)\nD ?= first\nD ?= second\nE = one\nE += two\n"
             . "B = late\nF ::= \$(B)\nG :::= \$(B) \$\$\$\$\nundefine E\n",
         );
-        self::assertSame('late', self::expand($makefile, '$(A)'));
-        self::assertSame('early', self::expand($makefile, '$(C)'));
-        self::assertSame('first', self::expand($makefile, '$(D)'));
-        self::assertSame('late', self::expand($makefile, '$(F)'));
-        self::assertSame('late $$', self::expand($makefile, '$(G)'));
-        self::assertSame('undefined', self::expand($makefile, '$(origin E)'));
+        self::assertSame('late', self::expand($parsed, '$(A)'));
+        self::assertSame('early', self::expand($parsed, '$(C)'));
+        self::assertSame('first', self::expand($parsed, '$(D)'));
+        self::assertSame('late', self::expand($parsed, '$(F)'));
+        self::assertSame('late $$', self::expand($parsed, '$(G)'));
+        self::assertSame('undefined', self::expand($parsed, '$(origin E)'));
     }
 
     /**
@@ -434,9 +437,9 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function vpathDirectivesDefineSearchPaths(): void
     {
-        $makefile = self::parse("vpath %.c src lib\n");
+        $parsed = self::parse("vpath %.c src lib\n");
         $filesystem = new FakeFilesystem(['lib/a.c' => '']);
-        self::assertSame('lib/a.c', $makefile->paths->find('a.c', $filesystem, self::expander($makefile), []));
-        self::assertNull($makefile->paths->find('a.h', $filesystem, self::expander($makefile), []));
+        self::assertSame('lib/a.c', $parsed->makefile->paths->find('a.c', $filesystem, self::expander($parsed), []));
+        self::assertNull($parsed->makefile->paths->find('a.h', $filesystem, self::expander($parsed), []));
     }
 }

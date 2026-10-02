@@ -247,7 +247,6 @@ final class MakefileBuilder
             $goal === '' ? null : $goal,
             $patterns,
             $exports,
-            $context,
             $this->scopes,
             $this->paths,
         );

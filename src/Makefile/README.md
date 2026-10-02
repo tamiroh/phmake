@@ -7,6 +7,9 @@ dependency updates, and recipe execution. Text parsing lives in
 
 Start with [`Makefile.php`](Makefile.php), which holds the parsed definitions,
 then [`Execution/Build.php`](Execution/Build.php), which coordinates a build.
+`Makefile` has no execution methods or evaluation context. The parser returns
+`Parser/ParsedMakefile`, pairing definitions with the live `EvaluationContext`;
+the caller passes both explicitly to `Build`.
 [`MakefileBuilder.php`](MakefileBuilder.php) merges the rules read by the
 parser: special targets, suffix rules, recipe overrides, and the default goal.
 `Builtins.php` supplies default makefile names, variables, and rules, and the
@@ -17,14 +20,14 @@ is the common semantic error type.
 
 | Directory | Question it answers | Main classes |
 | --- | --- | --- |
-| `Evaluation/` | What does an expression mean in the current variable scope? | `VariableExpander`, `Functions`, `EvaluationContext`, `VariableScope` |
+| `Evaluation/` | What does an expression mean in the current variable scope? | `VariableExpander`, `CommandExpander`, `ExpandedCommand`, `Functions`, `EvaluationContext`, `VariableScope` |
 | `Evaluation/Environment/` | Which variables reach a shell command? | `Exports`, `EnvironmentState`, `ExportingShell` |
 | `Evaluation/LoadedObject/` | How do loaded objects and Guile participate in evaluation? | `LoadedObjects`, `LoadedObject`, `LoadedFunction`, `ExpansionApi` |
-| `Rule/` | What are a target, its prerequisites, and its recipe? | `Target`, `BuildRule`, `PatternRule`, `Prerequisites`, `Recipe` |
+| `Rule/` | What are a target, its prerequisites, and its recipe? | `Target`, `BuildRule`, `PatternRule`, `Prerequisites`, `Recipe`, `Command` |
 | `Search/` | Which rule and file path can satisfy this target? | `RuleSearch`, `ImplicitCandidate`, `SearchPaths`, `SearchState` |
 | `Execution/` | Which dependencies need updating, and what is the overall result? | `Build`, `BuildState`, `BuildPath`, `UpdateResult`, `MakefileRemake`, `ExecutionOptions` |
 | `Execution/Files/` | Is a file out of date, and should it survive the build? | `BuildFiles`, `FilePolicy`, `DeletionOrder`, `FileOptions` |
-| `Execution/Recipe/` | How is a recipe expanded and executed? | `RecipeRunner`, `Command`, `ExpandedCommand`, `CommandResult` |
+| `Execution/Recipe/` | How is a recipe expanded and executed? | `RecipeRunner`, `CommandRunner`, `CommandResult` |
 | `Execution/Scheduling/` | Which target updates may proceed or wait? | `Jobs`, `TargetUpdate`, `Waiting`, `DependencyOrder`, `ParallelOptions` |
 | `Invocation/` | Which options change reading, and how are they passed to sub-makes through `MAKEFLAGS`? | `InvocationOptions`, `MakeFlags`, `CommandVariables`, `ReversibleOptions` |
 | `Reporting/` | How are failures, debug events, and rebuild reasons explained? | `Diagnostics`, `DebugTrace`, `RecipeTrace`, `ReportingOptions` |
@@ -55,7 +58,9 @@ flowchart TD
 ```
 
 1. `Parser/MakefileParser` reads definitions using `Evaluation` and passes each
-   `Rule/RuleDefinition` to `MakefileBuilder`, which constructs a `Makefile`. This is not a fully expanded build plan: recursive variables and
+   `Rule/RuleDefinition` to `MakefileBuilder`, which constructs a `Makefile`.
+   `Parser/ParsedMakefile` returns that definition and its evaluation context
+   separately. This is not a fully expanded build plan: recursive variables and
    secondary prerequisite expressions can remain deferred.
 2. `Build::run()` starts from the requested goals. Before that, `MakefileRemake`
    uses `Build::remake()` to update the `ReadFile` inputs and decides whether make
@@ -67,11 +72,28 @@ flowchart TD
    shared results; each `BuildPath` carries a branch's ancestors and variable
    scope. `Jobs` coordinates concurrent target updates and job slots.
 5. `RecipeRunner::run()` sets automatic variables and applies recipe options.
-   `Command` retains the original expression; `ExpandedCommand` handles its
-   expanded text and command prefixes. `ExportingShell` supplies the environment
-   before delegating to `IO/Shell`.
+   `Rule/Command` retains the original expression. `Evaluation/CommandExpander`
+   produces an `Evaluation/ExpandedCommand` containing text and original prefix
+   metadata; `Execution/Recipe/CommandRunner` interprets prefixes and executes
+   the expanded lines. `ExportingShell` supplies the environment before
+   delegating to `IO/Shell`.
 6. `Reporting` explains failures and rebuild reasons. `BuildFiles::cleanup()`
    removes intermediate files according to `FilePolicy`.
+
+## State lifetimes
+
+- `Makefile` holds definitions, including a snapshot of global variables at the
+  end of reading. Build-time variable lookup uses the explicitly supplied
+  `EvaluationContext`, not that snapshot.
+- `EvaluationContext` belongs to one read and its subsequent build. The same
+  context continues through makefile remaking and ordinary goals, preserving
+  `$(eval ...)` mutations, shell status, exports, and loaded objects. It is not
+  cloned at the read/build boundary. Restarting creates a new parser and context.
+- `Build` owns `BuildState`, rule-search state, file state, and scheduling state.
+  These are created for each build, independently of stored definitions.
+- Definition holders such as `Exports` and `TargetVariables` are still mutable;
+  separating the context does not make the complete definition graph deeply
+  immutable. Export directives are shared with evaluation deliberately.
 
 ## Boundaries that are easy to confuse
 
@@ -95,10 +117,13 @@ flowchart TD
 - Exceptions stay with the operation they describe. `Reporting` formats them;
   it does not own build failures or interruption control flow.
 
-These folders group responsibilities rather than independent layers. For
-example, stored rules refer to commands, and evaluation can invoke shell
-services. The enforced outer boundary is that `Makefile` does not depend on
-`Parser`, `Console`, or concrete process libraries. `mago guard` also rejects
+These folders group responsibilities rather than independent layers.
+Evaluation can invoke shell services while reading as well as while building.
+`mago guard` prevents definitions, parsing, evaluation, and search from depending
+on `Execution`. Execution dependencies are limited to execution itself, invocation
+options, reporting, Console, and tests. The outer boundary also prevents the
+`Makefile` namespace from depending on `Parser`, `Console`, or concrete process
+libraries. `mago guard` also rejects
 native functions for output, processes, files, the environment, the clock,
 sleeping, and randomness here and in `Parser`; use the interfaces in `IO/` instead.
 

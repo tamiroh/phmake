@@ -5,18 +5,16 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile;
 
 use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
-use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;
 use Tamiroh\Phmake\Makefile\Evaluation\Variable;
-use Tamiroh\Phmake\Makefile\Execution\Build;
-use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
-use Tamiroh\Phmake\Makefile\IO\Filesystem;
-use Tamiroh\Phmake\Makefile\IO\Output;
-use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 use Tamiroh\Phmake\Makefile\Search\SearchPaths;
 
+/**
+ * Stored definitions, with global variables captured at the end of reading.
+ * Live evaluation state is supplied separately to a build.
+ */
 final readonly class Makefile
 {
     /** @var array<string, Target> */
@@ -33,7 +31,6 @@ final readonly class Makefile
         public ?string $defaultGoal = null,
         public array $patterns = [],
         public Exports $exports = new Exports(),
-        public ?EvaluationContext $context = null,
         public TargetVariables $scopes = new TargetVariables(),
         public SearchPaths $paths = new SearchPaths(),
     ) {
@@ -42,16 +39,5 @@ final readonly class Makefile
             $indexed[$target->name] = $target;
         }
         $this->targetsByName = $indexed;
-    }
-
-    /**
-     * @param list<string> $targets
-     *
-     * @throws MakefileErrorException
-     * @throws CommandFailedException
-     */
-    public function run(array $targets, Shell $shell, Filesystem $filesystem, Output $output): void
-    {
-        new Build($this, $shell, $filesystem, $output)->run($targets);
     }
 }

@@ -15,7 +15,10 @@ use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 use function in_array;
 
 /**
- * Mutable global definitions shared by parsing, expansion, and recipe execution.
+ * Live evaluation state for one read and its subsequent build.
+ * Parsing, makefile remaking, and recipes deliberately share mutations (including eval
+ * and shell status). A restart creates a new context; Makefile stores no context.
+ * BuildState and SearchState have separate lifetimes owned by Build.
  */
 final class EvaluationContext
 {

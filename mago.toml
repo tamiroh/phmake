@@ -67,6 +67,11 @@ permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**', 'Tamiroh\Phmake\Pars
 namespace = 'Tamiroh\Phmake\Tests\'
 permit = ["@all"]
 
+# Definition objects and evaluation must not depend on recipe execution or builds.
+[[guard.perimeter.restrictions]]
+dependency = 'Tamiroh\Phmake\Makefile\Execution\**'
+allow-from = ['Tamiroh\Phmake\Makefile\Execution\', 'Tamiroh\Phmake\Makefile\Invocation\', 'Tamiroh\Phmake\Makefile\Reporting\', 'Tamiroh\Phmake\Console\', 'Tamiroh\Phmake\Tests\']
+
 # Native functions are generally allowed, but make semantics must reach the host
 # through the interfaces in Makefile\IO.
 
