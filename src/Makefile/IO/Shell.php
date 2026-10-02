@@ -16,13 +16,15 @@ interface Shell
      * @param array<string, string|false> $environment
      *
      * @throws MakefileErrorException
+     *
+     * @return array{output: string, status: int}
      */
     public function capture(
         string $command,
         array $environment = [],
         string $shell = '/bin/sh',
         string $flags = '-c',
-    ): ShellResult;
+    ): array;
 
     /**
      * @param array<string, string|false> $environment

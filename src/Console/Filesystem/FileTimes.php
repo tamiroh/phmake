@@ -72,9 +72,9 @@ final class FileTimes
         // A failed batch falls back to one command per path.
         foreach (array_chunk($existing, self::BATCH_SIZE) as $batch) {
             $stat = CapturedProcess::run(self::statCommand($batch));
-            $lines = explode("\n", rtrim($stat->output, "\n"));
+            $lines = explode("\n", rtrim($stat['output'], "\n"));
             foreach ($batch as $index => $path) {
-                $times[$path] = $stat->status === 0 && count($lines) === count($batch) && isset($lines[$index])
+                $times[$path] = $stat['status'] === 0 && count($lines) === count($batch) && isset($lines[$index])
                     ? trim($lines[$index])
                     : self::modifiedAt($path);
             }
@@ -93,7 +93,7 @@ final class FileTimes
             return null;
         }
         $stat = CapturedProcess::run(self::statCommand([$path]));
-        return $stat->status === 0 ? trim($stat->output) : (string) $seconds;
+        return $stat['status'] === 0 ? trim($stat['output']) : (string) $seconds;
     }
 
     /**

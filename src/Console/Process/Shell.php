@@ -7,7 +7,6 @@ namespace Tamiroh\Phmake\Console\Process;
 use Override;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell as ShellInterface;
-use Tamiroh\Phmake\Makefile\IO\ShellResult;
 use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 
@@ -50,6 +49,8 @@ final class Shell implements ShellInterface
 
     /**
      * @param array<string, string|false> $environment
+     *
+     * @return array{output: string, status: int}
      */
     #[Override]
     public function capture(
@@ -57,12 +58,12 @@ final class Shell implements ShellInterface
         array $environment = [],
         string $shell = '/bin/sh',
         string $flags = '-c',
-    ): ShellResult {
+    ): array {
         $environment = self::withoutPipeJobserver($environment);
         $environment = [...$this->environment, ...$environment];
         $invocation = CommandInvocation::parse($command, $shell, $flags);
         if ($this->failed($invocation, $environment)) {
-            return new ShellResult('', 127);
+            return ['output' => '', 'status' => 127];
         }
         return CapturedProcess::run($invocation->launch(), $environment, function (string $buffer): void {
             if ($this->output !== null) {

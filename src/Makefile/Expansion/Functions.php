@@ -1002,11 +1002,11 @@ final class Functions
         $result = new ExportingShell($shell, $expander->context->exports, $expander, $output)->capture($command);
         $expander->context->variables['.SHELLSTATUS'] = new Variable(
             '.SHELLSTATUS',
-            (string) $result->status,
+            (string) $result['status'],
             false,
             'override',
         );
-        $text = str_replace("\r\n", "\n", $result->output);
+        $text = str_replace("\r\n", "\n", $result['output']);
         return str_replace(
             "\n",
             ' ',

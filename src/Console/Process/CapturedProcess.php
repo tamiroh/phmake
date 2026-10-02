@@ -6,7 +6,6 @@ namespace Tamiroh\Phmake\Console\Process;
 
 use Closure;
 use RuntimeException;
-use Tamiroh\Phmake\Makefile\IO\ShellResult;
 
 use function fclose;
 use function feof;
@@ -27,13 +26,15 @@ final class CapturedProcess
      * @param non-empty-list<string>|string $command
      * @param array<string, string|false> $environment
      * @param Closure(string): void|null $stderr
+     *
+     * @return array{output: string, status: int}
      */
     public static function run(
         array|string $command,
         array $environment = [],
         ?Closure $stderr = null,
         bool $interruptible = true,
-    ): ShellResult {
+    ): array {
         $pipes = [];
         $process = ProcessLauncher::start(
             $command,
@@ -42,7 +43,7 @@ final class CapturedProcess
             $pipes,
         );
         if (!is_resource($process)) {
-            return new ShellResult('', 127);
+            return ['output' => '', 'status' => 127];
         }
         try {
             if (isset($pipes[0])) {
@@ -83,7 +84,7 @@ final class CapturedProcess
                     usleep(1000);
                 }
             } while ($pipes !== [] || $exitCode === null);
-            return new ShellResult($output, $exitCode);
+            return ['output' => $output, 'status' => $exitCode];
         } finally {
             foreach ($pipes as $pipe) {
                 fclose($pipe);

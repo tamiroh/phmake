@@ -8,7 +8,6 @@ use Override;
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
-use Tamiroh\Phmake\Makefile\IO\ShellResult;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 /**
@@ -27,6 +26,8 @@ final readonly class ExportingShell implements Shell
      * @param array<string, string|false> $environment
      *
      * @throws MakefileErrorException
+     *
+     * @return array{output: string, status: int}
      */
     #[Override]
     public function capture(
@@ -34,7 +35,7 @@ final readonly class ExportingShell implements Shell
         array $environment = [],
         string $shell = '/bin/sh',
         string $flags = '-c',
-    ): ShellResult {
+    ): array {
         $previous = $this->variables->context->environment->expandingShell;
         $this->variables->context->environment->expandingShell = true;
         try {

@@ -209,7 +209,7 @@ final class Jobserver implements JobSlots
             return;
         }
         $path = $this->directory . '/fifo';
-        if (CapturedProcess::run(['mkfifo', '-m', '600', $path])->status !== 0) {
+        if (CapturedProcess::run(['mkfifo', '-m', '600', $path])['status'] !== 0) {
             $this->pipe();
             return;
         }

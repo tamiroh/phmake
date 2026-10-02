@@ -77,9 +77,9 @@ final class Signals
     {
         $pid = proc_get_status($process)['pid'];
         $listing = CapturedProcess::run(['ps', '-eo', 'pid=,ppid='], interruptible: false);
-        if ($listing->status === 0) {
+        if ($listing['status'] === 0) {
             $rows = [];
-            preg_match_all('/^\s*(\d+)\s+(\d+)\s*$/m', $listing->output, $rows, PREG_SET_ORDER);
+            preg_match_all('/^\s*(\d+)\s+(\d+)\s*$/m', $listing['output'], $rows, PREG_SET_ORDER);
             $descendants = [$pid => true];
             do {
                 $added = false;
