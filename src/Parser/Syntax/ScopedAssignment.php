@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser\Syntax;
 
-use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
-use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\FileName;
+use Tamiroh\Phmake\Makefile\Variable\Assignment;
+use Tamiroh\Phmake\Makefile\Variable\TargetVariables;
 
 use function ltrim;
 use function preg_match;

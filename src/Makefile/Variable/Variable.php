@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Variable;
 
+/**
+ * A variable's expression, flavor, origin, and assignment modifiers.
+ * Recursive expressions are expanded where the variable is used.
+ */
 final readonly class Variable
 {
     public function __construct(

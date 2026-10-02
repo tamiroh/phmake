@@ -6,13 +6,10 @@ namespace Tamiroh\Phmake\Parser;
 
 use LogicException;
 use Tamiroh\Phmake\Makefile\Builtins;
-use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
-use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
-use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
-use Tamiroh\Phmake\Makefile\Evaluation\LoadedObject\LoadedObjects;
-use Tamiroh\Phmake\Makefile\Evaluation\UndefinedVariable;
-use Tamiroh\Phmake\Makefile\Evaluation\Variable;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Expansion\LoadedObject\LoadedObjects;
+use Tamiroh\Phmake\Makefile\Expansion\UndefinedVariable;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
@@ -22,6 +19,9 @@ use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
+use Tamiroh\Phmake\Makefile\Variable\Assignment;
+use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 use Tamiroh\Phmake\Parser\Source\LineReader;
 use Tamiroh\Phmake\Parser\Source\MakefileSources;
 use Tamiroh\Phmake\Parser\Syntax\Conditionals;
@@ -570,14 +570,14 @@ final readonly class MakefileParser
             }
 
             if (preg_match('/^vpath(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
-                $builder->paths->define(self::words($expander->expand($matches[1] ?? '')));
+                $builder->searchPaths->define(self::words($expander->expand($matches[1] ?? '')));
                 continue;
             }
 
             if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
                 throw new ParseException($lineNumber, 'Recipe without a rule');
             }
-            if (ScopedAssignment::read($uncommented, $builder->scopes, $expander, $this->output)) {
+            if (ScopedAssignment::read($uncommented, $builder->targetVariables, $expander, $this->output)) {
                 continue;
             }
 

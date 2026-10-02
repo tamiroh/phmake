@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Invocation;
 
-use Tamiroh\Phmake\Makefile\Evaluation\Assignment;
-use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Variable\Assignment;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 
 use function array_map;
 use function implode;

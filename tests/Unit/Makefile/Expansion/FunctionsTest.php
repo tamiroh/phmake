@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Tests\Unit\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Tests\Unit\Makefile\Expansion;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Tamiroh\Phmake\Makefile\Evaluation\Functions;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Expansion\Functions;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 final class FunctionsTest extends TestCase

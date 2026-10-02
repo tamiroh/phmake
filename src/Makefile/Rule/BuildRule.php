@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Rule;
 
+/**
+ * A rule's prerequisites and recipe, with its stem when selected for a target.
+ * Target updates and recipe execution are handled by Execution/Build.
+ */
 final readonly class BuildRule
 {
     /**

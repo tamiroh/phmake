@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution\Recipe;
 
-use Tamiroh\Phmake\Makefile\Evaluation\AutomaticVariables;
-use Tamiroh\Phmake\Makefile\Evaluation\CommandExpander;
-use Tamiroh\Phmake\Makefile\Evaluation\Environment\ExportingShell;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
 use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\Execution\Files\BuildFiles;
 use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
+use Tamiroh\Phmake\Makefile\Expansion\CommandExpander;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\RecipeOutput;
@@ -24,6 +21,9 @@ use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Command;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\Target;
+use Tamiroh\Phmake\Makefile\Variable\AutomaticVariables;
+use Tamiroh\Phmake\Makefile\Variable\Environment\ExportingShell;
+use Tamiroh\Phmake\Makefile\Variable\VariableScope;
 
 use function array_any;
 use function array_map;

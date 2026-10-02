@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation\Environment;
+namespace Tamiroh\Phmake\Makefile\Variable\Environment;
 
 /**
  * @internal

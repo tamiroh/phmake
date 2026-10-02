@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
-use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
-use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;
-use Tamiroh\Phmake\Makefile\Evaluation\Variable;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
@@ -19,6 +16,9 @@ use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 use Tamiroh\Phmake\Makefile\Rule\RuleDefinition;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 use Tamiroh\Phmake\Makefile\Search\SearchPaths;
+use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
+use Tamiroh\Phmake\Makefile\Variable\TargetVariables;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 
 use function array_filter;
 use function array_map;
@@ -49,16 +49,16 @@ final class MakefileBuilder
 
     private bool $secondary = false;
 
-    public readonly TargetVariables $scopes;
+    public readonly TargetVariables $targetVariables;
 
-    public readonly SearchPaths $paths;
+    public readonly SearchPaths $searchPaths;
 
     public function __construct(
         private bool $builtinSuffixes = true,
         private ?Output $output = null,
     ) {
-        $this->scopes = new TargetVariables();
-        $this->paths = new SearchPaths();
+        $this->targetVariables = new TargetVariables();
+        $this->searchPaths = new SearchPaths();
     }
 
     /**
@@ -247,8 +247,8 @@ final class MakefileBuilder
             $goal === '' ? null : $goal,
             $patterns,
             $exports,
-            $this->scopes,
-            $this->paths,
+            $this->targetVariables,
+            $this->searchPaths,
         );
     }
 

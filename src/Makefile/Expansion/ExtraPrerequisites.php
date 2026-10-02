@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Expansion;
 
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
@@ -30,7 +30,7 @@ final class ExtraPrerequisites
         Filesystem $filesystem,
         Output $output,
     ): Prerequisites {
-        $local = $makefile->scopes->definitionsFor($name);
+        $local = $makefile->targetVariables->definitionsFor($name);
         $variable = $local === null ? $context->variables['.EXTRA_PREREQS'] ?? null : $local['.EXTRA_PREREQS'] ?? null;
         if ($variable === null) {
             return new Prerequisites();

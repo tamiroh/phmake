@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\IO\SourceFiles;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Command;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 use Tamiroh\Phmake\Makefile\Rule\Recipe;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 
 use function array_filter;
 use function implode;

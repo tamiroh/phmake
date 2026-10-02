@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Search;
 
-use Tamiroh\Phmake\Makefile\Evaluation\SecondaryExpansion;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
+use Tamiroh\Phmake\Makefile\Expansion\SecondaryExpansion;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Makefile;
@@ -17,6 +16,7 @@ use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 use Tamiroh\Phmake\Makefile\Rule\Target;
+use Tamiroh\Phmake\Makefile\Variable\VariableScope;
 
 use function array_filter;
 use function array_key_exists;
@@ -43,7 +43,7 @@ final class RuleSearch
         private readonly Output $output,
     ) {
         $this->state = new SearchState();
-        foreach ($makefile->scopes->mentioned() as $name) {
+        foreach ($makefile->targetVariables->mentioned() as $name) {
             $this->state->mentioned[$name] = true;
         }
         foreach ($makefile->targets as $target) {
@@ -109,7 +109,7 @@ final class RuleSearch
         }
         $path = $this->state->paths[$name] ?? $name;
         $searchName = str_starts_with($name, '-l')
-        || $this->makefile->paths->retain($path, $expander)
+        || $this->makefile->searchPaths->retain($path, $expander)
         || isset($this->makefile->targetsByName[$path])
             ? $path
             : $name;
@@ -172,7 +172,7 @@ final class RuleSearch
             if (!isset($branch->mentioned[$dependency]) && !in_array($dependency, $prerequisites->literal, true)) {
                 $branch->intermediates[$dependency] = true;
             }
-            $child = $this->makefile->scopes->scope($dependency, $scope->inherit(), $this->output);
+            $child = $this->makefile->targetVariables->scope($dependency, $scope->inherit(), $this->output);
             if (
                 isset($this->makefile->targetsByName[$dependency])
                 || in_array($dependency, $explicit->prerequisites->sequence ?? [], true)
@@ -362,7 +362,7 @@ final class RuleSearch
         if (isset($state->discardedPaths[$name]) && !$this->filesystem->exists($name)) {
             return false;
         }
-        $path = $this->makefile->paths->find($name, $this->filesystem, $expander, $this->makefile->targetsByName);
+        $path = $this->makefile->searchPaths->find($name, $this->filesystem, $expander, $this->makefile->targetsByName);
         $state->existed[$name] ??= $path !== null && $this->filesystem->exists($path);
         if ($path === null) {
             return false;

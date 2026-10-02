@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
-use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
-use Tamiroh\Phmake\Makefile\Evaluation\ExtraPrerequisites;
-use Tamiroh\Phmake\Makefile\Evaluation\SecondaryExpansion;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
 use Tamiroh\Phmake\Makefile\Execution\Files\BuildFiles;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\RecipeRunner;
 use Tamiroh\Phmake\Makefile\Execution\Scheduling\DependencyOrder;
 use Tamiroh\Phmake\Makefile\Execution\Scheduling\Jobs;
+use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Expansion\ExtraPrerequisites;
+use Tamiroh\Phmake\Makefile\Expansion\SecondaryExpansion;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\JobSlots;
 use Tamiroh\Phmake\Makefile\IO\Output;
@@ -26,6 +25,7 @@ use Tamiroh\Phmake\Makefile\Rule\FileName;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 use Tamiroh\Phmake\Makefile\Search\RuleSearch;
+use Tamiroh\Phmake\Makefile\Variable\VariableScope;
 
 use function array_key_exists;
 use function array_unique;
@@ -578,7 +578,7 @@ final class Build
                 continue;
             }
             $parent = $path->scope;
-            $path->scope = $this->makefile->scopes->scope($peer, $inherited->inherit(), $this->output);
+            $path->scope = $this->makefile->targetVariables->scope($peer, $inherited->inherit(), $this->output);
             $path->visiting[$peer] = true;
             try {
                 $rules = [];
@@ -666,7 +666,7 @@ final class Build
             );
         }
         $parent = $path->scope;
-        $path->scope = $this->makefile->scopes->scope($name, $parent->inherit(), $this->output);
+        $path->scope = $this->makefile->targetVariables->scope($name, $parent->inherit(), $this->output);
         try {
             if ($this->files->assumedOld($name)) {
                 return $this->state->results[$name] = new UpdateResult();

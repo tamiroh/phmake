@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Expansion;
 
 use Closure;
-use Tamiroh\Phmake\Makefile\Evaluation\Environment\EnvironmentState;
-use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
-use Tamiroh\Phmake\Makefile\Evaluation\LoadedObject\LoadedObjects;
+use Tamiroh\Phmake\Makefile\Expansion\LoadedObject\LoadedObjects;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
+use Tamiroh\Phmake\Makefile\Variable\Environment\EnvironmentState;
+use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 
 use function in_array;
 

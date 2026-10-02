@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Tests\Unit\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Tests\Unit\Makefile\Expansion;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Tamiroh\Phmake\Makefile\Evaluation\Variable;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
 
 final class VariableExpanderTest extends TestCase

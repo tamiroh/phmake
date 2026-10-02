@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
-use Tamiroh\Phmake\Makefile\Evaluation\EvaluationContext;
+use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Makefile;
 
 /**

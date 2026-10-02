@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Expansion;
 
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
@@ -11,6 +11,8 @@ use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\PrerequisiteExpression;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
+use Tamiroh\Phmake\Makefile\Variable\AutomaticVariables;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 
 use function ksort;
 use function preg_replace_callback;

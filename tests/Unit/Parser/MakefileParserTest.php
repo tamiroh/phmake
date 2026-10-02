@@ -7,7 +7,7 @@ namespace Tamiroh\Phmake\Tests\Unit\Parser;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
@@ -406,8 +406,8 @@ final class MakefileParserTest extends TestCase
     public function targetSpecificVariablesStayOutOfTheGlobalScope(): void
     {
         $parsed = self::parse("all: V = local\nall: override W += more\nall:\n");
-        self::assertSame('local', $parsed->makefile->scopes->definitionsFor('all')['V']->expression ?? null);
-        self::assertSame('override', $parsed->makefile->scopes->definitionsFor('all')['W']->origin ?? null);
+        self::assertSame('local', $parsed->makefile->targetVariables->definitionsFor('all')['V']->expression ?? null);
+        self::assertSame('override', $parsed->makefile->targetVariables->definitionsFor('all')['W']->origin ?? null);
         self::assertSame('', self::expand($parsed, '$(V)'));
     }
 
@@ -439,7 +439,12 @@ final class MakefileParserTest extends TestCase
     {
         $parsed = self::parse("vpath %.c src lib\n");
         $filesystem = new FakeFilesystem(['lib/a.c' => '']);
-        self::assertSame('lib/a.c', $parsed->makefile->paths->find('a.c', $filesystem, self::expander($parsed), []));
-        self::assertNull($parsed->makefile->paths->find('a.h', $filesystem, self::expander($parsed), []));
+        self::assertSame('lib/a.c', $parsed->makefile->searchPaths->find(
+            'a.c',
+            $filesystem,
+            self::expander($parsed),
+            [],
+        ));
+        self::assertNull($parsed->makefile->searchPaths->find('a.h', $filesystem, self::expander($parsed), []));
     }
 }

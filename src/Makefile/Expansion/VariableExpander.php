@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Expansion;
 
 use LogicException;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
+use Tamiroh\Phmake\Makefile\Variable\VariableScope;
 
 use function array_keys;
 use function array_slice;

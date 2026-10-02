@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Variable;
 
+use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 
 use function array_filter;

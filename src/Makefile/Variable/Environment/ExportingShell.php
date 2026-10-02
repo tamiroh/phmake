@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation\Environment;
+namespace Tamiroh\Phmake\Makefile\Variable\Environment;
 
 use Override;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\IO\ShellResult;

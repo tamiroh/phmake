@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation\LoadedObject;
+namespace Tamiroh\Phmake\Makefile\Expansion\LoadedObject;
 
 use Override;
-use Tamiroh\Phmake\Makefile\Evaluation\Functions;
-use Tamiroh\Phmake\Makefile\Evaluation\VariableExpander;
+use Tamiroh\Phmake\Makefile\Expansion\Functions;
+use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\LoadedObjectApi;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 

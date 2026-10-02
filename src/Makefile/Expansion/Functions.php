@@ -2,16 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Expansion;
 
 use Closure;
-use Tamiroh\Phmake\Makefile\Evaluation\Environment\ExportingShell;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
+use Tamiroh\Phmake\Makefile\Variable\Environment\ExportingShell;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 
 use function array_filter;
 use function array_map;

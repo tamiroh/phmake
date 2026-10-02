@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-use Tamiroh\Phmake\Makefile\Evaluation\Environment\Exports;
-use Tamiroh\Phmake\Makefile\Evaluation\TargetVariables;
-use Tamiroh\Phmake\Makefile\Evaluation\Variable;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
 use Tamiroh\Phmake\Makefile\Rule\Target;
 use Tamiroh\Phmake\Makefile\Search\SearchPaths;
+use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
+use Tamiroh\Phmake\Makefile\Variable\TargetVariables;
+use Tamiroh\Phmake\Makefile\Variable\Variable;
 
 /**
- * Stored definitions, with global variables captured at the end of reading.
- * Live evaluation state is supplied separately to a build.
+ * Rules, variables, exports, and directory search definitions read from makefiles.
+ * Global variables are captured at the end of reading; deferred expressions are
+ * expanded in the live context passed to Execution/Build.
  */
 final readonly class Makefile
 {
@@ -31,8 +32,8 @@ final readonly class Makefile
         public ?string $defaultGoal = null,
         public array $patterns = [],
         public Exports $exports = new Exports(),
-        public TargetVariables $scopes = new TargetVariables(),
-        public SearchPaths $paths = new SearchPaths(),
+        public TargetVariables $targetVariables = new TargetVariables(),
+        public SearchPaths $searchPaths = new SearchPaths(),
     ) {
         $indexed = [];
         foreach ($targets as $target) {

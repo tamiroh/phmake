@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
-use Tamiroh\Phmake\Makefile\Evaluation\VariableScope;
+use Tamiroh\Phmake\Makefile\Variable\VariableScope;
 
 /**
  * A traversal's variable scope and ancestors, independent of concurrent branches.
