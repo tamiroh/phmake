@@ -21,27 +21,10 @@ with no network access. Build products are not shared. The container's `make`
 symlink selects the implementation for direct and recursive invocations; build
 targets, flags, and parallelism are identical for each pair.
 
-Both implementations run even if the first fails. Any failure makes the runner
-and CI job fail. Output is streamed to the job log, and the results are written
-to the given JSON file. `summarize-builds.py` prints a table with exit status
-and elapsed seconds from that file and appends it to `GITHUB_STEP_SUMMARY` when
-available; CI runs it as a separate step, also after a failed comparison. The
-phmake/GNU make time ratio is shown only when both runs pass.
-
-The timer is monotonic and surrounds the entire `docker run`: it includes
-container startup, build, installation where applicable, and smoke verification
-(including QEMU boot for Linux). Image construction, source downloads, and
-configure steps performed in the Dockerfile are excluded. These are single-run
-end-to-end comparisons, not isolated make-engine benchmarks. Compiler work,
-filesystem caches, the fixed run order, and CI runner load affect the results;
-use repeated runs and make-only workloads when investigating smaller changes.
-
-Each verifier also times its main build in three phases through `e2e/phase.sh`,
-before installation and smoke verification: `clean-build`, `no-op-rebuild`
-(the same command again), and `touched-rebuild` (after touching one source
-file). The summary adds a per-phase table. The rebuild phases involve little
-compiler work, so they mostly measure reading makefiles, resolving
-dependencies, and checking timestamps.
+Both runs must pass. Results contain exit status and elapsed time, including
+container startup and smoke verification. Per-phase timings cover `clean-build`,
+`no-op-rebuild`, and `touched-rebuild`. These are end-to-end measurements, not
+isolated make-engine benchmarks.
 
 To run only one implementation:
 
@@ -58,31 +41,10 @@ docker run --rm --init --platform linux/amd64 --network none \
 the image's default command, which runs `e2e/run-build.sh` before the project
 verifier. Overriding the command to call a verifier directly bypasses selection.
 
-FFmpeg uses the upstream Makefiles with a limited codec configuration to keep
-CI build times manageable. Its smoke test installs the binaries, generates video
-and audio, encodes them as FFV1/PCM in Matroska, and verifies decoded video hashes and audio samples
-against the original sources. External codec libraries and network input are
-not part of this configuration.
-
-GCC builds the C and C++ compilers and their runtime libraries in a separate
-build directory. It uses system GMP/MPFR/MPC libraries, disables the three-stage
-bootstrap, multilib, translations, sanitizers, the static analyzer, and ISL
-integration to limit CI cost. Both implementations build and install with `-j2`;
-recursive builds explicitly use the selected `make`. The smoke test uses the
-installed compilers to compile and run C and C++ programs, including C++ standard
-library and exception handling. It links the C++ runtime statically so it does
-not accidentally load the host's older libstdc++. This is not a GCC bootstrap
-validation or the upstream compiler test suite.
-
 ## Profiles
 
-phmake's rebuild phases can be profiled locally. `e2e/profile/Dockerfile`
-extends a project image with the Excimer sampling profiler and a `phase`
-wrapper: the clean build runs with GNU make, and the `no-op-rebuild` and
-`touched-rebuild` phases run with phmake while `PHMAKE_PROFILE` is set. An
-`auto_prepend_file` hook then samples each phmake process every millisecond of
-wall-clock time and writes its collapsed stacks to `/profiles/PHASE/PID.folded`.
-phmake itself is unchanged.
+The profile image uses Excimer to sample phmake during `no-op-rebuild` and
+`touched-rebuild`; the clean build uses GNU make.
 
 ```sh
 docker build -f e2e/make/Dockerfile -t phmake-make-build .
