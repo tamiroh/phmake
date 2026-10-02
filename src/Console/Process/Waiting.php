@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Execution\Scheduling;
+namespace Tamiroh\Phmake\Console\Process;
 
 use Closure;
 use Fiber;

@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Makefile;
 
+use Tamiroh\Phmake\Console\Filesystem\DeletionOrder;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Output\Output;
+use Tamiroh\Phmake\Console\Process\FiberUpdates;
 use Tamiroh\Phmake\Console\Process\Jobserver;
+use Tamiroh\Phmake\Console\Process\ModuleGuile;
 use Tamiroh\Phmake\Console\Process\ModuleHost;
+use Tamiroh\Phmake\Console\Process\ModuleObjects;
 use Tamiroh\Phmake\Console\Process\ProcessRestart;
 use Tamiroh\Phmake\Console\Process\Shell;
 use Tamiroh\Phmake\Console\Process\Signals;
@@ -94,8 +98,9 @@ final readonly class MakefileLoader
                     new LoadedObjects(
                         ($moduleHost = ModuleHost::executable()) === null
                             ? null
-                            : fn(): ModuleHost => new ModuleHost($moduleHost, $this->output),
+                            : new ModuleObjects($moduleHost, $this->output),
                     ),
+                    $moduleHost === null ? null : new ModuleGuile($moduleHost, $this->output),
                 )->parse();
             } catch (MakefileErrorException $error) {
                 Diagnostics::report($error, $this->output);
@@ -115,6 +120,8 @@ final readonly class MakefileLoader
                 new Shell(jobserver: $slots, output: $this->output, reporting: $configuration->execution->reporting),
                 $filesystem,
                 $this->output,
+                new FiberUpdates(),
+                new DeletionOrder(),
                 $configuration->execution,
                 $restarts,
                 $slots,
@@ -124,7 +131,7 @@ final readonly class MakefileLoader
                 $configuration->options,
                 $configuration->execution,
                 $parsed->context->variables,
-                $parsed->context->posix,
+                $parsed->context->reading->posix,
                 $restarts,
             );
             try {
@@ -145,7 +152,7 @@ final readonly class MakefileLoader
                     $configuration->options,
                     $configuration->execution,
                     $parsed->context->variables,
-                    $parsed->context->posix,
+                    $parsed->context->reading->posix,
                 );
             }
             if ($remade) {

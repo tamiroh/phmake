@@ -6,6 +6,11 @@ namespace Tamiroh\Phmake\Makefile\IO;
 
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
+/**
+ * File facts and operations used by make: timestamps, directory search, wildcard / realpath,
+ * the file function, touching targets, and deleting intermediate or failed targets.
+ * Archive members and timestamp overrides are resolved by the implementation.
+ */
 interface Filesystem
 {
     public function exists(string $path): bool;

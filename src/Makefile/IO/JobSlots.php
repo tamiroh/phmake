@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\IO;
 
+/**
+ * Job slots shared with recursive makes, including waiting for an available slot.
+ */
 interface JobSlots
 {
     /**

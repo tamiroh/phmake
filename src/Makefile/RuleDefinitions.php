@@ -31,7 +31,11 @@ use function str_starts_with;
 use function strlen;
 use function substr;
 
-final class MakefileBuilder
+/**
+ * Combine rule definitions as makefiles are read: special targets, suffix rules,
+ * recipe overrides, target-specific variables, directory search and the default goal.
+ */
+final class RuleDefinitions
 {
     /** @var array<string, Target> */
     private array $targets = [];
@@ -191,7 +195,7 @@ final class MakefileBuilder
      *
      * @throws MakefileErrorException
      */
-    public function build(
+    public function makefile(
         array $variables,
         array $builtinRules = [],
         Exports $exports = new Exports(),

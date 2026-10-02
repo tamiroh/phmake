@@ -593,7 +593,17 @@ final class Functions
      */
     public static function guile(string $expression, VariableExpander $expander): string
     {
-        return $expander->context->loadedObjects->guile($expression, $expander);
+        if ($expander->context->guile === null) {
+            throw new MakefileErrorException('Guile support is not available');
+        }
+        return $expander->context->guile->evaluate(
+            $expression,
+            $expander->expand(...),
+            /** @throws MakefileErrorException */
+            static function (string $text) use ($expander): void {
+                self::eval($text, $expander->context->reading->evaluate, $expander);
+            },
+        );
     }
 
     /**

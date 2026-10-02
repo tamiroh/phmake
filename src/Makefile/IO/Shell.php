@@ -6,6 +6,10 @@ namespace Tamiroh\Phmake\Makefile\IO;
 
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
+/**
+ * Shell expansion (including != assignments) and recipe execution using SHELL,
+ * .SHELLFLAGS and exported variables. Process creation stays behind this contract.
+ */
 interface Shell
 {
     /**

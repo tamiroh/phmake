@@ -15,7 +15,7 @@ use function in_array;
  *
  * @internal
  */
-final readonly class FilePolicy
+final readonly class IntermediateFiles
 {
     /** @var array<string, list<string>> */
     private array $special;
@@ -60,7 +60,7 @@ final readonly class FilePolicy
         return $inferred || ($this->special['.SECONDARY'] ?? null) === [];
     }
 
-    public function keep(string $name): bool
+    public function preserve(string $name): bool
     {
         return (
             ($this->special['.SECONDARY'] ?? null) === []

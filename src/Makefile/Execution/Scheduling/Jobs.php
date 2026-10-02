@@ -10,6 +10,7 @@ use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Execution\UpdateResult;
 use Tamiroh\Phmake\Makefile\IO\JobSlots;
 use Tamiroh\Phmake\Makefile\IO\Output;
+use Tamiroh\Phmake\Makefile\IO\TargetUpdates;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use WeakMap;
 
@@ -41,6 +42,7 @@ final class Jobs
     private readonly Closure $slotAvailable;
 
     public function __construct(
+        private readonly TargetUpdates $execution,
         private readonly ?JobSlots $slots = null,
         private readonly ?Output $output = null,
     ) {
@@ -65,7 +67,7 @@ final class Jobs
             }
             // Later waiters would find no slot either, so only one of them retries per round.
             $this->slotsTaken = true;
-            Waiting::until($this->slotAvailable);
+            $this->execution->waitUntil($this->slotAvailable);
         } while (true);
     }
 
@@ -97,17 +99,17 @@ final class Jobs
      */
     public function updateAll(array $work): array
     {
-        $current = TargetUpdate::current();
+        $current = $this->execution->current();
         $owner = $current !== null && isset($this->started[$current]) ? $current : null;
         $pending = [];
         foreach ($work as $name => $callback) {
             if ($this->error !== null) {
                 throw $this->error;
             }
-            if (!isset($this->updates[$name]) || $this->updates[$name]->finished()) {
-                $this->updates[$name] = new TargetUpdate($callback);
+            if (!isset($this->updates[$name]) || $this->updates[$name]->finished) {
+                $this->updates[$name] = $this->execution->create($callback);
                 $this->started[$this->updates[$name]] = true;
-                $this->updates[$name]->proceed();
+                $this->execution->proceed($this->updates[$name]);
                 $this->error ??= $this->updates[$name]->error;
             }
             $pending[$name] = $this->updates[$name];
@@ -127,11 +129,11 @@ final class Jobs
             if ($owner !== null) {
                 $owner->waiting = $update;
             }
-            while (!$update->finished()) {
+            while (!$update->finished) {
                 if ($current === null) {
                     $this->proceed();
                 } else {
-                    Waiting::until($update->finished(...));
+                    $this->execution->waitUntil(static fn(): bool => $update->finished);
                 }
             }
             if ($owner !== null) {
@@ -156,7 +158,7 @@ final class Jobs
         do {
             $running = false;
             foreach ($this->updates as $update) {
-                $running = $running || !$update->finished();
+                $running = $running || !$update->finished;
             }
             if ($running) {
                 $this->proceed();
@@ -173,13 +175,13 @@ final class Jobs
         foreach ($this->updates as $update) {
             // Skip readiness checks for prerequisite and slot waiters that would fail them.
             if (
-                $update->waiting !== null && !$update->waiting->finished()
+                $update->waiting !== null && !$update->waiting->finished
                 || $update->ready === $this->slotAvailable && $this->slotsTaken && $this->error === null
             ) {
                 continue;
             }
-            if (!$update->finished() && ($update->ready === null || ($update->ready)())) {
-                $update->proceed();
+            if (!$update->finished && ($update->ready === null || ($update->ready)())) {
+                $this->execution->proceed($update);
                 $this->error ??= $update->error;
             }
         }

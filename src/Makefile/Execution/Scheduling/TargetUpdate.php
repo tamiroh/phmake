@@ -5,13 +5,9 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Execution\Scheduling;
 
 use Closure;
-use Fiber;
-use LogicException;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Execution\UpdateResult;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Throwable;
-use WeakMap;
 
 /**
  * The update of one target and its prerequisites, which can wait while other updates proceed.
@@ -20,12 +16,6 @@ use WeakMap;
  */
 final class TargetUpdate
 {
-    /** @var WeakMap<Fiber<null, Closure(): bool, null, void>, self>|null */
-    private static ?WeakMap $updates = null;
-
-    /** @var Fiber<null, Closure(): bool, null, void> */
-    private readonly Fiber $fiber;
-
     /** @var (Closure(): bool)|null */
     public ?Closure $ready = null;
 
@@ -35,42 +25,19 @@ final class TargetUpdate
 
     public MakefileErrorException|CommandFailedException|null $error = null;
 
+    public private(set) bool $finished = false;
+
     /**
      * @param Closure(): UpdateResult $work
      */
-    public function __construct(Closure $work)
-    {
-        $this->fiber = new Fiber(function () use ($work): void {
-            try {
-                $this->result = $work();
-            } catch (MakefileErrorException|CommandFailedException $error) {
-                $this->error = $error;
-            }
-        });
-        self::$updates ??= new WeakMap();
-        self::$updates[$this->fiber] = $this;
-    }
-
-    /**
-     * The target update that is running now, or null outside of any.
-     */
-    public static function current(): ?self
-    {
-        $fiber = Fiber::getCurrent();
-        return $fiber === null ? null : self::$updates[$fiber] ?? null;
-    }
-
-    public function finished(): bool
-    {
-        return $this->fiber->isTerminated();
-    }
-
-    public function proceed(): void
+    public function run(Closure $work): void
     {
         try {
-            $this->ready = $this->fiber->isStarted() ? $this->fiber->resume() : $this->fiber->start();
-        } catch (Throwable $error) {
-            throw new LogicException('Unexpected failure in target update', previous: $error);
+            $this->result = $work();
+        } catch (MakefileErrorException|CommandFailedException $error) {
+            $this->error = $error;
+        } finally {
+            $this->finished = true;
         }
     }
 

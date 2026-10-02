@@ -173,7 +173,7 @@ final readonly class VariableExpander
                 $first,
             ),
             'call' => Functions::call($arguments, $this, $expanding),
-            'eval' => Functions::eval($first ?? '', $this->context->evaluate, $this->inExpansion($expanding)),
+            'eval' => Functions::eval($first ?? '', $this->context->reading->evaluate, $this->inExpansion($expanding)),
             'guile' => Functions::guile($first ?? '', $this->inExpansion($expanding)),
             'info' => Functions::info($first ?? '', $this->output),
             'warning' => Functions::warning($first ?? '', $this->output, $this->source),

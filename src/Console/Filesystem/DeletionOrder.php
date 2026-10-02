@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Execution\Files;
+namespace Tamiroh\Phmake\Console\Filesystem;
+
+use Override;
+use Tamiroh\Phmake\Makefile\IO\IntermediateDeletionOrder;
 
 use function array_values;
 use function count;
@@ -19,7 +22,7 @@ use function strlen;
  *
  * @internal
  */
-final class DeletionOrder
+final class DeletionOrder implements IntermediateDeletionOrder
 {
     /**
      * Names in first-entered order; values keep numeric names as strings.
@@ -108,6 +111,7 @@ final class DeletionOrder
         return $word;
     }
 
+    #[Override]
     public function enter(string $name): void
     {
         $this->entered[$name] ??= $name;
@@ -116,6 +120,7 @@ final class DeletionOrder
     /**
      * @return list<string>
      */
+    #[Override]
     public function names(): array
     {
         $slots = [];

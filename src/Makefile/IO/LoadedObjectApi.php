@@ -9,7 +9,7 @@ use Tamiroh\Phmake\Makefile\MakefileErrorException;
 /**
  * The Loaded Object API: what a loaded object may ask make to do while it runs.
  *
- * The make engine implements this interface; the host calls it back during DynamicObject requests.
+ * The make engine implements this interface; the host calls it back while loading an object or calling its functions.
  */
 interface LoadedObjectApi
 {

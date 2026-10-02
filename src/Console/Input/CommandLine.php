@@ -129,7 +129,7 @@ final class CommandLine implements Configuration
         $variables['GNUMAKEFLAGS'] = new Variable('GNUMAKEFLAGS', '', false, 'override');
         $this->updateMakeflags($variables, $expander, 'environment');
         $this->options->afterReading($variables);
-        MakeFlags::define($this->options, $this->execution, $variables, $expander->context->posix);
+        MakeFlags::define($this->options, $this->execution, $variables, $expander->context->reading->posix);
     }
 
     /**
@@ -158,7 +158,7 @@ final class CommandLine implements Configuration
             }
         }
         $variables = $this->options->overrideEnvironment($variables);
-        MakeFlags::define($this->options, $this->execution, $variables, $expander?->context->posix ?? false);
+        MakeFlags::define($this->options, $this->execution, $variables, $expander?->context->reading->posix ?? false);
     }
 
     /**

@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Process;
 
-use Override;
+use Closure;
 use Tamiroh\Phmake\Console\Output\Output;
-use Tamiroh\Phmake\Makefile\IO\DynamicObject;
 use Tamiroh\Phmake\Makefile\IO\LoadedObjectApi;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 /**
  * Transport native plugin calls without requiring PHP's FFI extension.
  */
-final readonly class ModuleHost implements DynamicObject
+final readonly class ModuleHost
 {
     private ModuleChannel $channel;
 
@@ -77,25 +76,39 @@ final readonly class ModuleHost implements DynamicObject
      *
      * @throws MakefileErrorException
      */
-    #[Override]
     public function call(string $name, array $arguments, LoadedObjectApi $api): string
     {
         return $this->request('C', [$name, ...$arguments], $api);
     }
 
     /**
+     * @param Closure(string): string $expand
+     * @param Closure(string): void $eval
+     *
      * @throws MakefileErrorException
      */
-    #[Override]
-    public function guile(string $expression, LoadedObjectApi $api): string
+    public function guile(string $expression, Closure $expand, Closure $eval): string
     {
-        return $this->request('G', [$expression], $api);
+        return $this->channel->request(
+            'G',
+            [$expression],
+            /** @throws MakefileErrorException */
+            static function (string $kind, array $values) use ($expand, $eval): string {
+                if ($kind === 'V' && count($values) === 1) {
+                    return $expand($values[0]);
+                }
+                if ($kind === 'A' && count($values) === 3) {
+                    $eval($values[0]);
+                    return '';
+                }
+                throw new MakefileErrorException('Invalid Guile callback');
+            },
+        );
     }
 
     /**
      * @throws MakefileErrorException
      */
-    #[Override]
     public function load(string $path, string $setup, ?string $file, int $line, LoadedObjectApi $api): int
     {
         return (int) $this->request('L', [$path, $setup, $file ?? '', (string) $line], $api);

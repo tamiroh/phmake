@@ -7,7 +7,7 @@ namespace Tamiroh\Phmake\Makefile\Invocation;
 /**
  * Preserve explicit negative switches and the precedence of their sources.
  */
-final class ReversibleOptions
+final class OptionOverrides
 {
     /** @var array<string, array{bool, int}> */
     private array $settings = [];

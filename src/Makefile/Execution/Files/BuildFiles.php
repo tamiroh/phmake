@@ -8,6 +8,7 @@ use Tamiroh\Phmake\Makefile\Execution\BuildState;
 use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
+use Tamiroh\Phmake\Makefile\IO\IntermediateDeletionOrder;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
@@ -37,9 +38,7 @@ final class BuildFiles
     /** @var array<string, array{string, string}> */
     private array $created = [];
 
-    private readonly FilePolicy $policy;
-
-    private readonly DeletionOrder $deletionOrder;
+    private readonly IntermediateFiles $intermediates;
 
     /**
      * @throws MakefileErrorException
@@ -51,9 +50,9 @@ final class BuildFiles
         private readonly Output $output,
         private readonly ExecutionOptions $options,
         private readonly BuildState $state,
+        private readonly IntermediateDeletionOrder $deletionOrder,
     ) {
-        $this->policy = new FilePolicy($makefile->targetsByName);
-        $this->deletionOrder = new DeletionOrder();
+        $this->intermediates = new IntermediateFiles($makefile->targetsByName);
         foreach ($makefile->targets as $target) {
             $this->deletionOrder->enter($target->name);
             foreach ($target->rules as $rule) {
@@ -78,7 +77,7 @@ final class BuildFiles
     {
         $removable = [];
         foreach ($this->created as [$name, $path]) {
-            if ($this->intermediate($name) && !$this->policy->keep($name)) {
+            if ($this->intermediate($name) && !$this->intermediates->preserve($name)) {
                 $removable[$name] = $path;
             }
         }
@@ -103,7 +102,7 @@ final class BuildFiles
         return (
             !in_array($name, $this->goals, true)
             && !($this->makefile->targetsByName[$name]->isPhony ?? false)
-            && $this->policy->intermediate($name, isset($this->search->state->intermediates[$name]))
+            && $this->intermediates->intermediate($name, isset($this->search->state->intermediates[$name]))
         );
     }
 

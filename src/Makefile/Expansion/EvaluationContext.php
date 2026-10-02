@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Expansion;
 
-use Closure;
 use Tamiroh\Phmake\Makefile\Expansion\LoadedObject\LoadedObjects;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
+use Tamiroh\Phmake\Makefile\IO\Guile;
 use Tamiroh\Phmake\Makefile\IO\Shell;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 use Tamiroh\Phmake\Makefile\Variable\Environment\EnvironmentState;
@@ -23,33 +23,43 @@ use function in_array;
  */
 final class EvaluationContext
 {
-    /** @var array<string, Variable> */
+    /**
+     * Global definitions, including changes from eval and .SHELLSTATUS.
+     *
+     * @var array<string, Variable>
+     */
     public array $variables = [];
 
-    /** @var Closure(string, VariableExpander): void|null */
-    public ?Closure $evaluate = null;
+    /** Initial reading, .POSIX and reading eval results share one makefile-reading state. */
+    public MakefileReading $reading;
 
-    public bool $reading = true;
-
-    public bool $posix = false;
-
+    /** Shell expansion and assignments share exports and shell status with recipes. */
     public ?Shell $shell = null;
 
+    /** File functions, wildcard expansion and load directive existence checks. */
     public ?Filesystem $filesystem = null;
 
+    /** Export directives are shared with Makefile definitions and may change through eval. */
     public Exports $exports;
 
+    /** Warning and trace options for expansions at every phase. */
     public ReportingOptions $reporting;
 
+    /** Inherited environment and protection against recursive shell expansion in exports. */
     public EnvironmentState $environment;
 
+    /** Loaded object definitions and registered functions, retained across makefile remaking. */
     public LoadedObjects $loadedObjects;
+
+    /** Scheme evaluation; interpreter creation and lifetime are owned by the host. */
+    public ?Guile $guile = null;
 
     /**
      * @param list<Variable> $variables
      */
     public function __construct(array $variables = [])
     {
+        $this->reading = new MakefileReading();
         $this->environment = new EnvironmentState();
         $this->loadedObjects = new LoadedObjects();
         $this->exports = new Exports();

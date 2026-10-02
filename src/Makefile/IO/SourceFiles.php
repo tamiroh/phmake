@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\IO;
 
+/**
+ * Find and read makefiles, including default names and include patterns, and detect
+ * whether remaking them changed their contents' timestamps and requires a restart.
+ */
 interface SourceFiles
 {
     public function isDirectory(string $path): bool;

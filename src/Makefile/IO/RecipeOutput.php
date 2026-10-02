@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\IO;
 
+/**
+ * Target and recipe-line boundaries used by --output-sync.
+ */
 interface RecipeOutput extends Output
 {
     public function beginCommand(bool $recursive): void;

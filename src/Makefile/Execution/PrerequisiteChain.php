@@ -7,14 +7,15 @@ namespace Tamiroh\Phmake\Makefile\Execution;
 use Tamiroh\Phmake\Makefile\Variable\VariableScope;
 
 /**
- * A traversal's variable scope and ancestors, independent of concurrent branches.
+ * The targets in one prerequisite chain and the target-specific variables inherited along it.
+ * Each concurrent branch keeps its own chain; shared evaluation state is not cloned.
  *
  * @internal
  */
-final class BuildPath
+final class PrerequisiteChain
 {
     /** @var array<string, true> */
-    public array $visiting = [];
+    public array $ancestors = [];
 
     public function __construct(
         public VariableScope $scope,

@@ -7,7 +7,6 @@ namespace Tamiroh\Phmake\Console\Process;
 use Closure;
 use Fiber;
 use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
-use Tamiroh\Phmake\Makefile\Execution\Scheduling\Waiting;
 
 use function fclose;
 use function fopen;

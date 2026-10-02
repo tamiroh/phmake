@@ -43,7 +43,7 @@ final readonly class ExpansionApi implements LoadedObjectApi
     {
         Functions::eval(
             $text,
-            $this->expander->context->evaluate,
+            $this->expander->context->reading->evaluate,
             $file === null ? $this->expander : $this->expander->atSource("{$file}:{$line}"),
         );
     }

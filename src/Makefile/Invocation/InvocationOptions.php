@@ -16,7 +16,7 @@ use function array_map;
  */
 final class InvocationOptions
 {
-    public ReversibleOptions $switches;
+    public OptionOverrides $switches;
 
     public bool $noBuiltinRules = false;
 
@@ -32,7 +32,7 @@ final class InvocationOptions
 
     public function __construct()
     {
-        $this->switches = new ReversibleOptions();
+        $this->switches = new OptionOverrides();
     }
 
     /**

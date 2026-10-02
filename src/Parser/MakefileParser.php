@@ -11,14 +11,15 @@ use Tamiroh\Phmake\Makefile\Expansion\LoadedObject\LoadedObjects;
 use Tamiroh\Phmake\Makefile\Expansion\UndefinedVariable;
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
+use Tamiroh\Phmake\Makefile\IO\Guile;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
-use Tamiroh\Phmake\Makefile\MakefileBuilder;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
+use Tamiroh\Phmake\Makefile\RuleDefinitions;
 use Tamiroh\Phmake\Makefile\Variable\Assignment;
 use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
 use Tamiroh\Phmake\Makefile\Variable\Variable;
@@ -62,6 +63,7 @@ final readonly class MakefileParser
         private ?Filesystem $filesystem = null,
         private ReportingOptions $reporting = new ReportingOptions(),
         private LoadedObjects $loadedObjects = new LoadedObjects(),
+        private ?Guile $guile = null,
     ) {}
 
     /**
@@ -193,9 +195,10 @@ final readonly class MakefileParser
      */
     public function parse(): ParsedMakefile
     {
-        $builder = new MakefileBuilder(!($this->configuration->noBuiltinRules ?? false), $this->output);
+        $definitions = new RuleDefinitions(!($this->configuration->noBuiltinRules ?? false), $this->output);
         $context = new EvaluationContext();
         $context->loadedObjects = $this->loadedObjects;
+        $context->guile = $this->guile;
         $context->reporting = $this->reporting;
         $context->shell = $this->shell;
         $context->filesystem = $this->filesystem;
@@ -217,13 +220,13 @@ final readonly class MakefileParser
         }
         $exports = new Exports($inherited);
         $context->exports = $exports;
-        $context->evaluate =
+        $context->reading->evaluate =
             /** @throws MakefileErrorException */
-            function (string $text, VariableExpander $expander) use ($builder, $exports): void {
+            function (string $text, VariableExpander $expander) use ($definitions, $exports): void {
                 try {
                     $this->readRules(
                         $text,
-                        $builder,
+                        $definitions,
                         $expander->context->variables,
                         [],
                         $exports,
@@ -244,28 +247,28 @@ final readonly class MakefileParser
             'default',
         );
         foreach ($this->sources->evaluations as $text) {
-            $this->readRules($text, $builder, $variables, [], $exports, [], $scope, '<command-line>');
+            $this->readRules($text, $definitions, $variables, [], $exports, [], $scope, '<command-line>');
         }
         foreach (self::words($scope->variable('MAKEFILES') === null ? '' : $scope->expand('$(MAKEFILES)')) as $path) {
             $this->readFile(
                 $this->sources->open($path, optional: true, defaultGoal: false),
-                $builder,
+                $definitions,
                 $exports,
                 $scope,
                 [],
             );
         }
         foreach ($this->sources->main as $path) {
-            $this->readFile($this->sources->open($path, main: true), $builder, $exports, $scope, []);
+            $this->readFile($this->sources->open($path, main: true), $definitions, $exports, $scope, []);
         }
         // GNU make rereads its environment flags after reading all makefiles.
         if ($scope->variable('GNUMAKEFLAGS') === null) {
             UndefinedVariable::warn($scope, 'GNUMAKEFLAGS');
         }
         $this->configuration?->finishReading($variables, $scope);
-        $context->reading = false;
+        $context->reading->initial = false;
         return new ParsedMakefile(
-            $builder->build(
+            $definitions->makefile(
                 array_values($variables),
                 $this->configuration->noBuiltinRules ?? false ? [] : $this->builtinRules,
                 $exports,
@@ -322,7 +325,7 @@ final readonly class MakefileParser
      */
     private function readFile(
         ReadFile $file,
-        MakefileBuilder $builder,
+        RuleDefinitions $definitions,
         Exports $exports,
         VariableExpander $scope,
         array $included,
@@ -346,7 +349,7 @@ final readonly class MakefileParser
         try {
             $this->readRules(
                 str_starts_with($file->text, "\xEF\xBB\xBF") ? substr($file->text, 3) : $file->text,
-                $builder,
+                $definitions,
                 $scope->context->variables,
                 [...$included, $file->path],
                 $exports,
@@ -368,7 +371,7 @@ final readonly class MakefileParser
      */
     private function readLines(
         string $source,
-        MakefileBuilder $builder,
+        RuleDefinitions $definitions,
         array &$variables,
         array $included,
         Exports $exports,
@@ -383,7 +386,7 @@ final readonly class MakefileParser
         while (
             ($line = $reader->next(
                 $variables['.RECIPEPREFIX']->expression[0] ?? "\t",
-                posix: $scope->context->posix,
+                posix: $scope->context->reading->posix,
                 hasRule: $rule !== null,
             )) !== null
         ) {
@@ -413,7 +416,7 @@ final readonly class MakefileParser
                     $lineNumber,
                     $sources,
                     $evaluationSource,
-                    $scope->context->posix,
+                    $scope->context->reading->posix,
                 );
                 continue;
             }
@@ -422,7 +425,7 @@ final readonly class MakefileParser
             }
 
             if ($rule !== null) {
-                $builder->addRule($rule->definition());
+                $definitions->addRule($rule->definition());
                 $rule = null;
             }
 
@@ -466,7 +469,7 @@ final readonly class MakefileParser
                     $lineNumber,
                     $sources,
                     $evaluationSource,
-                    $scope->context->posix,
+                    $scope->context->reading->posix,
                 );
                 new Assignment($header->name, $header->operator, $body)->apply(
                     $variables,
@@ -542,7 +545,7 @@ final readonly class MakefileParser
                                 $this->sources->defaultGoal,
                                 $location,
                             ),
-                            $builder,
+                            $definitions,
                             $exports,
                             $scope,
                             $included,
@@ -570,14 +573,14 @@ final readonly class MakefileParser
             }
 
             if (preg_match('/^vpath(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
-                $builder->searchPaths->define(self::words($expander->expand($matches[1] ?? '')));
+                $definitions->searchPaths->define(self::words($expander->expand($matches[1] ?? '')));
                 continue;
             }
 
             if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
                 throw new ParseException($lineNumber, 'Recipe without a rule');
             }
-            if (ScopedAssignment::read($uncommented, $builder->targetVariables, $expander, $this->output)) {
+            if (ScopedAssignment::read($uncommented, $definitions->targetVariables, $expander, $this->output)) {
                 continue;
             }
 
@@ -586,7 +589,7 @@ final readonly class MakefileParser
             if (trim($expanded, " \t\n\r\0\x0B\f") === '' && $recipe === null) {
                 continue;
             }
-            if (!$scope->context->reading) {
+            if (!$scope->context->reading->initial) {
                 throw new MakefileErrorException(
                     'prerequisites cannot be defined in recipes',
                     $scope->secondary ? null : $evaluationSource,
@@ -609,7 +612,7 @@ final readonly class MakefileParser
             }
             $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->sources->files);
             if (in_array('.POSIX', $rule->targetNames, true)) {
-                $scope->context->posix = true;
+                $scope->context->reading->posix = true;
                 foreach (Builtins::posixVariables() as $variable) {
                     if (($variables[$variable->name]->origin ?? 'default') === 'default') {
                         $variables[$variable->name] = $variable;
@@ -617,7 +620,7 @@ final readonly class MakefileParser
                 }
             }
             if ($this->sources->defaultGoal) {
-                $builder->selectDefault($rule->definition(), $scope);
+                $definitions->selectDefault($rule->definition(), $scope);
             }
             if ($recipe !== null) {
                 $rule->addRecipe(ltrim($recipe), $location);
@@ -626,7 +629,7 @@ final readonly class MakefileParser
 
         $conditionals->finish($reader->lineNumber);
         if ($rule !== null) {
-            $builder->addRule($rule->definition());
+            $definitions->addRule($rule->definition());
         }
     }
 
@@ -640,7 +643,7 @@ final readonly class MakefileParser
      */
     private function readRules(
         string $source,
-        MakefileBuilder $builder,
+        RuleDefinitions $definitions,
         array &$variables,
         array $included,
         Exports $exports,
@@ -649,7 +652,16 @@ final readonly class MakefileParser
         ?string $evaluationSource = null,
     ): void {
         try {
-            $this->readLines($source, $builder, $variables, $included, $exports, $sources, $scope, $evaluationSource);
+            $this->readLines(
+                $source,
+                $definitions,
+                $variables,
+                $included,
+                $exports,
+                $sources,
+                $scope,
+                $evaluationSource,
+            );
         } catch (ParseException $error) {
             $location = $evaluationSource ?? self::sourceLocation($sources, $error->lineNumber);
             if ($location === null) {
