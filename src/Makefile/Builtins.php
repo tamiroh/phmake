@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile;
 
-use Tamiroh\Phmake\Makefile\IO\SourceFiles;
+use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Command;
 use Tamiroh\Phmake\Makefile\Rule\PatternRule;
@@ -73,10 +73,10 @@ final class Builtins
      *
      * @return list<string>
      */
-    public static function makefiles(SourceFiles $files): array
+    public static function makefiles(Filesystem $filesystem): array
     {
         foreach (self::MAKEFILES as $path) {
-            if ($files->isFile($path)) {
+            if ($filesystem->isFile($path)) {
                 return [$path];
             }
         }

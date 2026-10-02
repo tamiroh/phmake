@@ -558,11 +558,11 @@ final readonly class MakefileParser
             if (preg_match('/^(-?load)(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
                 foreach (self::words($expander->expand($matches[2] ?? '')) as $name) {
                     $object = $scope->context->loadedObjects->load($name, $matches[1] === '-load', $expander);
-                    $contents = $this->sources->files->read($object->path);
+                    $contents = $this->sources->filesystem->read($object->path);
                     $this->sources->read[] = new ReadFile(
                         $object->path,
-                        $contents->text,
-                        $contents->modifiedAt,
+                        $contents['text'],
+                        $contents['modifiedAt'],
                         $object->optional,
                         false,
                         $object->source,
@@ -610,7 +610,7 @@ final readonly class MakefileParser
                     );
                 }
             }
-            $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->sources->files);
+            $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->sources->filesystem);
             if (in_array('.POSIX', $rule->targetNames, true)) {
                 $scope->context->reading->posix = true;
                 foreach (Builtins::posixVariables() as $variable) {

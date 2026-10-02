@@ -21,7 +21,7 @@ prefer-early-continue = { enabled = false }
 ambiguous-function-call = { enabled = true }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }
-too-many-methods = { exclude = ["tests/**", "src/Makefile/Expansion/Functions.php"] }
+too-many-methods = { exclude = ["tests/**", "src/Makefile/Expansion/Functions.php", "src/Makefile/IO/Filesystem.php", "src/Console/Filesystem/Filesystem.php"] }
 excessive-parameter-list = { enabled = false }
 no-error-control-operator = { enabled = false }
 halstead = { effort-threshold = 7000 }

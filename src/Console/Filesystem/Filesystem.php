@@ -10,17 +10,23 @@ use Tamiroh\Phmake\Makefile\IO\Filesystem as FilesystemInterface;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 
+use function basename;
 use function clearstatcache;
+use function dirname;
 use function error_get_last;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
+use function filemtime;
 use function getcwd;
 use function glob;
+use function in_array;
 use function is_dir;
+use function is_file;
 use function is_link;
 use function preg_replace;
 use function realpath;
+use function scandir;
 use function str_starts_with;
 use function touch;
 use function ucfirst;
@@ -39,6 +45,19 @@ final class Filesystem implements FilesystemInterface
             return Archive::modified($member) !== null;
         }
         return file_exists($path) || ($this->options->checkSymlinkTimes ?? false) && is_link($path);
+    }
+
+    #[Override]
+    public function isDirectory(string $path): bool
+    {
+        return is_dir($path);
+    }
+
+    #[Override]
+    public function isFile(string $path): bool
+    {
+        $entries = scandir(dirname($path));
+        return $entries !== false && in_array(basename($path), $entries, true) && is_file($path);
     }
 
     #[Override]
@@ -64,23 +83,42 @@ final class Filesystem implements FilesystemInterface
     }
 
     /**
-     * @throws MakefileErrorException
+     * @param list<string> $paths
+     *
+     * @return array<string, ?string>
      */
     #[Override]
-    public function read(string $path): ?string
+    public function modifiedTimes(array $paths): array
+    {
+        return FileTimes::modifiedTimes($paths);
+    }
+
+    /**
+     * @return array{text: ?string, error: ?string, modifiedAt: ?string}
+     */
+    #[Override]
+    public function read(string $path): array
     {
         clearstatcache(true, $path);
+        $seconds = @filemtime($path);
+        $modifiedAt = $seconds === false ? null : (string) $seconds;
         if (is_dir($path)) {
-            throw new MakefileErrorException('read: ' . $path . ': Is a directory');
+            return ['text' => null, 'error' => 'Is a directory', 'modifiedAt' => $modifiedAt];
         }
-        if (!file_exists($path)) {
-            return null;
-        }
-        $text = @file_get_contents(str_starts_with($path, '/') ? $path : './' . $path);
-        if ($text === false) {
-            throw $this->failure('open', $path);
-        }
-        return $text;
+        $source = @file_get_contents(str_starts_with($path, '/') ? $path : './' . $path);
+        return (
+            $source === false
+                ? [
+                    'text' => null,
+                    'error' => preg_replace(
+                        '/^.*Failed to open stream: /',
+                        '',
+                        error_get_last()['message'] ?? 'I/O error',
+                    ),
+                    'modifiedAt' => $modifiedAt,
+                ]
+                : ['text' => $source, 'error' => null, 'modifiedAt' => $modifiedAt]
+        );
     }
 
     #[Override]

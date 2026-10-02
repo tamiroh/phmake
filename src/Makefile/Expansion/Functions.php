@@ -39,6 +39,7 @@ use function strlen;
 use function strrpos;
 use function substr;
 use function trim;
+use function ucfirst;
 
 use const PHP_INT_MAX;
 use const PREG_SPLIT_NO_EMPTY;
@@ -402,7 +403,18 @@ final class Functions
                 if ($text !== null) {
                     throw new MakefileErrorException('file: too many arguments', $source);
                 }
-                $contents = $files->read($path) ?? '';
+                $read = $files->read($path);
+                if ($read['text'] === null) {
+                    if ($files->isDirectory($path)) {
+                        throw new MakefileErrorException('read: ' . $path . ': Is a directory');
+                    }
+                    if ($files->exists($path)) {
+                        throw new MakefileErrorException(
+                            'open: ' . $path . ': ' . ucfirst($read['error'] ?? 'I/O error'),
+                        );
+                    }
+                }
+                $contents = $read['text'] ?? '';
                 return str_ends_with($contents, "\n") ? substr($contents, 0, -1) : $contents;
             }
             $files->write($path, $text === null ? '' : $text . (str_ends_with($text, "\n") ? '' : "\n"), $append);

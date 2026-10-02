@@ -15,6 +15,13 @@ interface Filesystem
 {
     public function exists(string $path): bool;
 
+    public function isDirectory(string $path): bool;
+
+    /**
+     * Whether a regular file exists with exactly this name, even on case-insensitive filesystems.
+     */
+    public function isFile(string $path): bool;
+
     public function lastModified(string $path): ?int;
 
     /**
@@ -23,9 +30,21 @@ interface Filesystem
     public function matching(string $pattern): array;
 
     /**
-     * @throws MakefileErrorException
+     * Precise modification times, null for missing files; equal strings mean an unchanged file.
+     *
+     * @param list<string> $paths
+     *
+     * @return array<string, ?string>
      */
-    public function read(string $path): ?string;
+    public function modifiedTimes(array $paths): array;
+
+    /**
+     * Return file contents or a read error without throwing on an I/O failure.
+     * The modification time only indicates existence; compare times with modifiedTimes().
+     *
+     * @return array{text: ?string, error: ?string, modifiedAt: ?string}
+     */
+    public function read(string $path): array;
 
     public function realpath(string $path): ?string;
 

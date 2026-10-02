@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser\Syntax;
 
-use Tamiroh\Phmake\Makefile\IO\SourceFiles;
+use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\FileName;
@@ -25,7 +25,7 @@ final class RuleSyntax
     /**
      * @throws ParseException
      */
-    public static function parse(string $header, int $line, ?string $source, ?SourceFiles $files): Rule
+    public static function parse(string $header, int $line, ?string $source, ?Filesystem $filesystem): Rule
     {
         $colon = DependencySyntax::delimiter($header, ':');
         if ($colon === null) {
@@ -56,10 +56,10 @@ final class RuleSyntax
         }
         $order = DependencySyntax::delimiter($dependencies, '|');
         return new Rule(
-            self::paths($targets, $files),
+            self::paths($targets, $filesystem),
             new Prerequisites(
-                self::paths($order === null ? $dependencies : substr($dependencies, 0, $order), $files),
-                $order === null ? [] : self::paths(substr($dependencies, $order + 1), $files),
+                self::paths($order === null ? $dependencies : substr($dependencies, 0, $order), $filesystem),
+                $order === null ? [] : self::paths(substr($dependencies, $order + 1), $filesystem),
                 [new PrerequisiteExpression($dependencies, source: $source)],
             ),
             $double,
@@ -72,12 +72,12 @@ final class RuleSyntax
     /**
      * @return list<string>
      */
-    private static function paths(string $text, ?SourceFiles $files): array
+    private static function paths(string $text, ?Filesystem $filesystem): array
     {
         $result = [];
         foreach (DependencySyntax::words(ArchiveMember::expand($text)) as $word) {
             $word = FileName::normalize($word);
-            $paths = strpbrk($word, '*?[') === false ? [] : $files?->matching($word) ?? [];
+            $paths = strpbrk($word, '*?[') === false ? [] : $filesystem?->matching($word) ?? [];
             $result = [...$result, ...($paths === [] ? [$word] : $paths)];
         }
         return $result;

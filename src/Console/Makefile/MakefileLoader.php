@@ -69,12 +69,10 @@ final readonly class MakefileLoader
             $configuration = clone $this->commandLine;
             $filesystem = new Filesystem();
             $filesystem->options = $configuration->execution->files;
-            $files = new SourceFiles();
             $sources = new MakefileSources(
-                $files,
                 $filesystem,
                 $configuration->input->makefiles === []
-                    ? Builtins::makefiles($files)
+                    ? Builtins::makefiles($filesystem)
                     : $configuration->input->makefiles,
                 $configuration,
                 $stdin === null ? null : new ReadFile($stdin->path, $stdin->text, null, rebuild: false),
@@ -137,7 +135,7 @@ final readonly class MakefileLoader
             try {
                 $remade = new MakefileRemake(
                     $build,
-                    $sources->files,
+                    $sources->filesystem,
                     $this->output,
                     $configuration->execution->keepGoing,
                 )->run($sources->read);

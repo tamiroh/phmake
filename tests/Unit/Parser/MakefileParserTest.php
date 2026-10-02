@@ -21,7 +21,6 @@ use Tamiroh\Phmake\Parser\Source\MakefileSources;
 use Tamiroh\Phmake\Tests\Testing\FakeConfiguration;
 use Tamiroh\Phmake\Tests\Testing\FakeFilesystem;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
-use Tamiroh\Phmake\Tests\Testing\InMemorySourceFiles;
 
 use function array_map;
 use function array_slice;
@@ -160,8 +159,7 @@ final class MakefileParserTest extends TestCase
         array $evaluations = [],
     ): MakefileSources {
         return new MakefileSources(
-            new InMemorySourceFiles($files, $directories),
-            new FakeFilesystem($files),
+            new FakeFilesystem($files, $directories),
             ['Makefile'],
             $configuration,
             evaluations: $evaluations,

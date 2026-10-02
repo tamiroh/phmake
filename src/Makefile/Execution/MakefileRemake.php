@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Execution;
 
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
+use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;
-use Tamiroh\Phmake\Makefile\IO\SourceFiles;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
@@ -18,7 +18,7 @@ final readonly class MakefileRemake
 {
     public function __construct(
         private Build $build,
-        private SourceFiles $files,
+        private Filesystem $filesystem,
         private Output $output,
         private bool $keepGoing,
     ) {}
@@ -48,9 +48,9 @@ final readonly class MakefileRemake
             }
         }
         // As in GNU make, only makefiles whose times change while remaking restart make.
-        $before = $this->files->modifiedTimes($names);
+        $before = $this->filesystem->modifiedTimes($names);
         $errors = $this->build->remake($names, $unreadable);
-        foreach ($this->files->modifiedTimes($names) as $path => $modifiedAt) {
+        foreach ($this->filesystem->modifiedTimes($names) as $path => $modifiedAt) {
             if ($modifiedAt !== null && $modifiedAt !== ($before[$path] ?? null)) {
                 return true;
             }
@@ -60,7 +60,7 @@ final readonly class MakefileRemake
                 !$file->optional
                 && $file->text === null
                 && $file->modifiedAt !== null
-                && $this->files->read($file->path)->text === null
+                && $this->filesystem->read($file->path)['text'] === null
                 && !isset($errors[$file->path])
             ) {
                 $errors[$file->path] = new MakefileErrorException("No rule to make target '{$file->path}'");

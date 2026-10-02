@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser\Source;
 
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
-use Tamiroh\Phmake\Makefile\IO\SourceFiles;
 use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Parser\Configuration;
 
@@ -28,8 +27,7 @@ final class MakefileSources
      * @param list<string> $evaluations
      */
     public function __construct(
-        public readonly SourceFiles $files,
-        private readonly Filesystem $filesystem,
+        public readonly Filesystem $filesystem,
         public readonly array $main,
         private readonly ?Configuration $configuration = null,
         private readonly ?ReadFile $stdin = null,
@@ -55,7 +53,7 @@ final class MakefileSources
         }
         $result = [];
         foreach ([...$paths, ...$defaults] as $path) {
-            if ($this->files->isDirectory($path) && !in_array($path, $result, true)) {
+            if ($this->filesystem->isDirectory($path) && !in_array($path, $result, true)) {
                 $result[] = $path;
             }
         }
@@ -83,7 +81,7 @@ final class MakefileSources
      */
     public function matching(string $pattern): array
     {
-        $paths = $this->files->matching($pattern);
+        $paths = $this->filesystem->matching($pattern);
         return $paths === [] ? [$pattern] : $paths;
     }
 
@@ -98,10 +96,10 @@ final class MakefileSources
             return $this->read[] = $this->stdin;
         }
         $path = $name;
-        $contents = $this->files->read($path);
-        if (!$main && $contents->text === null && !$this->filesystem->exists($path) && !str_starts_with($name, '/')) {
+        $contents = $this->filesystem->read($path);
+        if (!$main && $contents['text'] === null && !$this->filesystem->exists($path) && !str_starts_with($name, '/')) {
             foreach ($this->directories() as $directory) {
-                if (($found = $this->files->read($directory . '/' . $name))->text !== null) {
+                if (($found = $this->filesystem->read($directory . '/' . $name))['text'] !== null) {
                     $path = $directory . '/' . $name;
                     $contents = $found;
                     break;
@@ -110,12 +108,12 @@ final class MakefileSources
         }
         return $this->read[] = new ReadFile(
             $path,
-            $contents->text,
-            $contents->modifiedAt,
+            $contents['text'],
+            $contents['modifiedAt'],
             $optional || $main && $this->optionalMain,
             $defaultGoal,
             $source,
-            error: $contents->error,
+            error: $contents['error'],
             displayPath: $name,
         );
     }
