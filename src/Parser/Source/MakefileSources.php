@@ -13,7 +13,7 @@ use function rtrim;
 use function str_starts_with;
 
 /**
- * Input discovery and the ordered record of files read in one parsing pass.
+ * Input discovery and the ordered record of files read in one evaluation pass.
  */
 final class MakefileSources
 {

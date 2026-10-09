@@ -29,7 +29,7 @@ use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
 use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
 use Tamiroh\Phmake\Makefile\Variable\Variable;
-use Tamiroh\Phmake\Parser\MakefileParser;
+use Tamiroh\Phmake\Parser\Evaluator;
 use Tamiroh\Phmake\Parser\ParseException;
 use Tamiroh\Phmake\Parser\Source\MakefileSources;
 
@@ -39,7 +39,7 @@ use function in_array;
 use function ltrim;
 
 /**
- * Each restart reconstructs parser and build state from the original invocation.
+ * Each restart reconstructs evaluation and build state from the original invocation.
  */
 final readonly class MakefileLoader
 {
@@ -83,7 +83,7 @@ final readonly class MakefileLoader
             DebugTrace::write($configuration->execution->reporting, $this->output, 'b', 'Reading makefiles...');
             $this->output->beginTarget();
             try {
-                $parsed = new MakefileParser(
+                $parsed = new Evaluator(
                     $sources,
                     $this->variables($configuration, $filesystem->workingDirectory(), $restarts),
                     $configuration->variables,
@@ -99,7 +99,7 @@ final readonly class MakefileLoader
                             : new ModuleObjects($moduleHost, $this->output),
                     ),
                     $moduleHost === null ? null : new ModuleGuile($moduleHost, $this->output),
-                )->parse();
+                )->evaluate();
             } catch (MakefileErrorException $error) {
                 Diagnostics::report($error, $this->output);
                 throw $error;

@@ -4,670 +4,265 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
-use LogicException;
-use Tamiroh\Phmake\Makefile\Builtins;
-use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
-use Tamiroh\Phmake\Makefile\Expansion\LoadedObject\LoadedObjects;
-use Tamiroh\Phmake\Makefile\Expansion\UndefinedVariable;
-use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
-use Tamiroh\Phmake\Makefile\IO\Filesystem;
-use Tamiroh\Phmake\Makefile\IO\Guile;
-use Tamiroh\Phmake\Makefile\IO\Output;
-use Tamiroh\Phmake\Makefile\IO\Shell;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\ReadFile;
-use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
-use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
-use Tamiroh\Phmake\Makefile\Rule\PatternRule;
-use Tamiroh\Phmake\Makefile\RuleDefinitions;
-use Tamiroh\Phmake\Makefile\Variable\Assignment;
-use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
-use Tamiroh\Phmake\Makefile\Variable\Variable;
-use Tamiroh\Phmake\Parser\Source\LineReader;
-use Tamiroh\Phmake\Parser\Source\MakefileSources;
-use Tamiroh\Phmake\Parser\Syntax\Conditionals;
-use Tamiroh\Phmake\Parser\Syntax\RuleSyntax;
-use Tamiroh\Phmake\Parser\Syntax\ScopedAssignment;
+use Tamiroh\Phmake\Parser\Ast\AssignmentNode;
+use Tamiroh\Phmake\Parser\Ast\ConditionalNode;
+use Tamiroh\Phmake\Parser\Ast\DefineNode;
+use Tamiroh\Phmake\Parser\Ast\DirectiveNode;
+use Tamiroh\Phmake\Parser\Ast\IncludeNode;
+use Tamiroh\Phmake\Parser\Ast\MakefileNode;
+use Tamiroh\Phmake\Parser\Ast\Node;
+use Tamiroh\Phmake\Parser\Ast\RawNode;
+use Tamiroh\Phmake\Parser\Ast\RecipeNode;
+use Tamiroh\Phmake\Parser\Ast\RuleNode;
+use Tamiroh\Phmake\Parser\Ast\SourceSpan;
+use Tamiroh\Phmake\Parser\Ast\TargetAssignmentNode;
+use Tamiroh\Phmake\Parser\Ast\TriviaNode;
 
-use function array_values;
-use function implode;
+use function array_pop;
+use function count;
 use function in_array;
-use function intdiv;
 use function ltrim;
 use function preg_match;
-use function preg_split;
-use function str_contains;
-use function str_repeat;
+use function rtrim;
 use function str_starts_with;
 use function strlen;
+use function strpos;
+use function strrpos;
 use function substr;
+use function substr_count;
 use function trim;
 
-use const PREG_SPLIT_NO_EMPTY;
-
+/**
+ * Pure, lossless syntax parser. No filesystem or evaluation services are accepted.
+ * State-dependent syntax remains lexical: the evaluator resolves logical lines and
+ * recipe prefixes in reading order. Malformed/incomplete input is retained for tools.
+ */
 final readonly class MakefileParser
 {
-    /**
-     * @param list<Variable> $defaults
-     * @param array<string, Variable> $overrides
-     * @param list<PatternRule> $builtinRules
-     */
-    public function __construct(
-        private MakefileSources $sources,
-        private array $defaults = [],
-        private array $overrides = [],
-        private array $builtinRules = [],
-        private ?Output $output = null,
-        private ?Configuration $configuration = null,
-        private ?Shell $shell = null,
-        private ?Filesystem $filesystem = null,
-        private ReportingOptions $reporting = new ReportingOptions(),
-        private LoadedObjects $loadedObjects = new LoadedObjects(),
-        private ?Guile $guile = null,
-    ) {}
+    public function parse(string $source, string $file = '<input>'): MakefileNode
+    {
+        $nodes = [];
+        $offset = 0;
+        $line = 1;
+        $column = 1;
+        $length = strlen($source);
+        if (str_starts_with($source, "\xEF\xBB\xBF")) {
+            $nodes[] = new TriviaNode(new SourceSpan($file, 0, 3, 1, 1, 1, 4), substr($source, 0, 3));
+            $offset = 3;
+            $column = 4;
+        }
+        while ($offset < $length) {
+            $start = $offset;
+            $startLine = $line;
+            $startColumn = $column;
+            do {
+                $newline = strpos($source, "\n", $offset);
+                $end = $newline === false ? $length : $newline + 1;
+                $physical = substr($source, $offset, $end - $offset);
+                $text = rtrim($physical, "\r\n");
+                $continued = ((strlen($text) - strlen(rtrim($text, '\\'))) % 2) === 1;
+                $offset = $end;
+                if ($newline === false) {
+                    $column += strlen($physical);
+                } else {
+                    $line++;
+                    $column = 1;
+                }
+            } while ($continued && $offset < $length);
+            $span = new SourceSpan($file, $start, $offset, $startLine, $startColumn, $line, $column);
+            $raw = substr($source, $start, $offset - $start);
+            // Folding is .POSIX- and recipe-dependent; do not normalize continuations.
+            $nodes[] = $this->classify($span, $raw);
+        }
+        return new MakefileNode(new SourceSpan($file, 0, $length, 1, 1, $line, $column), '', $this->blocks($nodes));
+    }
+
+    private function assignment(SourceSpan $span, string $raw, string $text): ?AssignmentNode
+    {
+        $modifiers = [];
+        $matches = [];
+        $text = ltrim($text);
+        while (
+            preg_match('/^(override|export|unexport|private)[ \t]+(?![ \t]*[:+?!=])(.*)$/s', $text, $matches) === 1
+        ) {
+            $modifiers[] = $matches[1];
+            $text = ltrim($matches[2]);
+        }
+        $equal = $this->delimiter($text, '=');
+        if ($equal === null) {
+            return null;
+        }
+        $before = substr($text, 0, $equal);
+        preg_match('/(:{1,3}|[!+?])?$/', $before, $matches);
+        $operator = ($matches[1] ?? '') . '=';
+        $name = rtrim(substr($text, 0, $equal + 1 - strlen($operator)));
+        if (
+            $name === ''
+            || $this->delimiter($name, ':') !== null
+            || preg_match('/^(define|override define|export define)\s/', $name) === 1
+        ) {
+            return null;
+        }
+        // Multi-word names and expansion-generated syntax are left unresolved.
+        if ($this->delimiter($name, ' ') !== null || $this->delimiter($name, "\t") !== null) {
+            return null;
+        }
+        return new AssignmentNode($span, $raw, $name, $operator, ltrim(substr($text, $equal + 1)), $modifiers);
+    }
 
     /**
-     * @pure
+     * @param list<Node> $nodes
+     *
+     * @return list<Node>
      */
-    private static function removeComment(string $line): string
+    private function blocks(array $nodes): array
     {
-        if (!str_contains($line, '#')) {
-            return $line;
-        }
-        $result = '';
-        $depth = 0;
-        for ($index = 0; $index < strlen($line); $index++) {
-            if ($line[$index] === '\\') {
-                $start = $index;
-                while (($line[$index] ?? '') === '\\') {
-                    $index++;
-                }
-                $count = $index - $start;
-                if ($count < 0) {
-                    throw new LogicException('Backslash count must be non-negative');
-                }
-                if (($line[$index] ?? '') === '#' && $depth === 0) {
-                    /**
-                     * Dividing a non-negative count by 2 yields a non-negative result.
-                     * Dividing by 2 cannot cause division by zero or integer overflow.
-                     *
-                     * @mago-expect analysis:unhandled-thrown-type,unhandled-thrown-type,possibly-invalid-argument
-                     */
-                    $result .= str_repeat('\\', intdiv($count, num2: 2));
-                    if (($count % 2) === 0) {
-                        break;
-                    }
-                    $result .= '#';
-                    continue;
-                }
-                $result .= str_repeat('\\', $count);
-                $index--;
+        /** @var list<array{string, list<Node>}> $stack */
+        $stack = [];
+        $result = [];
+        foreach ($nodes as $node) {
+            $directive = $node instanceof DirectiveNode ? $node->directive : '';
+            $insideDefine = $stack !== [] && $stack[count($stack) - 1][0] === 'define';
+            $opens =
+                $directive === 'define'
+                || !$insideDefine && in_array($directive, ['ifeq', 'ifneq', 'ifdef', 'ifndef'], true);
+            if ($opens) {
+                $stack[] = [$directive, [$node]];
                 continue;
             }
-            if (
-                ($line[$index] === '(' || $line[$index] === '{')
-                && ($depth > 0 || $index > 0 && $line[$index - 1] === '$')
-            ) {
-                $depth++;
-            } elseif (($line[$index] === ')' || $line[$index] === '}') && $depth > 0) {
-                $depth--;
+            if ($stack === []) {
+                $result[] = $node;
+                continue;
             }
-            if ($line[$index] === '#' && $depth === 0) {
-                break;
+            $index = count($stack) - 1;
+            $current = $stack[$index];
+            $current[1][] = $insideDefine ? new RawNode($node->span, $node->raw) : $node;
+            $stack[$index] = $current;
+            if ($insideDefine && $directive === 'endef' || !$insideDefine && $directive === 'endif') {
+                $block = array_pop($stack);
+                $children = $block[1];
+                $first = $children[0]->span;
+                $last = $node->span;
+                $span = new SourceSpan(
+                    $first->file,
+                    $first->startOffset,
+                    $last->endOffset,
+                    $first->startLine,
+                    $first->startColumn,
+                    $last->endLine,
+                    $last->endColumn,
+                );
+                $group = $insideDefine
+                    ? new DefineNode($span, '', $children)
+                    : new ConditionalNode($span, '', $children);
+                if ($stack === []) {
+                    $result[] = $group;
+                } else {
+                    $index = count($stack) - 1;
+                    $parent = $stack[$index];
+                    $parent[1][] = $group;
+                    $stack[$index] = $parent;
+                }
             }
-            $result .= $line[$index];
+        }
+        // Retain unterminated constructs as syntax, leaving diagnostics to consumers.
+        while ($stack !== []) {
+            $block = array_pop($stack);
+            if ($stack === []) {
+                $result = [...$result, ...$block[1]];
+            } else {
+                $index = count($stack) - 1;
+                $parent = $stack[$index];
+                $parent[1] = [...$parent[1], ...$block[1]];
+                $stack[$index] = $parent;
+            }
         }
         return $result;
     }
 
-    /**
-     * @pure
-     *
-     * @param array<int, string> $sources
-     */
-    private static function sourceLocation(array $sources, int $lineNumber): ?string
+    private function classify(SourceSpan $span, string $raw): Node
     {
-        $location = null;
-        foreach ($sources as $start => $path) {
-            if ($start > $lineNumber) {
-                break;
-            }
-            $location = $path . ':' . ($lineNumber - $start + 1);
+        if (str_starts_with($raw, "\t")) {
+            return new RecipeNode($span, $raw);
         }
-        return $location;
-    }
-
-    /**
-     * @pure
-     *
-     * @return array{string, ?string}
-     */
-    private static function splitRecipe(string $line): array
-    {
-        if (!str_contains($line, ';')) {
-            return [self::removeComment($line), null];
+        $text = rtrim($raw, "\r\n");
+        $comment = $this->delimiter($text, '#');
+        $text = $comment === null ? $text : substr($text, 0, $comment);
+        if (trim($text) === '') {
+            return new TriviaNode($span, $raw);
         }
-        $depth = 0;
-        for ($index = 0; $index < strlen($line); $index++) {
-            if ($line[$index] === '\\') {
-                $index++;
-                continue;
-            }
-            if ($line[$index] === '$' && isset($line[$index + 1])) {
-                if ($line[$index + 1] === '(' || $line[$index + 1] === '{') {
-                    $depth++;
-                }
-                $index++;
-                continue;
-            }
-            if (($line[$index] === '(' || $line[$index] === '{') && $depth > 0) {
-                $depth++;
-            } elseif (($line[$index] === ')' || $line[$index] === '}') && $depth > 0) {
-                $depth--;
-            }
-            if ($depth > 0) {
-                continue;
-            }
-            if ($line[$index] === '#') {
-                return [self::removeComment($line), null];
-            }
-            if ($line[$index] === ';') {
-                return [self::removeComment(substr($line, offset: 0, length: $index)), substr($line, $index + 1)];
-            }
+        $assignment = $this->assignment($span, $raw, $text);
+        if ($assignment !== null) {
+            return $assignment;
         }
-        return [self::removeComment($line), null];
-    }
-
-    /**
-     * @pure
-     *
-     * @return list<string>
-     */
-    private static function words(string $text): array
-    {
-        $words = preg_split('/\s+/', trim($text), -1, PREG_SPLIT_NO_EMPTY);
-        return $words === false ? [] : $words;
-    }
-
-    /**
-     * @throws MakefileErrorException
-     * @throws ParseException
-     */
-    public function parse(): ParsedMakefile
-    {
-        $definitions = new RuleDefinitions(!($this->configuration->noBuiltinRules ?? false), $this->output);
-        $context = new EvaluationContext();
-        $context->loadedObjects = $this->loadedObjects;
-        $context->guile = $this->guile;
-        $context->reporting = $this->reporting;
-        $context->shell = $this->shell;
-        $context->filesystem = $this->filesystem;
-        $variables = &$context->variables;
-        foreach ($this->defaults as $variable) {
-            $variables[$variable->name] = $variable;
-            if (in_array($variable->origin, ['environment', 'environment override'], true)) {
-                $context->environment->inherited[$variable->name] = $variable->expression;
-            }
+        $matches = [];
+        if (preg_match('/^\s*(-?include|sinclude)(?:[ \t]+(.*)|$)/s', $text, $matches) === 1) {
+            return new IncludeNode($span, $raw, $matches[1], $matches[2] ?? '');
         }
-        foreach ($this->overrides as $variable) {
-            $variables[$variable->name] = $variable;
-        }
-        $inherited = ['MAKEFLAGS', 'MAKEFILES'];
-        foreach ($variables as $variable) {
-            if (in_array($variable->origin, ['environment', 'environment override'], true)) {
-                $inherited[] = $variable->name;
-            }
-        }
-        $exports = new Exports($inherited);
-        $context->exports = $exports;
-        $context->reading->evaluate =
-            /** @throws MakefileErrorException */
-            function (string $text, VariableExpander $expander) use ($definitions, $exports): void {
-                try {
-                    $this->readRules(
-                        $text,
-                        $definitions,
-                        $expander->context->variables,
-                        [],
-                        $exports,
-                        [],
-                        $expander,
-                        $expander->source,
-                    );
-                } catch (ParseException $error) {
-                    throw new MakefileErrorException($error->reason, $expander->source);
-                }
-            };
-        $scope = new VariableExpander($context, $this->output);
-        $variables['MAKEFILE_LIST'] = new Variable('MAKEFILE_LIST', '', false);
-        $variables['.INCLUDE_DIRS'] = new Variable(
-            '.INCLUDE_DIRS',
-            implode(' ', $this->sources->directories()),
-            false,
-            'default',
-        );
-        foreach ($this->sources->evaluations as $text) {
-            $this->readRules($text, $definitions, $variables, [], $exports, [], $scope, '<command-line>');
-        }
-        foreach (self::words($scope->variable('MAKEFILES') === null ? '' : $scope->expand('$(MAKEFILES)')) as $path) {
-            $this->readFile(
-                $this->sources->open($path, optional: true, defaultGoal: false),
-                $definitions,
-                $exports,
-                $scope,
-                [],
-            );
-        }
-        foreach ($this->sources->main as $path) {
-            $this->readFile($this->sources->open($path, main: true), $definitions, $exports, $scope, []);
-        }
-        // GNU make rereads its environment flags after reading all makefiles.
-        if ($scope->variable('GNUMAKEFLAGS') === null) {
-            UndefinedVariable::warn($scope, 'GNUMAKEFLAGS');
-        }
-        $this->configuration?->finishReading($variables, $scope);
-        $context->reading->initial = false;
-        return new ParsedMakefile(
-            $definitions->makefile(
-                array_values($variables),
-                $this->configuration->noBuiltinRules ?? false ? [] : $this->builtinRules,
-                $exports,
-                !($this->configuration->noBuiltinRules ?? false),
-                $context,
-            ),
-            $context,
-        );
-    }
-
-    /**
-     * @param array<int, string> $sources
-     *
-     * @throws ParseException
-     */
-    private function readDefinition(
-        LineReader $reader,
-        string $prefix,
-        int $start,
-        array $sources,
-        ?string $evaluationSource,
-        bool $posix,
-    ): string {
-        $lines = [];
-        $depth = 1;
-        while (($line = $reader->next($prefix, true, $posix)) !== null) {
-            if (!str_starts_with($line, $prefix)) {
-                $directive = trim(self::removeComment($line));
-                $matches = [];
-                if (preg_match('/^define(?:[ \t]+(?![:+?!=])\S|$)/', $directive) === 1) {
-                    $depth++;
-                } elseif (preg_match('/^endef(?:\s+(.*))?$/', $directive, $matches) === 1) {
-                    if (--$depth === 0) {
-                        if (($matches[1] ?? '') !== '') {
-                            $this->output?->writeWarning(
-                                "extraneous text after 'endef' directive",
-                                $evaluationSource ?? self::sourceLocation($sources, $reader->lineNumber),
-                            );
-                        }
-                        return implode("\n", $lines);
-                    }
-                }
-            }
-            $lines[] = $line;
-        }
-        throw new ParseException($start, "missing 'endef', unterminated 'define'");
-    }
-
-    /**
-     * @param list<string> $included
-     *
-     * @throws MakefileErrorException
-     * @throws ParseException
-     */
-    private function readFile(
-        ReadFile $file,
-        RuleDefinitions $definitions,
-        Exports $exports,
-        VariableExpander $scope,
-        array $included,
-    ): void {
-        if ($file->text === null) {
-            if (!$file->optional && $file->source === null && !$this->sources->restarted) {
-                $this->output?->writeWarning($file->path . ': ' . ($file->error ?? 'No such file or directory'));
-            }
-            return;
-        }
-        if (in_array($file->path, $included, true)) {
-            throw new MakefileErrorException("Recursive include `{$file->path}'", $file->source);
-        }
-        $scope->context->variables['MAKEFILE_LIST'] = new Variable(
-            'MAKEFILE_LIST',
-            trim($scope->expand('$(MAKEFILE_LIST)') . ' ' . $file->path),
-            false,
-        );
-        $defaultGoal = $this->sources->defaultGoal;
-        $this->sources->defaultGoal = $file->defaultGoal;
-        try {
-            $this->readRules(
-                str_starts_with($file->text, "\xEF\xBB\xBF") ? substr($file->text, 3) : $file->text,
-                $definitions,
-                $scope->context->variables,
-                [...$included, $file->path],
-                $exports,
-                [1 => $file->displayPath ?? $file->path],
-                $scope,
-            );
-        } finally {
-            $this->sources->defaultGoal = $defaultGoal;
-        }
-    }
-
-    /**
-     * @param array<string, Variable> $variables
-     * @param list<string> $included
-     * @param array<int, string> $sources
-     *
-     * @throws ParseException
-     * @throws MakefileErrorException
-     */
-    private function readLines(
-        string $source,
-        RuleDefinitions $definitions,
-        array &$variables,
-        array $included,
-        Exports $exports,
-        array $sources,
-        VariableExpander $scope,
-        ?string $evaluationSource = null,
-    ): void {
-        $reader = new LineReader($source);
-        $rule = null;
-        $conditionals = new Conditionals();
-
-        while (
-            ($line = $reader->next(
-                $variables['.RECIPEPREFIX']->expression[0] ?? "\t",
-                posix: $scope->context->reading->posix,
-                hasRule: $rule !== null,
-            )) !== null
+        if (
+            preg_match(
+                '/^\s*(?:(?:override|export|unexport|private)[ \t]+)*(define|endef|ifeq|ifneq|ifdef|ifndef|else|endif|undefine|export|unexport|vpath|-?load)(?:[ \t]+(.*)|$)/s',
+                $text,
+                $matches,
+            ) === 1
         ) {
-            $lineNumber = $reader->lineNumber;
-            $location = $evaluationSource ?? self::sourceLocation($sources, $lineNumber);
-            $expander = $scope->atSource($location);
-            if ($rule !== null && str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
-                if (!$conditionals->active()) {
-                    continue;
-                }
-                $rule->addRecipe(substr($line, offset: 1), $location);
-                continue;
-            }
-
-            $uncommented = self::removeComment($line);
-            if (trim($uncommented, " \t\n\r\0\x0B\f") === '') {
-                continue;
-            }
-
-            if (
-                !$conditionals->active()
-                && preg_match('/^\s*(?:(?:override|export|unexport)\s+)*define\s+(?![:+?!=])/', $uncommented) === 1
-            ) {
-                $this->readDefinition(
-                    $reader,
-                    $variables['.RECIPEPREFIX']->expression[0] ?? "\t",
-                    $lineNumber,
-                    $sources,
-                    $evaluationSource,
-                    $scope->context->reading->posix,
-                );
-                continue;
-            }
-            if ($conditionals->read($uncommented, $expander, $lineNumber) || !$conditionals->active()) {
-                continue;
-            }
-
-            if ($rule !== null) {
-                $definitions->addRule($rule->definition());
-                $rule = null;
-            }
-
-            $uncommented = ltrim($uncommented);
-            $matches = [];
-            $export = null;
-            $origin = 'file';
-            $private = false;
-            while (
-                preg_match('/^\s*(override|private|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1
-            ) {
-                /** @var array{non-falsy-string, 'override'|'private'|'export'|'unexport', string} $matches */
-                if (preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[2])) === 1) {
-                    break;
-                }
-                if ($matches[1] === 'override') {
-                    $origin = 'override';
-                } elseif ($matches[1] === 'private') {
-                    $private = true;
-                } else {
-                    $export = $matches[1] === 'export';
-                }
-                $uncommented = ltrim($matches[2]);
-            }
-            if (
-                preg_match('/^define(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
-                && preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
-            ) {
-                $header = Assignment::parse($matches[1] ?? '', allowWhitespace: true) ?? new Assignment(
-                    trim($matches[1] ?? ''),
-                    '=',
-                    '',
-                );
-                $header = $header->resolveName($expander);
-                if ($header->expression !== '') {
-                    $this->output?->writeWarning("extraneous text after 'define' directive", $location);
-                }
-                $body = $this->readDefinition(
-                    $reader,
-                    $variables['.RECIPEPREFIX']->expression[0] ?? "\t",
-                    $lineNumber,
-                    $sources,
-                    $evaluationSource,
-                    $scope->context->reading->posix,
-                );
-                new Assignment($header->name, $header->operator, $body)->apply(
-                    $variables,
-                    $origin,
-                    $this->output,
-                    $location,
-                    $expander,
-                    $private,
-                );
-                if ($header->name === 'MAKEFLAGS') {
-                    $this->configuration?->updateMakeflags($variables, $expander, $origin);
-                    $variables['.INCLUDE_DIRS'] = new Variable(
-                        '.INCLUDE_DIRS',
-                        implode(' ', $this->sources->directories()),
-                        false,
-                        'default',
-                    );
-                }
-                if ($export !== null) {
-                    $exports->set([$header->name], $export);
-                }
-                continue;
-            }
-            if (
-                preg_match('/^undefine(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
-                && preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
-            ) {
-                $name = new Assignment(trim($matches[1] ?? ''), '=', '')->resolveName($expander)->name;
-                Assignment::undefine($variables, $name, $origin);
-                continue;
-            }
-            if (preg_match('/^endef(?:\s|$)/', $uncommented) === 1 && Assignment::parse($uncommented) === null) {
-                throw new ParseException($lineNumber, "extraneous 'endef'");
-            }
-            if ($export !== null && Assignment::parse($uncommented) === null) {
-                $names = self::words($expander->expand($uncommented));
-                $exports->set($names, $export);
-                foreach ($names as $name) {
-                    $variables[$name] ??= new Variable($name, '', false);
-                }
-                continue;
-            }
-            if (preg_match('/^\\.EXPORT_ALL_VARIABLES\\s*:/', $uncommented) === 1) {
-                $exports->set([], true);
-            }
-
-            $assignment = Assignment::parse($uncommented);
+            return new DirectiveNode($span, $raw, $matches[1], $matches[2] ?? '');
+        }
+        $colon = $this->delimiter($text, ':');
+        if ($colon !== null) {
+            $value = substr($text, $colon + 1);
+            $assignmentSpan = $this->tailSpan($span, $raw, $colon + 1);
+            $assignment = $this->assignment($assignmentSpan, substr($raw, $colon + 1), $value);
             if ($assignment !== null) {
-                $assignment = $assignment->resolveName($expander);
-                if ($export !== null) {
-                    $exports->set([$assignment->name], $export);
-                }
-                $assignment->apply($variables, $origin, $this->output, $location, $expander, $private);
-                if ($assignment->name === 'MAKEFLAGS') {
-                    $this->configuration?->updateMakeflags($variables, $expander, $origin);
-                    $variables['.INCLUDE_DIRS'] = new Variable(
-                        '.INCLUDE_DIRS',
-                        implode(' ', $this->sources->directories()),
-                        false,
-                        'default',
-                    );
-                }
-                continue;
+                return new TargetAssignmentNode($span, $raw, substr($text, 0, $colon), $assignment);
             }
-
-            if (preg_match('/^\s*(-?include|sinclude)(?:\s+(.*))?$/', $uncommented, $matches) === 1) {
-                foreach (self::words($expander->expand($matches[2] ?? '')) as $pattern) {
-                    foreach ($this->sources->matching($pattern) as $path) {
-                        $this->readFile(
-                            $this->sources->open(
-                                $path,
-                                $matches[1] !== 'include',
-                                $this->sources->defaultGoal,
-                                $location,
-                            ),
-                            $definitions,
-                            $exports,
-                            $scope,
-                            $included,
-                        );
-                    }
-                }
-                continue;
+            $semicolon = $this->delimiter($text, ';');
+            if ($semicolon === null) {
+                return new RuleNode($span, $raw, $text);
             }
-
-            if (preg_match('/^(-?load)(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
-                foreach (self::words($expander->expand($matches[2] ?? '')) as $name) {
-                    $object = $scope->context->loadedObjects->load($name, $matches[1] === '-load', $expander);
-                    $contents = $this->sources->filesystem->read($object->path);
-                    $this->sources->read[] = new ReadFile(
-                        $object->path,
-                        $contents['text'],
-                        $contents['modifiedAt'],
-                        $object->optional,
-                        false,
-                        $object->source,
-                        !$object->keep,
-                    );
-                }
-                continue;
-            }
-
-            if (preg_match('/^vpath(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1) {
-                $definitions->searchPaths->define(self::words($expander->expand($matches[1] ?? '')));
-                continue;
-            }
-
-            if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
-                throw new ParseException($lineNumber, 'Recipe without a rule');
-            }
-            if (ScopedAssignment::read($uncommented, $definitions->targetVariables, $expander, $this->output)) {
-                continue;
-            }
-
-            [$header, $recipe] = self::splitRecipe($line);
-            $expanded = $expander->expand($header);
-            if (trim($expanded, " \t\n\r\0\x0B\f") === '' && $recipe === null) {
-                continue;
-            }
-            if (!$scope->context->reading->initial) {
-                throw new MakefileErrorException(
-                    'prerequisites cannot be defined in recipes',
-                    $scope->secondary ? null : $evaluationSource,
-                    contextual: !$scope->secondary,
-                );
-            }
-            if (DependencySyntax::delimiter($expanded, ':') === null) {
-                if (
-                    ($variables['.RECIPEPREFIX']->expression[0] ?? "\t") === "\t"
-                    && str_starts_with($line, '        ')
-                ) {
-                    throw new ParseException($lineNumber, 'missing separator (did you mean TAB instead of 8 spaces?)');
-                }
-                if (preg_match('/^\s*ifn?eq\S/', $line) === 1) {
-                    throw new ParseException(
-                        $lineNumber,
-                        'missing separator (ifeq/ifneq must be followed by whitespace)',
-                    );
-                }
-            }
-            $rule = RuleSyntax::parse($expanded, $lineNumber, $location, $this->sources->filesystem);
-            if (in_array('.POSIX', $rule->targetNames, true)) {
-                $scope->context->reading->posix = true;
-                foreach (Builtins::posixVariables() as $variable) {
-                    if (($variables[$variable->name]->origin ?? 'default') === 'default') {
-                        $variables[$variable->name] = $variable;
-                    }
-                }
-            }
-            if ($this->sources->defaultGoal) {
-                $definitions->selectDefault($rule->definition(), $scope);
-            }
-            if ($recipe !== null) {
-                $rule->addRecipe(ltrim($recipe), $location);
-            }
+            $recipeSpan = $this->tailSpan($span, $raw, $semicolon + 1);
+            return new RuleNode(
+                $span,
+                $raw,
+                substr($text, 0, $semicolon),
+                new RecipeNode($recipeSpan, substr($raw, $semicolon + 1)),
+            );
         }
-
-        $conditionals->finish($reader->lineNumber);
-        if ($rule !== null) {
-            $definitions->addRule($rule->definition());
-        }
+        return new RawNode($span, $raw);
     }
 
-    /**
-     * @param array<string, Variable> $variables
-     * @param list<string> $included
-     * @param array<int, string> $sources
-     *
-     * @throws MakefileErrorException
-     * @throws ParseException
-     */
-    private function readRules(
-        string $source,
-        RuleDefinitions $definitions,
-        array &$variables,
-        array $included,
-        Exports $exports,
-        array $sources,
-        VariableExpander $scope,
-        ?string $evaluationSource = null,
-    ): void {
-        try {
-            $this->readLines(
-                $source,
-                $definitions,
-                $variables,
-                $included,
-                $exports,
-                $sources,
-                $scope,
-                $evaluationSource,
-            );
-        } catch (ParseException $error) {
-            $location = $evaluationSource ?? self::sourceLocation($sources, $error->lineNumber);
-            if ($location === null) {
-                throw $error;
+    private function delimiter(string $text, string $delimiter): ?int
+    {
+        $depth = 0;
+        for ($index = 0; $index < strlen($text); $index++) {
+            $character = $text[$index];
+            if ($character === '\\') {
+                $index++;
+                continue;
             }
-            throw new MakefileErrorException($error->reason, $location);
+            if (($character === '(' || $character === '{') && ($depth > 0 || $index > 0 && $text[$index - 1] === '$')) {
+                $depth++;
+            } elseif (($character === ')' || $character === '}') && $depth > 0) {
+                $depth--;
+            } elseif ($depth === 0 && $character === $delimiter) {
+                return $index;
+            }
         }
+        return null;
+    }
+
+    private function tailSpan(SourceSpan $span, string $raw, int $offset): SourceSpan
+    {
+        $prefix = substr($raw, 0, $offset);
+        $newline = strrpos($prefix, "\n");
+        return new SourceSpan(
+            $span->file,
+            $span->startOffset + $offset,
+            $span->endOffset,
+            $span->startLine + substr_count($prefix, "\n"),
+            $newline === false ? $span->startColumn + $offset : strlen($prefix) - $newline,
+            $span->endLine,
+            $span->endColumn,
+        );
     }
 }
