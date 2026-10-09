@@ -15,7 +15,7 @@ final readonly class Walker
         foreach ($node->children as $child) {
             $this->walk($child, $visit);
         }
-        if ($node instanceof RuleNode && $node->inlineRecipe !== null) {
+        if (($node instanceof RuleNode || $node instanceof ExpressionNode) && $node->inlineRecipe !== null) {
             $this->walk($node->inlineRecipe, $visit);
         }
         if ($node instanceof TargetAssignmentNode) {

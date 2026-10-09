@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser\Ast;
 
-final readonly class RecipeNode extends Node
+/**
+ * Syntax whose rule header can only be determined after expansion.
+ */
+final readonly class ExpressionNode extends Node
 {
     public function __construct(
         SourceSpan $span,
         string $raw,
-        public string $expression,
+        public string $header,
+        public ?RecipeNode $inlineRecipe = null,
     ) {
         parent::__construct($span, $raw);
     }

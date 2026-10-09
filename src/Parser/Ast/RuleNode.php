@@ -11,6 +11,7 @@ final readonly class RuleNode extends Node
         string $raw,
         public string $header,
         public ?RecipeNode $inlineRecipe = null,
+        public bool $exportAll = false,
     ) {
         parent::__construct($span, $raw);
     }

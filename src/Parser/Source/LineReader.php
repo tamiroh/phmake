@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser\Source;
 
-use Tamiroh\Phmake\Makefile\Variable\Assignment;
 use Tamiroh\Phmake\Parser\Ast\MakefileNode;
 use Tamiroh\Phmake\Parser\Ast\Node;
-use Tamiroh\Phmake\Parser\Syntax\ScopedAssignment;
+use Tamiroh\Phmake\Parser\Ast\SourceSpan;
+use Tamiroh\Phmake\Parser\Syntax\AssignmentSyntax;
+use Tamiroh\Phmake\Parser\Syntax\LineSyntax;
 
+use function array_slice;
 use function count;
 use function explode;
+use function implode;
 use function ltrim;
 use function rtrim;
 use function str_contains;
-use function str_replace;
+use function str_ends_with;
 use function str_starts_with;
 use function strcspn;
 use function strlen;
@@ -24,6 +27,16 @@ final class LineReader
 {
     /** @var list<string> */
     private readonly array $lines;
+
+    /** @var list<string> */
+    private readonly array $originalLines;
+
+    /** @var list<int> */
+    private readonly array $offsets;
+
+    private readonly string $file;
+
+    private readonly int $endOffset;
 
     /** @var array<int, Node> */
     private readonly array $nodes;
@@ -39,11 +52,26 @@ final class LineReader
     public function __construct(string|MakefileNode $source)
     {
         if ($source instanceof MakefileNode) {
-            [$this->lines, $this->nodes] = self::syntaxLines($source);
-            return;
+            [$original, $this->nodes, $offset] = self::syntaxLines($source);
+            $this->file = $source->span->file;
+        } else {
+            $original = explode("\n", $source);
+            $this->nodes = [];
+            $this->file = '<input>';
+            $offset = 0;
         }
-        $this->lines = explode("\n", str_replace("\r\n", replace: "\n", subject: $source));
-        $this->nodes = [];
+        $this->originalLines = $original;
+        $lines = [];
+        $offsets = [];
+        foreach ($original as $index => $line) {
+            $offsets[] = $offset;
+            $terminated = $index < (count($original) - 1);
+            $lines[] = $terminated && str_ends_with($line, "\r") ? substr($line, 0, -1) : $line;
+            $offset += strlen($line) + ($terminated ? 1 : 0);
+        }
+        $this->lines = $lines;
+        $this->offsets = $offsets;
+        $this->endOffset = $offset;
     }
 
     /**
@@ -61,7 +89,7 @@ final class LineReader
     }
 
     /**
-     * @return array{list<string>, array<int, Node>}
+     * @return array{list<string>, array<int, Node>, int}
      */
     private static function syntaxLines(MakefileNode $source): array
     {
@@ -69,16 +97,17 @@ final class LineReader
         $pending = '';
         $nodes = [];
         $first = true;
+        $offset = 0;
         foreach (self::leaves($source) as $node) {
             $raw = $node->raw;
             if ($first && str_starts_with($raw, "\xEF\xBB\xBF")) {
                 $raw = substr($raw, 3);
+                $offset = 3;
             }
             $first = false;
             if ($raw === '') {
                 continue;
             }
-            $raw = str_replace("\r\n", "\n", $raw);
             $index = count($lines);
             // Only complete single-line leaves may bypass contextual syntax parsing.
             if ($pending === '' && !str_contains(rtrim($raw, "\n"), "\n")) {
@@ -95,7 +124,7 @@ final class LineReader
             }
         }
         $lines[] = $pending;
-        return [$lines, $nodes];
+        return [$lines, $nodes, $offset];
     }
 
     public function next(
@@ -132,12 +161,38 @@ final class LineReader
         return $line;
     }
 
+    public function raw(): string
+    {
+        $raw = implode("\n", array_slice(
+            $this->originalLines,
+            $this->lineNumber - 1,
+            $this->offset - $this->lineNumber + 1,
+        ));
+        return $raw . ($this->offset < count($this->lines) ? "\n" : '');
+    }
+
+    public function span(): SourceSpan
+    {
+        $start = $this->lineNumber - 1;
+        $endedLine = $this->offset < count($this->lines);
+        $last = $this->originalLines[$this->offset - 1] ?? '';
+        return new SourceSpan(
+            $this->file,
+            $this->offsets[$start] ?? 0,
+            $this->offsets[$this->offset] ?? $this->endOffset,
+            $this->lineNumber,
+            $start === 0 ? ($this->offsets[0] ?? 0) + 1 : 1,
+            $endedLine ? $this->offset + 1 : $this->offset,
+            $endedLine ? 1 : strlen($last) + 1,
+        );
+    }
+
     private function isRecipe(string $line, string $recipePrefix, bool $hasRule): bool
     {
         if ($hasRule && str_starts_with($line, $recipePrefix)) {
             return true;
         }
-        if (Assignment::parse($line) !== null) {
+        if (AssignmentSyntax::parse($line) !== null) {
             return false;
         }
         $hasColon = false;
@@ -149,7 +204,8 @@ final class LineReader
                 return false;
             } elseif ($line[$index] === ':') {
                 $value = substr($line, $index + 1);
-                if (ScopedAssignment::parse($value) !== null) {
+                [$value] = LineSyntax::modifiers($value, scoped: true);
+                if (AssignmentSyntax::parse($value) !== null) {
                     return false;
                 }
                 $hasColon = true;

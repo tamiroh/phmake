@@ -16,6 +16,7 @@ final readonly class AssignmentNode extends Node
         public string $operator,
         public string $expression,
         public array $modifiers = [],
+        public bool $exportAll = false,
     ) {
         parent::__construct($span, $raw);
     }

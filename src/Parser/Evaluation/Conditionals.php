@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser\Syntax;
+namespace Tamiroh\Phmake\Parser\Evaluation;
 
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Parser\Ast\ConditionalDirectiveNode;
 use Tamiroh\Phmake\Parser\ParseException;
 
 use function array_key_last;
@@ -44,17 +45,12 @@ final class Conditionals
      * @throws MakefileErrorException
      * @throws ParseException
      */
-    public function read(string $line, VariableExpander $expander, int $lineNumber): bool
+    public function read(ConditionalDirectiveNode $node, VariableExpander $expander): void
     {
+        $directive = $node->directive;
+        $argument = $node->expression;
+        $lineNumber = $node->span->startLine;
         $matches = [];
-        if (preg_match('/^\s*(ifdef|ifndef|ifeq|ifneq|else|endif)(?:[ \t]+|$)(.*)$/s', $line, $matches) !== 1) {
-            return false;
-        }
-        /** @var array{non-falsy-string, 'ifdef'|'ifndef'|'ifeq'|'ifneq'|'else'|'endif', string} $matches */
-        [, $directive, $argument] = $matches;
-        if (preg_match('/^\s*(?::=|\+=|\?=|=)/', $argument) === 1) {
-            return false;
-        }
         $argument = trim($argument);
         if ($directive === 'endif') {
             if ($this->stack === []) {
@@ -64,7 +60,7 @@ final class Conditionals
                 throw new ParseException($lineNumber, "extraneous text after 'endif'");
             }
             array_pop($this->stack);
-            return true;
+            return;
         }
         if ($directive === 'else') {
             $index = array_key_last($this->stack);
@@ -88,12 +84,11 @@ final class Conditionals
             }
             $frame['matched'] = $frame['matched'] || $frame['active'];
             $this->stack[$index] = $frame;
-            return true;
+            return;
         }
         $parent = $this->active();
         $active = $parent && $this->evaluate($directive, $argument, $expander, $lineNumber);
         $this->stack[] = ['parent' => $parent, 'active' => $active, 'matched' => $active, 'else' => false];
-        return true;
     }
 
     /**

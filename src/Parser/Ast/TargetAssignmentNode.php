@@ -11,6 +11,7 @@ final readonly class TargetAssignmentNode extends Node
         string $raw,
         public string $targets,
         public AssignmentNode $assignment,
+        public bool $exportAll = false,
     ) {
         parent::__construct($span, $raw);
     }
