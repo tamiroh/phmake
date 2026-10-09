@@ -36,6 +36,7 @@ use function intdiv;
 use function ltrim;
 use function preg_match;
 use function preg_split;
+use function rtrim;
 use function str_contains;
 use function str_repeat;
 use function str_starts_with;
@@ -475,6 +476,7 @@ final readonly class Evaluator
                         $export = $matches[1] === 'export';
                     }
                     $uncommented = ltrim($matches[2]);
+                    $syntax = null;
                 }
                 $assignment = Assignment::parse($uncommented);
             }
@@ -617,11 +619,27 @@ final readonly class Evaluator
             if (str_starts_with($line, $variables['.RECIPEPREFIX']->expression[0] ?? "\t")) {
                 throw new ParseException($lineNumber, 'Recipe without a rule');
             }
-            if (ScopedAssignment::read($uncommented, $definitions->targetVariables, $expander, $this->output)) {
+            // Scoped modifiers accept additional whitespace at read time; the
+            // lexical assignment parser currently recognizes spaces and tabs only.
+            if (ScopedAssignment::read(
+                $syntax instanceof Ast\TargetAssignmentNode && preg_match('/[\x0B\x0C]/', $syntax->raw) !== 1
+                    ? $syntax
+                    : $uncommented,
+                $definitions->targetVariables,
+                $expander,
+                $this->output,
+            )) {
                 continue;
             }
 
-            [$header, $recipe] = self::splitRecipe($line);
+            // Short variable references and dollar escaping can change where a
+            // semicolon belongs; keep their contextual splitter until syntax is unified.
+            if ($syntax instanceof Ast\RuleNode && preg_match('/\$[^{(]/', $syntax->raw) !== 1) {
+                $header = $syntax->header;
+                $recipe = $syntax->inlineRecipe === null ? null : rtrim($syntax->inlineRecipe->raw, characters: "\n");
+            } else {
+                [$header, $recipe] = self::splitRecipe($line);
+            }
             $expanded = $expander->expand($header);
             if (trim($expanded, " \t\n\r\0\x0B\f") === '' && $recipe === null) {
                 continue;

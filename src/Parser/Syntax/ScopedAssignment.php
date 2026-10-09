@@ -11,6 +11,7 @@ use Tamiroh\Phmake\Makefile\Rule\DependencySyntax;
 use Tamiroh\Phmake\Makefile\Rule\FileName;
 use Tamiroh\Phmake\Makefile\Variable\Assignment;
 use Tamiroh\Phmake\Makefile\Variable\TargetVariables;
+use Tamiroh\Phmake\Parser\Ast\TargetAssignmentNode;
 
 use function ltrim;
 use function preg_match;
@@ -55,20 +56,43 @@ final readonly class ScopedAssignment
      * @throws MakefileErrorException
      */
     public static function read(
-        string $line,
+        string|TargetAssignmentNode $line,
         TargetVariables $variables,
         VariableExpander $expander,
         ?Output $output,
     ): bool {
-        $colon = DependencySyntax::delimiter($line, ':');
-        if ($colon === null) {
-            return false;
+        if ($line instanceof TargetAssignmentNode) {
+            $targets = $line->targets;
+            $origin = 'file';
+            $private = false;
+            $export = null;
+            foreach ($line->assignment->modifiers as $modifier) {
+                if ($modifier === 'override') {
+                    $origin = 'override';
+                } elseif ($modifier === 'private') {
+                    $private = true;
+                } else {
+                    $export = $modifier === 'export';
+                }
+            }
+            $declaration = new self(
+                new Assignment($line->assignment->name, $line->assignment->operator, $line->assignment->expression),
+                $origin,
+                $private,
+                $export,
+            );
+        } else {
+            $colon = DependencySyntax::delimiter($line, ':');
+            if ($colon === null) {
+                return false;
+            }
+            $declaration = self::parse(substr($line, $colon + 1));
+            if ($declaration === null) {
+                return false;
+            }
+            $targets = substr($line, 0, $colon);
         }
-        $declaration = self::parse(substr($line, $colon + 1));
-        if ($declaration === null) {
-            return false;
-        }
-        foreach (DependencySyntax::words($expander->expand(substr($line, 0, $colon))) as $target) {
+        foreach (DependencySyntax::words($expander->expand($targets)) as $target) {
             $variables->define(
                 FileName::normalize($target),
                 $declaration->assignment,
