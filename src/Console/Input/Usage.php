@@ -18,6 +18,7 @@ final class Usage
     {
         return (
             "Usage: {$program} [options] [target ...]\n"
+            . "  --format [FILE]            Format a Makefile in place (standalone).\n"
             . "  -f FILE, --file=FILE       Read FILE as a makefile (- for standard input).\n"
             . "  -C DIR, --directory=DIR    Change directory before reading makefiles.\n"
             . "  -j [N], --jobs[=N]        Run recipes in parallel.\n"

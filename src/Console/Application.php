@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console;
 
 use Phar;
+use Tamiroh\Phmake\Console\Commands\FormatCommand;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Input\Usage;
 use Tamiroh\Phmake\Console\Input\UsageException;
@@ -22,6 +23,7 @@ use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
 use Tamiroh\Phmake\Makefile\Variable\Variable;
 use Tamiroh\Phmake\Parser\ParseException;
 
+use function array_slice;
 use function basename;
 use function chdir;
 use function dirname;
@@ -42,6 +44,9 @@ final readonly class Application
      */
     public function run(array $arguments): void
     {
+        if (($arguments[0] ?? null) === '--format') {
+            exit(new FormatCommand()->run(array_slice($arguments, 1)));
+        }
         $signals = new Signals();
         $status = 0;
         try {
