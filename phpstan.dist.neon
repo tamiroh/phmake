@@ -1,4 +1,5 @@
 includes:
+	- vendor/spaze/phpstan-disallowed-calls/extension.neon
 	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
 	- vendor/phpstan/phpstan-strict-rules/rules.neon
 	- vendor/phpstan/phpstan-deprecation-rules/rules.neon
@@ -33,3 +34,65 @@ parameters:
 			missingCheckedExceptionInThrows: true
 			throwTypeCovariance: true
 			tooWideImplicitThrowType: true
+	# Host operations are permitted only in adapters and tests.
+	filesRootDir: %rootDir%/../../..
+	disallowedFunctionCalls:
+		-
+			function:
+				- 'fwrite()'
+				- 'fputs()'
+				- 'fprintf()'
+				- 'printf()'
+				- 'vprintf()'
+				- 'var_dump()'
+				- 'error_log()'
+				- 'exec()'
+				- 'system()'
+				- 'passthru()'
+				- 'shell_exec()'
+				- 'popen()'
+				- 'proc_*()'
+				- 'pcntl_*()'
+				- 'posix_*()'
+				- 'fopen()'
+				- 'opendir()'
+				- 'scandir()'
+				- 'glob()'
+				- 'file()'
+				- 'file_*()'
+				- 'is_file()'
+				- 'is_dir()'
+				- 'is_link()'
+				- 'is_readable()'
+				- 'is_writable()'
+				- 'filemtime()'
+				- 'stat()'
+				- 'lstat()'
+				- 'clearstatcache()'
+				- 'touch()'
+				- 'unlink()'
+				- 'rename()'
+				- 'copy()'
+				- 'mkdir()'
+				- 'rmdir()'
+				- 'readlink()'
+				- 'realpath()'
+				- 'tempnam()'
+				- 'tmpfile()'
+				- 'getcwd()'
+				- 'chdir()'
+				- 'getenv()'
+				- 'putenv()'
+				- 'sleep()'
+				- 'usleep()'
+				- 'time_nanosleep()'
+				- 'time()'
+				- 'microtime()'
+				- 'hrtime()'
+				- 'rand()'
+				- 'mt_rand()'
+				- 'random_int()'
+				- 'random_bytes()'
+			allowIn:
+				- src/Console/*
+				- tests/*
