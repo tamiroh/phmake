@@ -13,8 +13,8 @@ use function strlen;
 use function substr;
 
 /**
- * Emits syntax in source order. Unresolved read-time state disables whitespace
- * changes for the rest of the file, including across conditional branches.
+ * Emits syntax in source order. Ordinary variable references stay unexpanded.
+ * Explicit read-time syntax changes disable subsequent whitespace normalization.
  */
 final class Printer
 {
@@ -43,9 +43,8 @@ final class Printer
         }
         if (
             $node instanceof Ast\IncludeNode
-            || $node instanceof Ast\ExpressionNode
             || str_contains($node->raw, '.RECIPEPREFIX')
-            || str_contains($node->raw, '$')
+            || preg_match('/\$[({]eval[ \t]/', $node->raw) === 1
         ) {
             $this->normalize = false;
         }
@@ -85,7 +84,10 @@ final class Printer
         if ($comment !== '' && !str_starts_with($comment, '#')) {
             return $node->raw;
         }
-        return $parts[1] . $node->name . ' ' . $node->operator . ' ' . $node->expression . $comment . ($parts[5] ?? '');
+        $value = $node->expression . $comment;
+        return (
+            $parts[1] . $node->name . ' ' . $node->operator . ($value === '' ? '' : ' ' . $value) . ($parts[5] ?? '')
+        );
     }
 
     /**
