@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser\Ast;
 
+use Override;
+
 final readonly class DefineHeaderNode extends Node
 {
     public function __construct(
@@ -13,5 +15,14 @@ final readonly class DefineHeaderNode extends Node
         public bool $skipWhenInactive,
     ) {
         parent::__construct($span, $raw);
+    }
+
+    /**
+     * @return list<Node>
+     */
+    #[Override]
+    public function syntaxChildren(): array
+    {
+        return [$this->assignment];
     }
 }

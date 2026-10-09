@@ -18,4 +18,17 @@ final readonly class SourceSpan
         public int $endLine,
         public int $endColumn,
     ) {}
+
+    public function through(self $end): self
+    {
+        return new self(
+            $this->file,
+            $this->startOffset,
+            $end->endOffset,
+            $this->startLine,
+            $this->startColumn,
+            $end->endLine,
+            $end->endColumn,
+        );
+    }
 }

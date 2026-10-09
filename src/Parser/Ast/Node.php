@@ -31,4 +31,15 @@ abstract readonly class Node
         }
         return $source;
     }
+
+    /**
+     * Structural children for inspection. Unlike the lossless source partition in
+     * $children, this also exposes branches and fields embedded in a source leaf.
+     *
+     * @return list<Node>
+     */
+    public function syntaxChildren(): array
+    {
+        return $this->children;
+    }
 }

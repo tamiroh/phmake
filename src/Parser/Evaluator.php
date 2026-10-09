@@ -24,6 +24,7 @@ use Tamiroh\Phmake\Makefile\RuleDefinitions;
 use Tamiroh\Phmake\Makefile\Variable\Assignment;
 use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
 use Tamiroh\Phmake\Makefile\Variable\Variable;
+use Tamiroh\Phmake\Parser\Evaluation\Assignments;
 use Tamiroh\Phmake\Parser\Evaluation\Conditionals;
 use Tamiroh\Phmake\Parser\Evaluation\Rule;
 use Tamiroh\Phmake\Parser\Evaluation\RuleSyntax;
@@ -43,6 +44,8 @@ use const PREG_SPLIT_NO_EMPTY;
 
 final readonly class Evaluator
 {
+    private Assignments $assignments;
+
     /**
      * @param list<Variable> $defaults
      * @param array<string, Variable> $overrides
@@ -60,33 +63,8 @@ final readonly class Evaluator
         private ReportingOptions $reporting = new ReportingOptions(),
         private LoadedObjects $loadedObjects = new LoadedObjects(),
         private ?Guile $guile = null,
-    ) {}
-
-    private static function assignment(Ast\AssignmentNode $node): Assignment
-    {
-        return new Assignment($node->name, $node->operator, $node->expression);
-    }
-
-    /**
-     * @param list<string> $modifiers
-     *
-     * @return array{string, bool, ?bool}
-     */
-    private static function modifiers(array $modifiers): array
-    {
-        $origin = 'file';
-        $private = false;
-        $export = null;
-        foreach ($modifiers as $modifier) {
-            if ($modifier === 'override') {
-                $origin = 'override';
-            } elseif ($modifier === 'private') {
-                $private = true;
-            } else {
-                $export = $modifier === 'export';
-            }
-        }
-        return [$origin, $private, $export];
+    ) {
+        $this->assignments = new Assignments($this->sources, $this->output, $this->configuration);
     }
 
     /**
@@ -254,7 +232,7 @@ final readonly class Evaluator
     ): void {
         switch ($node->directive) {
             case 'undefine':
-                [$origin] = self::modifiers($node->modifiers);
+                [$origin] = Assignments::modifiers($node->modifiers);
                 Assignment::undefine(
                     $variables,
                     new Assignment($node->expression, '=', '')->resolveName($expander)->name,
@@ -394,12 +372,12 @@ final readonly class Evaluator
                 $rule = null;
             }
             if ($node instanceof Ast\DefineHeaderNode) {
-                $header = self::assignment($node->assignment)->resolveName($expander);
+                $header = Assignments::assignment($node->assignment)->resolveName($expander);
                 if ($header->expression !== '') {
                     $this->output?->writeWarning("extraneous text after 'define' directive", $location);
                 }
                 $body = $this->definition($reader, $node, $variables, $scope, $sources, $evaluationSource);
-                $this->storeAssignment(
+                $this->assignments->store(
                     new Assignment($header->name, $header->operator, $body),
                     $node->assignment->modifiers,
                     $variables,
@@ -413,8 +391,8 @@ final readonly class Evaluator
                 if ($node->exportAll) {
                     $exports->set([], true);
                 }
-                $this->storeAssignment(
-                    self::assignment($node)->resolveName($expander),
+                $this->assignments->store(
+                    Assignments::assignment($node)->resolveName($expander),
                     $node->modifiers,
                     $variables,
                     $exports,
@@ -452,8 +430,8 @@ final readonly class Evaluator
                 if ($node->exportAll) {
                     $exports->set([], true);
                 }
-                [$origin, $private, $export] = self::modifiers($node->assignment->modifiers);
-                $assignment = self::assignment($node->assignment);
+                [$origin, $private, $export] = Assignments::modifiers($node->assignment->modifiers);
+                $assignment = Assignments::assignment($node->assignment);
                 foreach (DependencySyntax::words($expander->expand($node->targets)) as $target) {
                     $definitions->targetVariables->define(
                         FileName::normalize($target),
@@ -577,38 +555,5 @@ final readonly class Evaluator
             $rule->addRecipe(ltrim($node->inlineRecipe->expression), $expander->source);
         }
         return $rule;
-    }
-
-    /**
-     * @param list<string> $modifiers
-     * @param array<string, Variable> $variables
-     *
-     * @throws MakefileErrorException
-     */
-    private function storeAssignment(
-        Assignment $assignment,
-        array $modifiers,
-        array &$variables,
-        Exports $exports,
-        VariableExpander $expander,
-        bool $definition = false,
-    ): void {
-        [$origin, $private, $export] = self::modifiers($modifiers);
-        if (!$definition && $export !== null) {
-            $exports->set([$assignment->name], $export);
-        }
-        $assignment->apply($variables, $origin, $this->output, $expander->source, $expander, $private);
-        if ($assignment->name === 'MAKEFLAGS') {
-            $this->configuration?->updateMakeflags($variables, $expander, $origin);
-            $variables['.INCLUDE_DIRS'] = new Variable(
-                '.INCLUDE_DIRS',
-                implode(' ', $this->sources->directories()),
-                false,
-                'default',
-            );
-        }
-        if ($definition && $export !== null) {
-            $exports->set([$assignment->name], $export);
-        }
     }
 }
