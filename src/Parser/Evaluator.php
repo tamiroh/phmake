@@ -259,14 +259,7 @@ final readonly class Evaluator
             );
         }
         if ($ast !== null) {
-            $this->readFile(
-                new ReadFile($ast->span->file, $ast->source(), null),
-                $definitions,
-                $exports,
-                $scope,
-                [],
-                $ast,
-            );
+            $this->readFile(new ReadFile($ast->span->file, null, null), $definitions, $exports, $scope, [], $ast);
         } else {
             foreach ($this->sources->main as $path) {
                 $this->readFile($this->sources->open($path, main: true), $definitions, $exports, $scope, []);
@@ -342,7 +335,8 @@ final readonly class Evaluator
         array $included,
         ?Ast\MakefileNode $ast = null,
     ): void {
-        if ($file->text === null) {
+        $source = $ast ?? $file->text;
+        if ($source === null) {
             if (!$file->optional && $file->source === null && !$this->sources->restarted) {
                 $this->output?->writeWarning($file->path . ': ' . ($file->error ?? 'No such file or directory'));
             }
@@ -360,7 +354,7 @@ final readonly class Evaluator
         $this->sources->defaultGoal = $file->defaultGoal;
         try {
             $this->readRules(
-                $ast ?? (str_starts_with($file->text, "\xEF\xBB\xBF") ? substr($file->text, 3) : $file->text),
+                $source,
                 $definitions,
                 $scope->context->variables,
                 [...$included, $file->path],
@@ -393,8 +387,7 @@ final readonly class Evaluator
     ): void {
         // Logical lines depend on read-time state (.POSIX, .RECIPEPREFIX and eval).
         // Resolve the lossless syntax here, never in the pure parser.
-        $source = $ast->source();
-        $reader = new LineReader(str_starts_with($source, "\xEF\xBB\xBF") ? substr($source, 3) : $source);
+        $reader = new LineReader($ast);
         $rule = null;
         $conditionals = new Conditionals();
 
@@ -445,28 +438,49 @@ final readonly class Evaluator
             }
 
             $uncommented = ltrim($uncommented);
+            // Escapes and continuation folding still require the contextual reader.
+            $syntax = $reader->node;
+            if ($syntax !== null && (str_contains($syntax->raw, '\\') || str_contains($syntax->raw, "\r"))) {
+                $syntax = null;
+            }
             $matches = [];
             $export = null;
             $origin = 'file';
             $private = false;
-            while (
-                preg_match('/^\s*(override|private|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches) === 1
-            ) {
-                /** @var array{non-falsy-string, 'override'|'private'|'export'|'unexport', string} $matches */
-                if (preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[2])) === 1) {
-                    break;
+            if ($syntax instanceof Ast\AssignmentNode) {
+                foreach ($syntax->modifiers as $modifier) {
+                    if ($modifier === 'override') {
+                        $origin = 'override';
+                    } elseif ($modifier === 'private') {
+                        $private = true;
+                    } else {
+                        $export = $modifier === 'export';
+                    }
                 }
-                if ($matches[1] === 'override') {
-                    $origin = 'override';
-                } elseif ($matches[1] === 'private') {
-                    $private = true;
-                } else {
-                    $export = $matches[1] === 'export';
+                $assignment = new Assignment($syntax->name, $syntax->operator, $syntax->expression);
+            } else {
+                while (
+                    preg_match('/^\s*(override|private|export|unexport)(?:[ \t]+|$)(.*)$/s', $uncommented, $matches)
+                    === 1
+                ) {
+                    /** @var array{non-falsy-string, 'override'|'private'|'export'|'unexport', string} $matches */
+                    if (preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[2])) === 1) {
+                        break;
+                    }
+                    if ($matches[1] === 'override') {
+                        $origin = 'override';
+                    } elseif ($matches[1] === 'private') {
+                        $private = true;
+                    } else {
+                        $export = $matches[1] === 'export';
+                    }
+                    $uncommented = ltrim($matches[2]);
                 }
-                $uncommented = ltrim($matches[2]);
+                $assignment = Assignment::parse($uncommented);
             }
             if (
-                preg_match('/^define(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
+                $assignment === null
+                && preg_match('/^define(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
                 && preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
             ) {
                 $header = Assignment::parse($matches[1] ?? '', allowWhitespace: true) ?? new Assignment(
@@ -509,17 +523,18 @@ final readonly class Evaluator
                 continue;
             }
             if (
-                preg_match('/^undefine(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
+                $assignment === null
+                && preg_match('/^undefine(?:[ \t]+(.*)|$)/s', $uncommented, $matches) === 1
                 && preg_match('/^(?::::=|::=|:=|!=|\+=|\?=|=)/', ltrim($matches[1] ?? '')) !== 1
             ) {
                 $name = new Assignment(trim($matches[1] ?? ''), '=', '')->resolveName($expander)->name;
                 Assignment::undefine($variables, $name, $origin);
                 continue;
             }
-            if (preg_match('/^endef(?:\s|$)/', $uncommented) === 1 && Assignment::parse($uncommented) === null) {
+            if (preg_match('/^endef(?:\s|$)/', $uncommented) === 1 && $assignment === null) {
                 throw new ParseException($lineNumber, "extraneous 'endef'");
             }
-            if ($export !== null && Assignment::parse($uncommented) === null) {
+            if ($export !== null && $assignment === null) {
                 $names = self::words($expander->expand($uncommented));
                 $exports->set($names, $export);
                 foreach ($names as $name) {
@@ -527,11 +542,14 @@ final readonly class Evaluator
                 }
                 continue;
             }
-            if (preg_match('/^\\.EXPORT_ALL_VARIABLES\\s*:/', $uncommented) === 1) {
+            if (
+                $syntax instanceof Ast\AssignmentNode
+                    ? $syntax->name === '.EXPORT_ALL_VARIABLES' && str_starts_with($syntax->operator, ':')
+                    : preg_match('/^\\.EXPORT_ALL_VARIABLES\\s*:/', $uncommented) === 1
+            ) {
                 $exports->set([], true);
             }
 
-            $assignment = Assignment::parse($uncommented);
             if ($assignment !== null) {
                 $assignment = $assignment->resolveName($expander);
                 if ($export !== null) {
@@ -550,16 +568,20 @@ final readonly class Evaluator
                 continue;
             }
 
-            if (preg_match('/^\s*(-?include|sinclude)(?:\s+(.*))?$/', $uncommented, $matches) === 1) {
-                foreach (self::words($expander->expand($matches[2] ?? '')) as $pattern) {
+            $include = null;
+            $includeMatches = [];
+            if ($syntax instanceof Ast\IncludeNode) {
+                $include = [$syntax->directive, $syntax->expression];
+            } elseif (preg_match('/^\s*(-?include|sinclude)(?:\s+(.*))?$/', $uncommented, $includeMatches) === 1) {
+                $include = [$includeMatches[1], $includeMatches[2] ?? ''];
+            }
+            if ($include !== null) {
+                $expression = $include[1];
+                $optional = $include[0] !== 'include';
+                foreach (self::words($expander->expand($expression)) as $pattern) {
                     foreach ($this->sources->matching($pattern) as $path) {
                         $this->readFile(
-                            $this->sources->open(
-                                $path,
-                                $matches[1] !== 'include',
-                                $this->sources->defaultGoal,
-                                $location,
-                            ),
+                            $this->sources->open($path, $optional, $this->sources->defaultGoal, $location),
                             $definitions,
                             $exports,
                             $scope,
