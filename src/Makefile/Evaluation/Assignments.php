@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
@@ -11,8 +11,6 @@ use Tamiroh\Phmake\Makefile\Variable\Assignment;
 use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
 use Tamiroh\Phmake\Makefile\Variable\Variable;
 use Tamiroh\Phmake\Parser\Ast;
-use Tamiroh\Phmake\Parser\Configuration;
-use Tamiroh\Phmake\Parser\Source\MakefileSources;
 
 use function implode;
 

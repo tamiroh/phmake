@@ -43,7 +43,7 @@ no-boolean-literal-comparison = true
 check-missing-type-hints = true
 register-super-globals = true
 
-# Dependency boundaries: Console -> Parser -> Makefile.
+# Evaluation consumes syntax; Parser remains independent of Makefile.
 [guard]
 mode = "perimeter"
 
@@ -56,8 +56,12 @@ namespace = 'Tamiroh\Phmake\Makefile\'
 permit = ["@self", "@native"]
 
 [[guard.perimeter.rules]]
+namespace = 'Tamiroh\Phmake\Makefile\Evaluation\'
+permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**', 'Tamiroh\Phmake\Parser\**']
+
+[[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Parser\'
-permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**']
+permit = ["@self", "@native"]
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Parser\Syntax\'

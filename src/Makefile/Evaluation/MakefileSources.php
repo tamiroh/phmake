@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser\Source;
+namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\ReadFile;
-use Tamiroh\Phmake\Parser\Configuration;
 
 use function in_array;
 use function rtrim;

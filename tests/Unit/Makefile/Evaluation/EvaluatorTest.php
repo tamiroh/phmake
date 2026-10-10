@@ -2,24 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Tests\Unit\Parser;
+namespace Tamiroh\Phmake\Tests\Unit\Makefile\Evaluation;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tamiroh\Phmake\Formatter\Formatter;
+use Tamiroh\Phmake\Makefile\Evaluation\Configuration;
+use Tamiroh\Phmake\Makefile\Evaluation\Evaluator;
+use Tamiroh\Phmake\Makefile\Evaluation\MakefileSources;
+use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
+use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Command;
 use Tamiroh\Phmake\Makefile\Rule\Target;
-use Tamiroh\Phmake\Parser\Configuration;
-use Tamiroh\Phmake\Parser\Evaluator;
 use Tamiroh\Phmake\Parser\MakefileParser;
-use Tamiroh\Phmake\Parser\ParsedMakefile;
 use Tamiroh\Phmake\Parser\ParseException;
-use Tamiroh\Phmake\Parser\Source\MakefileSources;
 use Tamiroh\Phmake\Tests\Testing\FakeConfiguration;
 use Tamiroh\Phmake\Tests\Testing\FakeFilesystem;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
@@ -106,23 +107,30 @@ final class EvaluatorTest extends TestCase
     }
 
     /**
+     * @param array{Makefile, EvaluationContext} $parsed
+     *
      * @throws MakefileErrorException
      */
-    private static function expand(ParsedMakefile $parsed, string $expression): string
+    private static function expand(array $parsed, string $expression): string
     {
         return self::expander($parsed)->expand($expression);
     }
 
-    private static function expander(ParsedMakefile $parsed): VariableExpander
+    /**
+     * @param array{Makefile, EvaluationContext} $parsed
+     */
+    private static function expander(array $parsed): VariableExpander
     {
-        return new VariableExpander($parsed->context);
+        return new VariableExpander($parsed[1]);
     }
 
     /**
      * @throws MakefileErrorException
      * @throws ParseException
+     *
+     * @return array{Makefile, EvaluationContext}
      */
-    private static function parse(MakefileSources|string $sources, ?FakeOutput $output = null): ParsedMakefile
+    private static function parse(MakefileSources|string $sources, ?FakeOutput $output = null): array
     {
         return new Evaluator(
             $sources instanceof MakefileSources ? $sources : self::sources(['Makefile' => $sources]),
@@ -168,9 +176,12 @@ final class EvaluatorTest extends TestCase
         );
     }
 
-    private static function target(ParsedMakefile $parsed, string $name): Target
+    /**
+     * @param array{Makefile, EvaluationContext} $parsed
+     */
+    private static function target(array $parsed, string $name): Target
     {
-        return $parsed->makefile->targetsByName[$name] ?? self::fail("Target '{$name}' is missing.");
+        return $parsed[0]->targetsByName[$name] ?? self::fail("Target '{$name}' is missing.");
     }
 
     /**
@@ -203,12 +214,9 @@ final class EvaluatorTest extends TestCase
     #[Test]
     public function defaultGoalIsTheFirstOrdinaryTarget(): void
     {
-        self::assertSame(
-            'first',
-            self::parse(".PHONY: first\n%.o: %.c\nfirst: second\nsecond:\n")->makefile->defaultGoal,
-        );
-        self::assertSame('second', self::parse("first:\nsecond:\n.DEFAULT_GOAL := second\n")->makefile->defaultGoal);
-        self::assertNull(self::parse("A = 1\n")->makefile->defaultGoal);
+        self::assertSame('first', self::parse(".PHONY: first\n%.o: %.c\nfirst: second\nsecond:\n")[0]->defaultGoal);
+        self::assertSame('second', self::parse("first:\nsecond:\n.DEFAULT_GOAL := second\n")[0]->defaultGoal);
+        self::assertNull(self::parse("A = 1\n")[0]->defaultGoal);
     }
 
     /**
@@ -281,7 +289,7 @@ final class EvaluatorTest extends TestCase
     public function exportDirectivesSelectEnvironmentVariables(): void
     {
         $parsed = self::parse("export A = 1\nB = 2\nexport B\nC = 3\nexport D := 4\nunexport D\n");
-        $environment = $parsed->makefile->exports->environment(self::expander($parsed), null);
+        $environment = $parsed[0]->exports->environment(self::expander($parsed), null);
         self::assertSame('1', $environment['A'] ?? null);
         self::assertSame('2', $environment['B'] ?? null);
         self::assertArrayNotHasKey('C', $environment);
@@ -430,8 +438,8 @@ final class EvaluatorTest extends TestCase
     public function targetSpecificVariablesStayOutOfTheGlobalScope(): void
     {
         $parsed = self::parse("all: V = local\nall: override W += more\nall:\n");
-        self::assertSame('local', $parsed->makefile->targetVariables->definitionsFor('all')['V']->expression ?? null);
-        self::assertSame('override', $parsed->makefile->targetVariables->definitionsFor('all')['W']->origin ?? null);
+        self::assertSame('local', $parsed[0]->targetVariables->definitionsFor('all')['V']->expression ?? null);
+        self::assertSame('override', $parsed[0]->targetVariables->definitionsFor('all')['W']->origin ?? null);
         self::assertSame('', self::expand($parsed, '$(V)'));
     }
 
@@ -463,12 +471,7 @@ final class EvaluatorTest extends TestCase
     {
         $parsed = self::parse("vpath %.c src lib\n");
         $filesystem = new FakeFilesystem(['lib/a.c' => '']);
-        self::assertSame('lib/a.c', $parsed->makefile->searchPaths->find(
-            'a.c',
-            $filesystem,
-            self::expander($parsed),
-            [],
-        ));
-        self::assertNull($parsed->makefile->searchPaths->find('a.h', $filesystem, self::expander($parsed), []));
+        self::assertSame('lib/a.c', $parsed[0]->searchPaths->find('a.c', $filesystem, self::expander($parsed), []));
+        self::assertNull($parsed[0]->searchPaths->find('a.h', $filesystem, self::expander($parsed), []));
     }
 }

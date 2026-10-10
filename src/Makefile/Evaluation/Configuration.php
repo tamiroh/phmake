@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;

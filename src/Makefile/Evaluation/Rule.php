@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use Tamiroh\Phmake\Makefile\Rule\Command;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;

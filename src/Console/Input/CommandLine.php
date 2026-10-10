@@ -9,6 +9,7 @@ use Random\RandomException;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Process\Shell;
+use Tamiroh\Phmake\Makefile\Evaluation\Configuration;
 use Tamiroh\Phmake\Makefile\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
@@ -17,7 +18,6 @@ use Tamiroh\Phmake\Makefile\Invocation\MakeFlags;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Variable\Assignment;
 use Tamiroh\Phmake\Makefile\Variable\Variable;
-use Tamiroh\Phmake\Parser\Configuration;
 
 use function array_values;
 use function count;

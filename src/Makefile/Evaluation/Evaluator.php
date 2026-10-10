@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser;
+namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use LogicException;
 use Tamiroh\Phmake\Makefile\Builtins;
@@ -14,6 +14,7 @@ use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Guile;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\IO\Shell;
+use Tamiroh\Phmake\Makefile\Makefile;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\ReadFile;
 use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
@@ -24,11 +25,9 @@ use Tamiroh\Phmake\Makefile\RuleDefinitions;
 use Tamiroh\Phmake\Makefile\Variable\Assignment;
 use Tamiroh\Phmake\Makefile\Variable\Environment\Exports;
 use Tamiroh\Phmake\Makefile\Variable\Variable;
-use Tamiroh\Phmake\Parser\Evaluation\Assignments;
-use Tamiroh\Phmake\Parser\Evaluation\Conditionals;
-use Tamiroh\Phmake\Parser\Evaluation\Rule;
-use Tamiroh\Phmake\Parser\Evaluation\RuleSyntax;
-use Tamiroh\Phmake\Parser\Source\MakefileSources;
+use Tamiroh\Phmake\Parser\Ast;
+use Tamiroh\Phmake\Parser\MakefileParser;
+use Tamiroh\Phmake\Parser\ParseException;
 use Tamiroh\Phmake\Parser\Source\SyntaxReader;
 
 use function array_values;
@@ -98,8 +97,10 @@ final readonly class Evaluator
     /**
      * @throws MakefileErrorException
      * @throws ParseException
+     *
+     * @return array{Makefile, EvaluationContext}
      */
-    public function evaluate(?Ast\MakefileNode $ast = null): ParsedMakefile
+    public function evaluate(?Ast\MakefileNode $ast = null): array
     {
         $definitions = new RuleDefinitions(!($this->configuration->noBuiltinRules ?? false), $this->output);
         $context = new EvaluationContext();
@@ -177,7 +178,7 @@ final readonly class Evaluator
         }
         $this->configuration?->finishReading($variables, $scope);
         $context->reading->initial = false;
-        return new ParsedMakefile(
+        return [
             $definitions->makefile(
                 array_values($variables),
                 $this->configuration->noBuiltinRules ?? false ? [] : $this->builtinRules,
@@ -186,7 +187,7 @@ final readonly class Evaluator
                 $context,
             ),
             $context,
-        );
+        ];
     }
 
     /**
