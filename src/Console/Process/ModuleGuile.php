@@ -7,8 +7,8 @@ namespace Tamiroh\Phmake\Console\Process;
 use Closure;
 use Override;
 use Tamiroh\Phmake\Console\Output\Output;
-use Tamiroh\Phmake\Makefile\IO\Guile;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Engine\IO\Guile;
+use Tamiroh\Phmake\Engine\MakefileErrorException;
 
 /**
  * A persistent Scheme interpreter, independent of the hosts for load directives.

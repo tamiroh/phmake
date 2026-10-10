@@ -7,10 +7,10 @@ namespace Tamiroh\Phmake\Console\Filesystem;
 use Override;
 use Tamiroh\Phmake\Console\Filesystem\Internal\Archive;
 use Tamiroh\Phmake\Console\Filesystem\Internal\FileTimes;
-use Tamiroh\Phmake\Makefile\Execution\Files\FileOptions;
-use Tamiroh\Phmake\Makefile\IO\Filesystem as FilesystemInterface;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
+use Tamiroh\Phmake\Engine\Execution\Files\FileOptions;
+use Tamiroh\Phmake\Engine\IO\Filesystem as FilesystemInterface;
+use Tamiroh\Phmake\Engine\MakefileErrorException;
+use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 
 use function basename;
 use function clearstatcache;

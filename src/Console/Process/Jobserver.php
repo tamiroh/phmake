@@ -7,9 +7,9 @@ namespace Tamiroh\Phmake\Console\Process;
 use Override;
 use Random\RandomException;
 use Tamiroh\Phmake\Console\Output\Output;
-use Tamiroh\Phmake\Makefile\Execution\Scheduling\ParallelOptions;
-use Tamiroh\Phmake\Makefile\IO\JobSlots;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Engine\Execution\Scheduling\ParallelOptions;
+use Tamiroh\Phmake\Engine\IO\JobSlots;
+use Tamiroh\Phmake\Engine\MakefileErrorException;
 
 use function bin2hex;
 use function fclose;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Makefile\Internal;
 
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Engine\MakefileErrorException;
 
 use function file_get_contents;
 use function file_put_contents;

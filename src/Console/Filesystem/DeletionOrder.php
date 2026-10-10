@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console\Filesystem;
 
 use Override;
-use Tamiroh\Phmake\Makefile\IO\IntermediateDeletionOrder;
+use Tamiroh\Phmake\Engine\IO\IntermediateDeletionOrder;
 
 use function array_values;
 use function count;

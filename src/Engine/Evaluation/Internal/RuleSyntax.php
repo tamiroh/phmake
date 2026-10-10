@@ -1,0 +1,85 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tamiroh\Phmake\Engine\Evaluation\Internal;
+
+use Tamiroh\Phmake\Engine\IO\Filesystem;
+use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
+use Tamiroh\Phmake\Engine\Rule\DependencySyntax;
+use Tamiroh\Phmake\Engine\Rule\FileName;
+use Tamiroh\Phmake\Engine\Rule\Pattern;
+use Tamiroh\Phmake\Engine\Rule\PrerequisiteExpression;
+use Tamiroh\Phmake\Engine\Rule\Prerequisites;
+use Tamiroh\Phmake\Parser\ParseException;
+
+use function count;
+use function ltrim;
+use function rtrim;
+use function str_ends_with;
+use function strpbrk;
+use function substr;
+
+final class RuleSyntax
+{
+    /**
+     * @throws ParseException
+     */
+    public static function parse(string $header, int $line, ?string $source, ?Filesystem $filesystem): Rule
+    {
+        $colon = DependencySyntax::delimiter($header, ':');
+        if ($colon === null) {
+            throw new ParseException($line, 'missing separator');
+        }
+        $targets = rtrim(substr($header, 0, $colon));
+        $grouped = str_ends_with($targets, '&') && !str_ends_with($targets, '\\&');
+        if ($grouped) {
+            $targets = substr($targets, 0, -1);
+        }
+        $double = ($header[$colon + 1] ?? '') === ':';
+        $dependencies = ltrim(substr($header, $colon + ($double ? 2 : 1)));
+        $pattern = null;
+        $second = DependencySyntax::delimiter($dependencies, ':');
+        if ($second !== null) {
+            $patterns = DependencySyntax::words(substr($dependencies, 0, $second));
+            if ($patterns === []) {
+                throw new ParseException($line, 'missing target pattern');
+            }
+            if (count($patterns) !== 1) {
+                throw new ParseException($line, 'multiple target patterns');
+            }
+            $pattern = FileName::normalize($patterns[0]);
+            if (!new Pattern($pattern)->hasWildcard()) {
+                throw new ParseException($line, "target pattern contains no '%'");
+            }
+            $dependencies = substr($dependencies, $second + 1);
+        }
+        $order = DependencySyntax::delimiter($dependencies, '|');
+        return new Rule(
+            self::paths($targets, $filesystem),
+            new Prerequisites(
+                self::paths($order === null ? $dependencies : substr($dependencies, 0, $order), $filesystem),
+                $order === null ? [] : self::paths(substr($dependencies, $order + 1), $filesystem),
+                [new PrerequisiteExpression($dependencies, source: $source)],
+            ),
+            $double,
+            $grouped,
+            $pattern,
+            $source,
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function paths(string $text, ?Filesystem $filesystem): array
+    {
+        $result = [];
+        foreach (DependencySyntax::words(ArchiveMember::expand($text)) as $word) {
+            $word = FileName::normalize($word);
+            $paths = strpbrk($word, '*?[') === false ? [] : $filesystem?->matching($word) ?? [];
+            $result = [...$result, ...($paths === [] ? [$word] : $paths)];
+        }
+        return $result;
+    }
+}

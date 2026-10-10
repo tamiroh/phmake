@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Process;
 
-use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
+use Tamiroh\Phmake\Engine\Execution\InterruptedException;
 
 use function array_reverse;
 use function function_exists;

@@ -7,9 +7,9 @@ namespace Tamiroh\Phmake\Console\Process;
 use Override;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Process\Internal\CommandInvocation;
-use Tamiroh\Phmake\Makefile\IO\Shell as ShellInterface;
-use Tamiroh\Phmake\Makefile\Reporting\DebugTrace;
-use Tamiroh\Phmake\Makefile\Reporting\ReportingOptions;
+use Tamiroh\Phmake\Engine\IO\Shell as ShellInterface;
+use Tamiroh\Phmake\Engine\Reporting\DebugTrace;
+use Tamiroh\Phmake\Engine\Reporting\ReportingOptions;
 
 use function explode;
 use function fwrite;

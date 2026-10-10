@@ -8,7 +8,7 @@ use Closure;
 use Fiber;
 use Tamiroh\Phmake\Console\Process\Internal\ProcessLauncher;
 use Tamiroh\Phmake\Console\Process\Internal\Waiting;
-use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
+use Tamiroh\Phmake\Engine\Execution\InterruptedException;
 
 use function fclose;
 use function fopen;

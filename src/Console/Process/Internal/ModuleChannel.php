@@ -6,7 +6,7 @@ namespace Tamiroh\Phmake\Console\Process\Internal;
 
 use Closure;
 use Tamiroh\Phmake\Console\Output\Output;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Engine\MakefileErrorException;
 
 /**
  * Exchange length-prefixed messages with the module host process.

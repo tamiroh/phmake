@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Filesystem\Internal;
 
-use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
+use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 
 /**
  * Read Unix ar member headers, including GNU and BSD extended member names.

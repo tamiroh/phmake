@@ -6,10 +6,10 @@ namespace Tamiroh\Phmake\Console\Process;
 
 use Override;
 use Tamiroh\Phmake\Console\Output\Output;
-use Tamiroh\Phmake\Makefile\Expansion\LoadedObject\LoadedObject;
-use Tamiroh\Phmake\Makefile\IO\LoadableObjects;
-use Tamiroh\Phmake\Makefile\IO\LoadedObjectApi;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Engine\Expansion\LoadedObject\LoadedObject;
+use Tamiroh\Phmake\Engine\IO\LoadableObjects;
+use Tamiroh\Phmake\Engine\IO\LoadedObjectApi;
+use Tamiroh\Phmake\Engine\MakefileErrorException;
 use WeakMap;
 
 /**

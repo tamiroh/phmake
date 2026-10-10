@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Tests\Testing;
 
 use Override;
-use Tamiroh\Phmake\Makefile\IO\Filesystem;
+use Tamiroh\Phmake\Engine\IO\Filesystem;
 
 use function array_filter;
 use function array_key_exists;

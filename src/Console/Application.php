@@ -15,12 +15,12 @@ use Tamiroh\Phmake\Console\Output\OutputWriteException;
 use Tamiroh\Phmake\Console\Process\ModuleHost;
 use Tamiroh\Phmake\Console\Process\RestartFailureException;
 use Tamiroh\Phmake\Console\Process\Signals;
-use Tamiroh\Phmake\Makefile\Builtins;
-use Tamiroh\Phmake\Makefile\Execution\InterruptedException;
-use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
-use Tamiroh\Phmake\Makefile\Reporting\Diagnostics;
-use Tamiroh\Phmake\Makefile\Variable\Variable;
+use Tamiroh\Phmake\Engine\Builtins;
+use Tamiroh\Phmake\Engine\Execution\InterruptedException;
+use Tamiroh\Phmake\Engine\Execution\Recipe\CommandFailedException;
+use Tamiroh\Phmake\Engine\MakefileErrorException;
+use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
+use Tamiroh\Phmake\Engine\Variable\Variable;
 use Tamiroh\Phmake\Parser\ParseException;
 
 use function array_slice;

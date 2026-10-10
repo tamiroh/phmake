@@ -9,9 +9,9 @@ use Fiber;
 use LogicException;
 use Override;
 use Tamiroh\Phmake\Console\Process\Internal\Waiting;
-use Tamiroh\Phmake\Makefile\Execution\Scheduling\TargetUpdate;
-use Tamiroh\Phmake\Makefile\Execution\UpdateResult;
-use Tamiroh\Phmake\Makefile\IO\TargetUpdates;
+use Tamiroh\Phmake\Engine\Execution\Scheduling\TargetUpdate;
+use Tamiroh\Phmake\Engine\Execution\UpdateResult;
+use Tamiroh\Phmake\Engine\IO\TargetUpdates;
 use Throwable;
 use WeakMap;
 

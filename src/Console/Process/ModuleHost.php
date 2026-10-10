@@ -7,8 +7,8 @@ namespace Tamiroh\Phmake\Console\Process;
 use Closure;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Process\Internal\ModuleChannel;
-use Tamiroh\Phmake\Makefile\IO\LoadedObjectApi;
-use Tamiroh\Phmake\Makefile\MakefileErrorException;
+use Tamiroh\Phmake\Engine\IO\LoadedObjectApi;
+use Tamiroh\Phmake\Engine\MakefileErrorException;
 
 /**
  * Transport native plugin calls without requiring PHP's FFI extension.

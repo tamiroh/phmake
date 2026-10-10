@@ -21,7 +21,7 @@ prefer-early-continue = { enabled = false }
 ambiguous-function-call = { enabled = true }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }
-too-many-methods = { exclude = ["tests/**", "src/Makefile/Expansion/Functions.php", "src/Makefile/IO/Filesystem.php", "src/Console/Filesystem/Filesystem.php"] }
+too-many-methods = { exclude = ["tests/**", "src/Engine/Expansion/Functions.php", "src/Engine/IO/Filesystem.php", "src/Console/Filesystem/Filesystem.php"] }
 excessive-parameter-list = { enabled = false }
 no-error-control-operator = { enabled = false }
 halstead = { effort-threshold = 7000 }
@@ -43,7 +43,7 @@ no-boolean-literal-comparison = true
 check-missing-type-hints = true
 register-super-globals = true
 
-# Evaluation consumes syntax; Parser remains independent of Makefile.
+# Evaluation consumes syntax; Parser remains independent of Engine.
 [guard]
 mode = "perimeter"
 
@@ -52,12 +52,12 @@ namespace = "@global"
 permit = ["@native", 'Tamiroh\Phmake\Console\Application']
 
 [[guard.perimeter.rules]]
-namespace = 'Tamiroh\Phmake\Makefile\'
+namespace = 'Tamiroh\Phmake\Engine\'
 permit = ["@self", "@native"]
 
 [[guard.perimeter.rules]]
-namespace = 'Tamiroh\Phmake\Makefile\Evaluation\'
-permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**', 'Tamiroh\Phmake\Parser\**']
+namespace = 'Tamiroh\Phmake\Engine\Evaluation\'
+permit = ["@self", "@native", 'Tamiroh\Phmake\Engine\**', 'Tamiroh\Phmake\Parser\**']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Parser\'
@@ -81,7 +81,7 @@ permit = ["@self", "@native", 'Tamiroh\Phmake\Parser\Ast\**']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Console\'
-permit = ["@self", "@native", 'Tamiroh\Phmake\Makefile\**', 'Tamiroh\Phmake\Parser\**', 'Tamiroh\Phmake\Formatter\**']
+permit = ["@self", "@native", 'Tamiroh\Phmake\Engine\**', 'Tamiroh\Phmake\Parser\**', 'Tamiroh\Phmake\Formatter\**']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Tests\'
