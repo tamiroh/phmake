@@ -1,4 +1,5 @@
 includes:
+	- tools/phpstan/extension.neon
 	- vendor/spaze/phpstan-disallowed-calls/extension.neon
 	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
 	- vendor/phpstan/phpstan-strict-rules/rules.neon
@@ -26,6 +27,7 @@ parameters:
 		- phmake
 		- src
 		- tests
+		- tools/phpstan
 	exceptions:
 		uncheckedExceptionClasses:
 			- LogicException

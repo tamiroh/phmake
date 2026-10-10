@@ -1,0 +1,4 @@
+services:
+	-
+		class: Tamiroh\Phmake\PHPStan\InternalNamespaceExtension
+		tags: [phpstan.restrictedClassNameUsageExtension]

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Formatter;
 
+use Tamiroh\Phmake\Formatter\Internal\Printer;
 use Tamiroh\Phmake\Parser\Ast\MakefileNode;
 
 final readonly class Formatter

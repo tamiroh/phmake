@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Formatter;
+namespace Tamiroh\Phmake\Formatter\Internal;
 
 use Tamiroh\Phmake\Parser\Ast;
 

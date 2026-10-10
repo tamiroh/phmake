@@ -10,7 +10,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tamiroh\\Phmake\\Tests\\": "tests/"
+            "Tamiroh\\Phmake\\Tests\\": "tests/",
+            "Tamiroh\\Phmake\\PHPStan\\": "tools/phpstan/"
         }
     },
     "authors": [
