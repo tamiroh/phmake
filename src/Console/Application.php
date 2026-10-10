@@ -9,7 +9,7 @@ use Tamiroh\Phmake\Console\Commands\FormatCommand;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Input\Usage;
 use Tamiroh\Phmake\Console\Input\UsageException;
-use Tamiroh\Phmake\Console\Makefile\MakefileLoader;
+use Tamiroh\Phmake\Console\Makefile\MakeCommand;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Output\OutputWriteException;
 use Tamiroh\Phmake\Console\Process\ModuleHost;
@@ -21,7 +21,6 @@ use Tamiroh\Phmake\Engine\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
 use Tamiroh\Phmake\Engine\Variable\Variable;
-use Tamiroh\Phmake\Parser\ParseException;
 
 use function array_slice;
 use function basename;
@@ -114,7 +113,7 @@ final readonly class Application
                     $output->writeDirectory(true, (string) getcwd());
                 }
             }
-            return new MakefileLoader($commandLine, $output, $defaults, $level)->load()->run($commandLine->targets);
+            return new MakeCommand($commandLine, $output, $defaults, $level)->run();
         } catch (RestartFailureException $error) {
             $leaveDirectory = false;
             $output->writeWarning($error->getMessage());
@@ -130,15 +129,6 @@ final readonly class Application
             if ($error instanceof UsageException) {
                 $output->buffer->write(Usage::text($program), true);
             }
-            return 2;
-        } catch (ParseException $error) {
-            Diagnostics::report(
-                new MakefileErrorException(
-                    $error->reason,
-                    ($commandLine->input->makefiles[0] ?? 'Makefile') . ":{$error->lineNumber}",
-                ),
-                $output,
-            );
             return 2;
         } finally {
             if ($leaveDirectory && $output->directory !== null) {

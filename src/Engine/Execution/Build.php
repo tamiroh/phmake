@@ -29,6 +29,7 @@ use Tamiroh\Phmake\Engine\Rule\BuildRule;
 use Tamiroh\Phmake\Engine\Rule\FileName;
 use Tamiroh\Phmake\Engine\Rule\Prerequisites;
 use Tamiroh\Phmake\Engine\Rule\Target;
+use Tamiroh\Phmake\Engine\RunResult;
 use Tamiroh\Phmake\Engine\Search\RuleSearch;
 use Tamiroh\Phmake\Engine\Variable\VariableScope;
 
@@ -179,7 +180,7 @@ final class Build
      * @throws MakefileErrorException
      * @throws CommandFailedException
      */
-    public function run(array $names): int
+    public function run(array $names): RunResult
     {
         try {
             if ($names === []) {
@@ -229,7 +230,11 @@ final class Build
             $this->jobs->waitForUnfinishedJobs();
             $this->files->cleanup();
         }
-        return $this->state->failed ? 2 : ($this->state->needsUpdate ? 1 : 0);
+        return match (true) {
+            $this->state->failed => RunResult::Failed,
+            $this->state->needsUpdate => RunResult::OutOfDate,
+            default => RunResult::Succeeded,
+        };
     }
 
     /**

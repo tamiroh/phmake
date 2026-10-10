@@ -100,7 +100,6 @@ final readonly class Evaluator
 
     /**
      * @throws MakefileErrorException
-     * @throws ParseException
      *
      * @return array{Makefile, EvaluationContext}
      */
@@ -134,20 +133,16 @@ final readonly class Evaluator
         $context->reading->evaluate =
             /** @throws MakefileErrorException */
             function (string $text, VariableExpander $expander) use ($definitions, $exports): void {
-                try {
-                    $this->readRules(
-                        $text,
-                        $definitions,
-                        $expander->context->variables,
-                        [],
-                        $exports,
-                        [],
-                        $expander,
-                        $expander->source,
-                    );
-                } catch (ParseException $error) {
-                    throw new MakefileErrorException($error->reason, $expander->source);
-                }
+                $this->readRules(
+                    $text,
+                    $definitions,
+                    $expander->context->variables,
+                    [],
+                    $exports,
+                    [],
+                    $expander,
+                    $expander->source,
+                );
             };
         $scope = new VariableExpander($context, $this->output);
         $variables['MAKEFILE_LIST'] = new Variable('MAKEFILE_LIST', '', false);
@@ -281,7 +276,6 @@ final readonly class Evaluator
      * @param list<string> $included
      *
      * @throws MakefileErrorException
-     * @throws ParseException
      */
     private function readFile(
         ReadFile $file,
@@ -471,7 +465,6 @@ final readonly class Evaluator
      * @param array<int, string> $sources
      *
      * @throws MakefileErrorException
-     * @throws ParseException
      */
     private function readRules(
         string|Ast\MakefileNode $source,
@@ -498,9 +491,6 @@ final readonly class Evaluator
             );
         } catch (ParseException $error) {
             $location = $evaluationSource ?? self::sourceLocation($sources, $error->lineNumber);
-            if ($location === null) {
-                throw $error;
-            }
             throw new MakefileErrorException($error->reason, $location);
         }
     }

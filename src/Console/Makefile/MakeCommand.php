@@ -18,21 +18,20 @@ use Tamiroh\Phmake\Console\Process\ProcessRestart;
 use Tamiroh\Phmake\Console\Process\Shell;
 use Tamiroh\Phmake\Console\Process\Signals;
 use Tamiroh\Phmake\Engine\Builtins;
+use Tamiroh\Phmake\Engine\Engine;
 use Tamiroh\Phmake\Engine\Evaluation\Evaluator;
 use Tamiroh\Phmake\Engine\Evaluation\MakefileSources;
 use Tamiroh\Phmake\Engine\Execution\Build;
-use Tamiroh\Phmake\Engine\Execution\MakefileRemake;
 use Tamiroh\Phmake\Engine\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Engine\Expansion\LoadedObject\LoadedObjects;
-use Tamiroh\Phmake\Engine\Expansion\VariableExpander;
 use Tamiroh\Phmake\Engine\Invocation\CommandVariables;
 use Tamiroh\Phmake\Engine\Invocation\MakeFlags;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\ReadFile;
 use Tamiroh\Phmake\Engine\Reporting\DebugTrace;
 use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
+use Tamiroh\Phmake\Engine\RunResult;
 use Tamiroh\Phmake\Engine\Variable\Variable;
-use Tamiroh\Phmake\Parser\ParseException;
 
 use function array_values;
 use function function_exists;
@@ -42,7 +41,7 @@ use function ltrim;
 /**
  * Each restart reconstructs evaluation and build state from the original invocation.
  */
-final readonly class MakefileLoader
+final readonly class MakeCommand
 {
     /**
      * @param array<string, Variable> $defaults
@@ -57,9 +56,8 @@ final readonly class MakefileLoader
     /**
      * @throws MakefileErrorException
      * @throws CommandFailedException
-     * @throws ParseException
      */
-    public function load(): Build
+    public function run(): int
     {
         $stdin = in_array('-', $this->commandLine->input->makefiles, true)
             ? new StdinMakefile($this->commandLine->input->temporaryStdin)
@@ -126,44 +124,28 @@ final readonly class MakefileLoader
                 $slots,
                 $sources->foundMain(),
             );
-            MakeFlags::define(
+            $engine = new Engine(
+                $build,
+                $context,
+                $filesystem,
+                $this->output,
                 $configuration->options,
                 $configuration->execution,
-                $context->variables,
-                $context->reading->posix,
-                $restarts,
             );
-            try {
-                $remade = new MakefileRemake(
-                    $build,
-                    $sources->filesystem,
-                    $this->output,
-                    $configuration->execution->keepGoing,
-                )->run($sources->read);
-                if (!$remade) {
-                    $context->loadedObjects->reload(new VariableExpander($context, $this->output));
-                }
-            } catch (MakefileErrorException|CommandFailedException $error) {
-                $build->cleanup();
-                throw $error;
-            } finally {
-                MakeFlags::define(
-                    $configuration->options,
-                    $configuration->execution,
-                    $context->variables,
-                    $context->reading->posix,
-                );
-            }
-            if ($remade) {
-                $build->cleanup();
+            $result = $engine->run($sources->read, $this->commandLine->targets, $restarts);
+            if ($result === RunResult::NeedsReevaluation) {
                 $restarts++;
                 if ($stdin !== null && function_exists('pcntl_exec')) {
-                    unset($build, $slots, $makefile, $context);
+                    unset($engine, $build, $slots, $makefile, $context);
                     ProcessRestart::execute($configuration, $stdin->path, $restarts, $this->output);
                 }
                 continue;
             }
-            return $build;
+            return match ($result) {
+                RunResult::Succeeded => 0,
+                RunResult::OutOfDate => 1,
+                RunResult::Failed => 2,
+            };
         }
     }
 
