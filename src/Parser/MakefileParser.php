@@ -9,7 +9,7 @@ use Tamiroh\Phmake\Parser\Ast\Node;
 use Tamiroh\Phmake\Parser\Ast\RecipeNode;
 use Tamiroh\Phmake\Parser\Ast\SourceSpan;
 use Tamiroh\Phmake\Parser\Ast\TriviaNode;
-use Tamiroh\Phmake\Parser\Syntax\BlockSyntax;
+use Tamiroh\Phmake\Parser\Internal\BlockSyntax;
 use Tamiroh\Phmake\Parser\Syntax\LineSyntax;
 
 use function rtrim;

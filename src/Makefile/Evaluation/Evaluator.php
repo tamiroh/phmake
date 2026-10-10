@@ -6,6 +6,11 @@ namespace Tamiroh\Phmake\Makefile\Evaluation;
 
 use LogicException;
 use Tamiroh\Phmake\Makefile\Builtins;
+use Tamiroh\Phmake\Makefile\Evaluation\Internal\Assignments;
+use Tamiroh\Phmake\Makefile\Evaluation\Internal\Conditionals;
+use Tamiroh\Phmake\Makefile\Evaluation\Internal\Rule;
+use Tamiroh\Phmake\Makefile\Evaluation\Internal\RuleSyntax;
+use Tamiroh\Phmake\Makefile\Evaluation\Internal\SyntaxReader;
 use Tamiroh\Phmake\Makefile\Expansion\EvaluationContext;
 use Tamiroh\Phmake\Makefile\Expansion\LoadedObject\LoadedObjects;
 use Tamiroh\Phmake\Makefile\Expansion\UndefinedVariable;

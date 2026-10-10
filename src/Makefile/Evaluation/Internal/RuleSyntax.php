@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Evaluation\Internal;
 
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;

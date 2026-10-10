@@ -16,6 +16,8 @@ use Tamiroh\Phmake\Makefile\Rule\BuildRule;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;
 use Tamiroh\Phmake\Makefile\Rule\Prerequisites;
 use Tamiroh\Phmake\Makefile\Rule\Target;
+use Tamiroh\Phmake\Makefile\Search\Internal\ImplicitCandidate;
+use Tamiroh\Phmake\Makefile\Search\Internal\TargetAlias;
 use Tamiroh\Phmake\Makefile\Variable\VariableScope;
 
 use function array_filter;

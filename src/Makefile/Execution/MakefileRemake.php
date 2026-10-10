@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Makefile\Execution;
 
+use Tamiroh\Phmake\Makefile\Execution\Internal\UnremadeMakefileException;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\IO\Filesystem;
 use Tamiroh\Phmake\Makefile\IO\Output;

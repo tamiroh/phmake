@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console\Process;
+namespace Tamiroh\Phmake\Console\Process\Internal;
 
 use Closure;
 use Tamiroh\Phmake\Console\Output\Output;

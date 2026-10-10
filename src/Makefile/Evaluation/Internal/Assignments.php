@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Evaluation\Internal;
 
+use Tamiroh\Phmake\Makefile\Evaluation\Configuration;
+use Tamiroh\Phmake\Makefile\Evaluation\MakefileSources;
 use Tamiroh\Phmake\Makefile\Expansion\VariableExpander;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;

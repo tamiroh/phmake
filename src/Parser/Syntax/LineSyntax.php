@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser\Syntax;
 
 use Tamiroh\Phmake\Parser\Ast;
+use Tamiroh\Phmake\Parser\Syntax\Internal\LineText;
 
 use function ltrim;
 use function preg_match;

@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Console\Process;
 
 use Closure;
 use Tamiroh\Phmake\Console\Output\Output;
+use Tamiroh\Phmake\Console\Process\Internal\ModuleChannel;
 use Tamiroh\Phmake\Makefile\IO\LoadedObjectApi;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 

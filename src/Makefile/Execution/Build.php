@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Execution;
 
 use Tamiroh\Phmake\Makefile\Execution\Files\BuildFiles;
+use Tamiroh\Phmake\Makefile\Execution\Internal\MissingTargetException;
+use Tamiroh\Phmake\Makefile\Execution\Internal\PrerequisiteChain;
+use Tamiroh\Phmake\Makefile\Execution\Internal\UnremadeMakefileException;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Makefile\Execution\Recipe\RecipeRunner;
 use Tamiroh\Phmake\Makefile\Execution\Scheduling\DependencyOrder;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Makefile\Expansion;
 
 use LogicException;
+use Tamiroh\Phmake\Makefile\Expansion\Internal\ExpansionSyntax;
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 use Tamiroh\Phmake\Makefile\Rule\Pattern;

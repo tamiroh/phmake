@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Search;
+namespace Tamiroh\Phmake\Makefile\Search\Internal;
 
 use Tamiroh\Phmake\Makefile\IO\Output;
 use Tamiroh\Phmake\Makefile\Rule\BuildRule;

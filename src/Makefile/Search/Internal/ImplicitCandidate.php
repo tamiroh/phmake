@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Search;
+namespace Tamiroh\Phmake\Makefile\Search\Internal;
 
 use Closure;
 use Tamiroh\Phmake\Makefile\Expansion\SecondaryExpansion;

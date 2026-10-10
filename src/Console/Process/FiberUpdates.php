@@ -8,6 +8,7 @@ use Closure;
 use Fiber;
 use LogicException;
 use Override;
+use Tamiroh\Phmake\Console\Process\Internal\Waiting;
 use Tamiroh\Phmake\Makefile\Execution\Scheduling\TargetUpdate;
 use Tamiroh\Phmake\Makefile\Execution\UpdateResult;
 use Tamiroh\Phmake\Makefile\IO\TargetUpdates;

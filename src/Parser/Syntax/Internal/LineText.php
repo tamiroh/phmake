@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Parser\Syntax;
+namespace Tamiroh\Phmake\Parser\Syntax\Internal;
 
 use LogicException;
 

@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Console\Process;
 
 use Closure;
 use RuntimeException;
+use Tamiroh\Phmake\Console\Process\Internal\ProcessLauncher;
 
 use function fclose;
 use function feof;

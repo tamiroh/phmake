@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Evaluation;
+namespace Tamiroh\Phmake\Makefile\Evaluation\Internal;
 
+use Tamiroh\Phmake\Makefile\Evaluation\LineReader;
 use Tamiroh\Phmake\Parser\Ast;
 use Tamiroh\Phmake\Parser\ParseException;
 use Tamiroh\Phmake\Parser\Syntax\LineSyntax;

@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Console\Makefile;
 use Tamiroh\Phmake\Console\Filesystem\DeletionOrder;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
 use Tamiroh\Phmake\Console\Input\CommandLine;
+use Tamiroh\Phmake\Console\Makefile\Internal\StdinMakefile;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Process\FiberUpdates;
 use Tamiroh\Phmake\Console\Process\Jobserver;

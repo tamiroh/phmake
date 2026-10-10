@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console\Filesystem;
+namespace Tamiroh\Phmake\Console\Filesystem\Internal;
 
 use Tamiroh\Phmake\Makefile\Rule\ArchiveMember;
 

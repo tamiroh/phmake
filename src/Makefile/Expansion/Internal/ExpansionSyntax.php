@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Makefile\Expansion;
+namespace Tamiroh\Phmake\Makefile\Expansion\Internal;
 
+use Tamiroh\Phmake\Makefile\Expansion\Functions;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
 use function count;

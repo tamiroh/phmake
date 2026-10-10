@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console\Filesystem;
 
 use Override;
+use Tamiroh\Phmake\Console\Filesystem\Internal\Archive;
+use Tamiroh\Phmake\Console\Filesystem\Internal\FileTimes;
 use Tamiroh\Phmake\Makefile\Execution\Files\FileOptions;
 use Tamiroh\Phmake\Makefile\IO\Filesystem as FilesystemInterface;
 use Tamiroh\Phmake\Makefile\MakefileErrorException;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Console\Makefile;
+namespace Tamiroh\Phmake\Console\Makefile\Internal;
 
 use Tamiroh\Phmake\Makefile\MakefileErrorException;
 
