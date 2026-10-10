@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Tests\Unit\Parser\Source;
+namespace Tamiroh\Phmake\Tests\Unit\Makefile\Evaluation;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Tamiroh\Phmake\Parser\Source\LineReader;
+use Tamiroh\Phmake\Makefile\Evaluation\LineReader;
 
 final class LineReaderTest extends TestCase
 {

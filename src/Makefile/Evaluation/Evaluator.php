@@ -28,7 +28,6 @@ use Tamiroh\Phmake\Makefile\Variable\Variable;
 use Tamiroh\Phmake\Parser\Ast;
 use Tamiroh\Phmake\Parser\MakefileParser;
 use Tamiroh\Phmake\Parser\ParseException;
-use Tamiroh\Phmake\Parser\Source\SyntaxReader;
 
 use function array_values;
 use function implode;
