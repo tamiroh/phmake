@@ -13,13 +13,10 @@ use Tamiroh\Phmake\Linter\Diagnostic;
 use Tamiroh\Phmake\Linter\Linter;
 use Tamiroh\Phmake\Linter\Rule;
 use Tamiroh\Phmake\Parser\Ast\AssignmentNode;
-use Tamiroh\Phmake\Parser\Ast\ConditionalNode;
-use Tamiroh\Phmake\Parser\Ast\DefineNode;
-use Tamiroh\Phmake\Parser\Ast\IncludeNode;
 use Tamiroh\Phmake\Parser\Ast\Node;
 use Tamiroh\Phmake\Parser\Ast\RuleNode;
-use Tamiroh\Phmake\Parser\Ast\TargetAssignmentNode;
 use Tamiroh\Phmake\Parser\MakefileParser;
+use Tamiroh\Phmake\Tests\Testing\AstTree;
 
 use function array_map;
 use function strlen;
@@ -44,13 +41,26 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function acceptsSideEffectingExpressionsWithoutEvaluatingThem(): void
     {
-        // The parser accepts only text: neither an IO service nor a mutable context exists.
-        $source = "A != exit 97\nB := \$(shell exit 98)\ninclude /nonexistent/phmake-ast-test.mk\n\$(eval C := \$(error evaluated))\n";
+        // Arrange
+        $source = <<<'MAKEFILE'
+            A != exit 97
+            B := $(shell exit 98)
+            include /nonexistent/phmake-ast-test.mk
+            $(eval C := $(error evaluated))
+            MAKEFILE;
+
+        // Act
         $ast = MakefileParser::parse($source);
+
+        // Assert
         self::assertSame($source, $ast->source());
-        self::assertCount(4, $ast->children);
-        self::assertInstanceOf(IncludeNode::class, $ast->children[2]);
-        self::assertSame('/nonexistent/phmake-ast-test.mk', $ast->children[2]->expression);
+        self::assertSame(<<<'TREE'
+            MakefileNode
+              AssignmentNode name="A" operator="!=" expression="exit 97" modifiers=[] exportAll=false
+              AssignmentNode name="B" operator=":=" expression="$(shell exit 98)" modifiers=[] exportAll=false
+              IncludeNode directive="include" expression="/nonexistent/phmake-ast-test.mk"
+              ExpressionNode header="$(eval C := $(error evaluated))"
+            TREE, AstTree::dump($ast));
     }
 
     #[Test]
@@ -66,48 +76,89 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function preservesScopedAssignmentsAndDefineBodies(): void
     {
-        $ast = MakefileParser::parse("%.o: private CFLAGS += \$(FLAGS)\ndefine BODY :=\n# literal\nA = body\nendef\n");
-        self::assertCount(2, $ast->children);
-        $scoped = $ast->children[0];
-        self::assertInstanceOf(TargetAssignmentNode::class, $scoped);
-        self::assertSame('%.o', $scoped->targets);
-        self::assertSame(['private'], $scoped->assignment->modifiers);
-        self::assertSame('$(FLAGS)', $scoped->assignment->expression);
-        self::assertInstanceOf(DefineNode::class, $ast->children[1]);
-        self::assertSame("define BODY :=\n# literal\nA = body\nendef\n", $ast->children[1]->source());
+        // Arrange
+        $source = <<<'MAKEFILE'
+            %.o: private CFLAGS += $(FLAGS)
+            define BODY :=
+            # literal
+            A = body
+            endef
+
+            MAKEFILE;
+
+        // Act
+        $ast = MakefileParser::parse($source);
+
+        // Assert
+        self::assertSame(<<<'TREE'
+            MakefileNode
+              TargetAssignmentNode targets="%.o" exportAll=false
+                AssignmentNode name="CFLAGS" operator="+=" expression="$(FLAGS)" modifiers=["private"] exportAll=false
+              DefineNode
+                DefineHeaderNode skipWhenInactive=true
+                  AssignmentNode name="BODY" operator=":=" expression="" modifiers=[] exportAll=false
+                RawNode raw="# literal\nA = body\n"
+                DirectiveNode directive="endef" expression="" modifiers=[]
+            TREE, AstTree::dump($ast));
+        self::assertSame($source, $ast->source());
     }
 
     #[Test]
     public function retainsAssignmentContinuationWithoutFolding(): void
     {
-        $ast = MakefileParser::parse("A += first \\\n  second\n");
+        // Arrange
+        $source = <<<'MAKEFILE'
+            A += first \
+              second
+
+            MAKEFILE;
+
+        // Act
+        $ast = MakefileParser::parse($source);
+
+        // Assert
+        self::assertSame(<<<'TREE'
+            MakefileNode
+              AssignmentNode name="A" operator="+=" expression="first \\\n  second" modifiers=[] exportAll=false
+            TREE, AstTree::dump($ast));
         self::assertCount(1, $ast->children);
-        $assignment = $ast->children[0];
-        self::assertInstanceOf(AssignmentNode::class, $assignment);
-        self::assertSame("first \\\n  second", $assignment->expression);
-        self::assertSame(3, $assignment->span->endLine);
+        self::assertSame(3, $ast->children[0]->span->endLine);
     }
 
     #[Test]
     public function retainsAssignmentsRulesAndAllBranches(): void
     {
-        $ast = MakefileParser::parse(
-            "A = \$(B)\nA := later\nifdef A\napp: main.o\nelse\napp: util.o\nendif\n",
-            'sample.mk',
-        );
+        // Arrange
+        $source = <<<'MAKEFILE'
+            A = $(B)
+            A := later
+            ifdef A
+            app: main.o
+            else
+            app: util.o
+            endif
+
+            MAKEFILE;
+
+        // Act
+        $ast = MakefileParser::parse($source, 'sample.mk');
+
+        // Assert
+        self::assertSame(<<<'TREE'
+            MakefileNode
+              AssignmentNode name="A" operator="=" expression="$(B)" modifiers=[] exportAll=false
+              AssignmentNode name="A" operator=":=" expression="later" modifiers=[] exportAll=false
+              ConditionalNode
+                ConditionalBranchNode
+                  ConditionalDirectiveNode directive="ifdef" expression="A"
+                  RuleNode header="app: main.o" exportAll=false
+                ConditionalBranchNode
+                  ConditionalDirectiveNode directive="else" expression=""
+                  RuleNode header="app: util.o" exportAll=false
+                ConditionalDirectiveNode directive="endif" expression=""
+            TREE, AstTree::dump($ast));
         self::assertCount(3, $ast->children);
         $first = $ast->children[0];
-        self::assertInstanceOf(AssignmentNode::class, $first);
-        self::assertSame('$(B)', $first->expression);
-        self::assertSame('=', $first->operator);
-        $second = $ast->children[1];
-        self::assertInstanceOf(AssignmentNode::class, $second);
-        self::assertSame(':=', $second->operator);
-        $conditional = $ast->children[2];
-        self::assertInstanceOf(ConditionalNode::class, $conditional);
-        self::assertCount(5, $conditional->children);
-        self::assertInstanceOf(RuleNode::class, $conditional->children[1]);
-        self::assertInstanceOf(RuleNode::class, $conditional->children[3]);
         self::assertSame('sample.mk', $first->span->file);
         self::assertSame(1, $first->span->startLine);
         self::assertSame(2, $first->span->endLine);
@@ -117,16 +168,27 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function retainsSeparateRulesAndInlineRecipeSource(): void
     {
-        $ast = MakefileParser::parse("app: $(OBJECTS)\napp: util.o; echo '# literal'\n");
+        // Arrange
+        $source = <<<'MAKEFILE'
+            app: $(OBJECTS)
+            app: util.o; echo '# literal'
+
+            MAKEFILE;
+
+        // Act
+        $ast = MakefileParser::parse($source);
+
+        // Assert
+        self::assertSame(<<<'TREE'
+            MakefileNode
+              RuleNode header="app: $(OBJECTS)" exportAll=false
+              RuleNode header="app: util.o" exportAll=false
+                RecipeNode raw=" echo '# literal'\n" expression=" echo '# literal'"
+            TREE, AstTree::dump($ast));
         self::assertCount(2, $ast->children);
-        $first = $ast->children[0];
         $second = $ast->children[1];
-        self::assertInstanceOf(RuleNode::class, $first);
         self::assertInstanceOf(RuleNode::class, $second);
-        self::assertSame('app: $(OBJECTS)', $first->header);
-        self::assertSame('app: util.o', $second->header);
         self::assertNotNull($second->inlineRecipe);
-        self::assertSame(" echo '# literal'\n", $second->inlineRecipe->raw);
         self::assertSame(2, $second->inlineRecipe->span->startLine);
         self::assertSame(13, $second->inlineRecipe->span->startColumn);
     }
