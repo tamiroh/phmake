@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 use Tamiroh\Phmake\Formatter\Formatter;
 use Tamiroh\Phmake\Linter\Diagnostic;
 use Tamiroh\Phmake\Linter\Linter;
-use Tamiroh\Phmake\Linter\Rule;
+use Tamiroh\Phmake\Linter\Rules\Rule;
 use Tamiroh\Phmake\Parser\Ast\AssignmentNode;
 use Tamiroh\Phmake\Parser\Ast\Node;
 use Tamiroh\Phmake\Parser\Ast\RuleNode;

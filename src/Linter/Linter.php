@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Linter;
 
+use Tamiroh\Phmake\Linter\Rules\Rule;
 use Tamiroh\Phmake\Parser\Ast\MakefileNode;
 use Tamiroh\Phmake\Parser\Ast\Node;
 use Tamiroh\Phmake\Parser\Ast\Walker;

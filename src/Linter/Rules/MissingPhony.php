@@ -6,7 +6,6 @@ namespace Tamiroh\Phmake\Linter\Rules;
 
 use Override;
 use Tamiroh\Phmake\Linter\Diagnostic;
-use Tamiroh\Phmake\Linter\Rule;
 use Tamiroh\Phmake\Parser\Ast\MakefileNode;
 use Tamiroh\Phmake\Parser\Ast\Node;
 use Tamiroh\Phmake\Parser\Ast\RuleNode;

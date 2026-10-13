@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tamiroh\Phmake\Linter;
+namespace Tamiroh\Phmake\Linter\Rules;
 
+use Tamiroh\Phmake\Linter\Diagnostic;
 use Tamiroh\Phmake\Parser\Ast\Node;
 
 /**
