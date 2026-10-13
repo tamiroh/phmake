@@ -27,7 +27,9 @@ final class FakeShell implements Shell
         private readonly ?Closure $execute = null,
     ) {}
 
-    /** @throws void */
+    /**
+     * @throws void
+     */
     #[Override]
     public function capture(
         string $command,
