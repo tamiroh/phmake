@@ -43,7 +43,7 @@ final readonly class FormatCommand
                 @fwrite(STDERR, "phmake: cannot read '{$file}'\n");
                 return 2;
             }
-            $formatted = new Formatter()->format(new MakefileParser()->parse($source, $file));
+            $formatted = new Formatter()->format(MakefileParser::parse($source, $file));
             if ($formatted !== $source && @file_put_contents($file, $formatted) !== strlen($formatted)) {
                 @fwrite(STDERR, "phmake: cannot write '{$file}'\n");
                 return 2;

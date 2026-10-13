@@ -46,7 +46,7 @@ final class MakefileParserTest extends TestCase
     {
         // The parser accepts only text: neither an IO service nor a mutable context exists.
         $source = "A != exit 97\nB := \$(shell exit 98)\ninclude /nonexistent/phmake-ast-test.mk\n\$(eval C := \$(error evaluated))\n";
-        $ast = new MakefileParser()->parse($source);
+        $ast = MakefileParser::parse($source);
         self::assertSame($source, $ast->source());
         self::assertCount(4, $ast->children);
         self::assertInstanceOf(IncludeNode::class, $ast->children[2]);
@@ -57,19 +57,16 @@ final class MakefileParserTest extends TestCase
     #[DataProvider('sources')]
     public function formatterPreservesBytesAndIsIdempotent(string $source): void
     {
-        $parser = new MakefileParser();
         $formatter = new Formatter();
-        $formatted = $formatter->format($parser->parse($source));
+        $formatted = $formatter->format(MakefileParser::parse($source));
         self::assertSame($source, $formatted);
-        self::assertSame($formatted, $formatter->format($parser->parse($formatted)));
+        self::assertSame($formatted, $formatter->format(MakefileParser::parse($formatted)));
     }
 
     #[Test]
     public function preservesScopedAssignmentsAndDefineBodies(): void
     {
-        $ast = new MakefileParser()->parse(
-            "%.o: private CFLAGS += \$(FLAGS)\ndefine BODY :=\n# literal\nA = body\nendef\n",
-        );
+        $ast = MakefileParser::parse("%.o: private CFLAGS += \$(FLAGS)\ndefine BODY :=\n# literal\nA = body\nendef\n");
         self::assertCount(2, $ast->children);
         $scoped = $ast->children[0];
         self::assertInstanceOf(TargetAssignmentNode::class, $scoped);
@@ -83,7 +80,7 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function retainsAssignmentContinuationWithoutFolding(): void
     {
-        $ast = new MakefileParser()->parse("A += first \\\n  second\n");
+        $ast = MakefileParser::parse("A += first \\\n  second\n");
         self::assertCount(1, $ast->children);
         $assignment = $ast->children[0];
         self::assertInstanceOf(AssignmentNode::class, $assignment);
@@ -94,7 +91,7 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function retainsAssignmentsRulesAndAllBranches(): void
     {
-        $ast = new MakefileParser()->parse(
+        $ast = MakefileParser::parse(
             "A = \$(B)\nA := later\nifdef A\napp: main.o\nelse\napp: util.o\nendif\n",
             'sample.mk',
         );
@@ -120,7 +117,7 @@ final class MakefileParserTest extends TestCase
     #[Test]
     public function retainsSeparateRulesAndInlineRecipeSource(): void
     {
-        $ast = new MakefileParser()->parse("app: $(OBJECTS)\napp: util.o; echo '# literal'\n");
+        $ast = MakefileParser::parse("app: $(OBJECTS)\napp: util.o; echo '# literal'\n");
         self::assertCount(2, $ast->children);
         $first = $ast->children[0];
         $second = $ast->children[1];
@@ -144,7 +141,7 @@ final class MakefileParserTest extends TestCase
                 return $node instanceof AssignmentNode ? [new Diagnostic('assignment', $node->name, $node->span)] : [];
             }
         };
-        $ast = new MakefileParser()->parse("ifeq (a,b)\nA = one\nelse\nB = two\nendif\n");
+        $ast = MakefileParser::parse("ifeq (a,b)\nA = one\nelse\nB = two\nendif\n");
         $diagnostics = new Linter([$rule])->lint($ast);
         self::assertSame(
             ['A', 'B'],

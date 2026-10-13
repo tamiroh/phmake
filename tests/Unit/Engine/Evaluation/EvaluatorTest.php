@@ -256,14 +256,13 @@ final class EvaluatorTest extends TestCase
         $source =
             "A = before\ninclude part.mk\nifeq (a,b)\nA = ignored\nendif\n"
             . "app: main.o\napp: util.o\n\t@echo $(A)\n";
-        $parser = new MakefileParser();
-        $formatted = new Formatter()->format($parser->parse($source));
+        $formatted = new Formatter()->format(MakefileParser::parse($source));
         $sources = new MakefileSources(new FakeFilesystem(['part.mk' => "A = included\n"]), []);
         $parsed = new Evaluator(
             $sources,
             output: new FakeOutput(),
             filesystem: new FakeFilesystem(),
-        )->evaluate($parser->parse($formatted, 'source.mk'));
+        )->evaluate(MakefileParser::parse($formatted, 'source.mk'));
         self::assertSame('included', self::expand($parsed, '$(A)'));
         self::assertSame(['util.o', 'main.o'], self::rule(self::target($parsed, 'app'))->prerequisites->normal);
         self::assertSame('source.mk part.mk', self::expand($parsed, '$(MAKEFILE_LIST)'));

@@ -480,7 +480,7 @@ final readonly class Evaluator
             $this->readLines(
                 $source instanceof Ast\MakefileNode
                     ? $source
-                    : new MakefileParser()->parse($source, $sources[1] ?? $evaluationSource ?? '<input>'),
+                    : MakefileParser::parse($source, $sources[1] ?? $evaluationSource ?? '<input>'),
                 $definitions,
                 $variables,
                 $included,

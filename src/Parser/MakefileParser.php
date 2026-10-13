@@ -35,6 +35,52 @@ use function substr;
  */
 final readonly class MakefileParser
 {
+    public static function parse(string $source, string $file = '<input>'): MakefileNode
+    {
+        $nodes = [];
+        $offset = 0;
+        $line = 1;
+        $column = 1;
+        $length = strlen($source);
+        if (str_starts_with($source, "\xEF\xBB\xBF")) {
+            $nodes[] = new TriviaNode(new SourceSpan($file, 0, 3, 1, 1, 1, 4), substr($source, 0, 3));
+            $offset = 3;
+            $column = 4;
+        }
+        while ($offset < $length) {
+            $start = $offset;
+            $startLine = $line;
+            $startColumn = $column;
+            do {
+                $newline = strpos($source, "\n", $offset);
+                $end = $newline === false ? $length : $newline + 1;
+                $physical = substr($source, $offset, $end - $offset);
+                $text = rtrim($physical, "\r\n");
+                $continued = ((strlen($text) - strlen(rtrim($text, '\\'))) % 2) === 1;
+                $offset = $end;
+                if ($newline === false) {
+                    $column += strlen($physical);
+                } else {
+                    $line++;
+                    $column = 1;
+                }
+            } while ($continued && $offset < $length);
+            $span = new SourceSpan($file, $start, $offset, $startLine, $startColumn, $line, $column);
+            $raw = substr($source, $start, $offset - $start);
+            // Folding is .POSIX- and recipe-dependent; do not normalize continuations.
+            $nodes[] = self::classify($span, $raw);
+        }
+        return new MakefileNode(new SourceSpan($file, 0, $length, 1, 1, $line, $column), '', self::group($nodes));
+    }
+
+    private static function classify(SourceSpan $span, string $raw): Node
+    {
+        $line = rtrim($raw, "\r\n");
+        return str_starts_with($raw, "\t")
+            ? new RecipeNode($span, $raw, substr($line, 1))
+            : LineParser::parse($span, $raw, $line);
+    }
+
     /**
      * @param non-empty-list<Node> $nodes
      */
@@ -195,51 +241,5 @@ final readonly class MakefileParser
             $index = $lastRecipe;
         }
         return $result;
-    }
-
-    public function parse(string $source, string $file = '<input>'): MakefileNode
-    {
-        $nodes = [];
-        $offset = 0;
-        $line = 1;
-        $column = 1;
-        $length = strlen($source);
-        if (str_starts_with($source, "\xEF\xBB\xBF")) {
-            $nodes[] = new TriviaNode(new SourceSpan($file, 0, 3, 1, 1, 1, 4), substr($source, 0, 3));
-            $offset = 3;
-            $column = 4;
-        }
-        while ($offset < $length) {
-            $start = $offset;
-            $startLine = $line;
-            $startColumn = $column;
-            do {
-                $newline = strpos($source, "\n", $offset);
-                $end = $newline === false ? $length : $newline + 1;
-                $physical = substr($source, $offset, $end - $offset);
-                $text = rtrim($physical, "\r\n");
-                $continued = ((strlen($text) - strlen(rtrim($text, '\\'))) % 2) === 1;
-                $offset = $end;
-                if ($newline === false) {
-                    $column += strlen($physical);
-                } else {
-                    $line++;
-                    $column = 1;
-                }
-            } while ($continued && $offset < $length);
-            $span = new SourceSpan($file, $start, $offset, $startLine, $startColumn, $line, $column);
-            $raw = substr($source, $start, $offset - $start);
-            // Folding is .POSIX- and recipe-dependent; do not normalize continuations.
-            $nodes[] = $this->classify($span, $raw);
-        }
-        return new MakefileNode(new SourceSpan($file, 0, $length, 1, 1, $line, $column), '', self::group($nodes));
-    }
-
-    private function classify(SourceSpan $span, string $raw): Node
-    {
-        $line = rtrim($raw, "\r\n");
-        return str_starts_with($raw, "\t")
-            ? new RecipeNode($span, $raw, substr($line, 1))
-            : LineParser::parse($span, $raw, $line);
     }
 }
