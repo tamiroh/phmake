@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Console;
 
 use Phar;
 use Tamiroh\Phmake\Console\Commands\FormatCommand;
+use Tamiroh\Phmake\Console\Commands\LintCommand;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Input\Usage;
 use Tamiroh\Phmake\Console\Input\UsageException;
@@ -45,6 +46,9 @@ final readonly class Application
     {
         if (($arguments[0] ?? null) === '--format') {
             exit(new FormatCommand()->run(array_slice($arguments, 1)));
+        }
+        if (($arguments[0] ?? null) === '--lint') {
+            exit(new LintCommand()->run(array_slice($arguments, 1)));
         }
         $signals = new Signals();
         $status = 0;

@@ -77,7 +77,7 @@ permit = ["@self", "@native", 'Tamiroh\Phmake\Parser\Ast\**']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Console\'
-permit = ["@self", "@native", 'Tamiroh\Phmake\Engine\**', 'Tamiroh\Phmake\Parser\**', 'Tamiroh\Phmake\Formatter\**']
+permit = ["@self", "@native", 'Tamiroh\Phmake\Engine\**', 'Tamiroh\Phmake\Parser\**', 'Tamiroh\Phmake\Formatter\**', 'Tamiroh\Phmake\Linter\**']
 
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Tests\'
