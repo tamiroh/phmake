@@ -23,6 +23,7 @@ use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\RunResult;
 use Tamiroh\Phmake\Tests\Testing\FakeFilesystem;
 use Tamiroh\Phmake\Tests\Testing\FakeOutput;
+use Tamiroh\Phmake\Tests\Testing\FakeShell;
 
 final class EngineTest extends TestCase
 {
@@ -36,8 +37,7 @@ final class EngineTest extends TestCase
     {
         // Arrange
         $filesystem = new FakeFilesystem(['Makefile' => "all:\n\tfail\n"]);
-        $shell = $this->createMock(Shell::class);
-        $shell->expects(self::once())->method('exec')->with('fail')->willReturn(1);
+        $shell = new FakeShell(exitCode: 1);
         $execution = new ExecutionOptions();
         $execution->keepGoing = true;
         [$engine, $sources] = $this->engine($filesystem, $shell, $execution);
@@ -46,6 +46,7 @@ final class EngineTest extends TestCase
         $result = $engine->run($sources->read);
 
         // Assert
+        self::assertSame(['fail'], $shell->commands);
         self::assertSame(RunResult::Failed, $result);
     }
 
@@ -59,8 +60,7 @@ final class EngineTest extends TestCase
     {
         // Arrange
         $filesystem = new FakeFilesystem(['Makefile' => "all:\n\tbuild\n"]);
-        $shell = $this->createMock(Shell::class);
-        $shell->expects(self::never())->method('exec');
+        $shell = new FakeShell();
         $execution = new ExecutionOptions();
         $execution->question = true;
         [$engine, $sources] = $this->engine($filesystem, $shell, $execution);
@@ -69,6 +69,7 @@ final class EngineTest extends TestCase
         $result = $engine->run($sources->read);
 
         // Assert
+        self::assertSame([], $shell->commands);
         self::assertSame(RunResult::OutOfDate, $result);
     }
 
@@ -84,15 +85,12 @@ final class EngineTest extends TestCase
         $filesystem = new FakeFilesystem([
             'Makefile' => "include generated.mk\nall:\n\tbuild\ngenerated.mk:\n\tgenerate\n",
         ]);
-        $shell = $this->createMock(Shell::class);
-        $shell
-            ->expects(self::once())
-            ->method('exec')
-            ->with('generate')
-            ->willReturnCallback(static function () use ($filesystem): int {
+        $shell = new FakeShell(execute: static function (string $command) use ($filesystem): int {
+            if ($command === 'generate') {
                 $filesystem->write('generated.mk', "VALUE = generated\n", false);
-                return 0;
-            });
+            }
+            return 0;
+        });
         $execution = new ExecutionOptions();
         $execution->dryRun = true;
         [$engine, $sources, $context] = $this->engine($filesystem, $shell, $execution);
@@ -101,6 +99,7 @@ final class EngineTest extends TestCase
         $result = $engine->run($sources->read, ['all']);
 
         // Assert
+        self::assertSame(['generate'], $shell->commands);
         self::assertSame(RunResult::NeedsReevaluation, $result);
         self::assertTrue($filesystem->exists('generated.mk'));
         self::assertSame('n', new VariableExpander($context)->expand('$(MAKEFLAGS)'));
@@ -117,8 +116,7 @@ final class EngineTest extends TestCase
         $filesystem = new FakeFilesystem([
             'Makefile' => "include generated.mk\nall:\n\tbuild\ngenerated.mk:\n\tfail\n",
         ]);
-        $shell = $this->createMock(Shell::class);
-        $shell->expects(self::once())->method('exec')->with('fail')->willReturn(1);
+        $shell = new FakeShell(exitCode: 1);
         $execution = new ExecutionOptions();
         $execution->dryRun = true;
         [$engine, $sources, $context] = $this->engine($filesystem, $shell, $execution);
@@ -133,6 +131,7 @@ final class EngineTest extends TestCase
         }
 
         // Assert
+        self::assertSame(['fail'], $shell->commands);
         self::assertInstanceOf(CommandFailedException::class, $failure);
         self::assertSame('generated.mk', $failure->target);
         self::assertSame('n', new VariableExpander($context)->expand('$(MAKEFLAGS)'));
@@ -148,14 +147,14 @@ final class EngineTest extends TestCase
     {
         // Arrange
         $filesystem = new FakeFilesystem(['Makefile' => "all:\n\tbuild-default\nother:\n\tbuild-other\n"]);
-        $shell = $this->createMock(Shell::class);
-        $shell->expects(self::once())->method('exec')->with('build-other')->willReturn(0);
+        $shell = new FakeShell();
         [$engine, $sources] = $this->engine($filesystem, $shell);
 
         // Act
         $result = $engine->run($sources->read, ['other']);
 
         // Assert
+        self::assertSame(['build-other'], $shell->commands);
         self::assertSame(RunResult::Succeeded, $result);
     }
 
@@ -169,14 +168,14 @@ final class EngineTest extends TestCase
     {
         // Arrange
         $filesystem = new FakeFilesystem(['Makefile' => "all:\n\tbuild-default\nother:\n\tbuild-other\n"]);
-        $shell = $this->createMock(Shell::class);
-        $shell->expects(self::once())->method('exec')->with('build-default')->willReturn(0);
+        $shell = new FakeShell();
         [$engine, $sources] = $this->engine($filesystem, $shell);
 
         // Act
         $result = $engine->run($sources->read);
 
         // Assert
+        self::assertSame(['build-default'], $shell->commands);
         self::assertSame(RunResult::Succeeded, $result);
     }
 
