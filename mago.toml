@@ -64,10 +64,6 @@ namespace = 'Tamiroh\Phmake\Parser\'
 permit = ["@self", "@native"]
 
 [[guard.perimeter.rules]]
-namespace = 'Tamiroh\Phmake\Parser\Syntax\'
-permit = ["@self", "@native", 'Tamiroh\Phmake\Parser\Ast\**']
-
-[[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Parser\Ast\'
 permit = ["@self", "@native"]
 

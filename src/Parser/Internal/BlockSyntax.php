@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Parser\Internal;
 
 use Tamiroh\Phmake\Parser\Ast;
-use Tamiroh\Phmake\Parser\Syntax\LineSyntax;
+use Tamiroh\Phmake\Parser\LineParser;
 
 use function array_pop;
 use function array_slice;
@@ -111,7 +111,7 @@ final readonly class BlockSyntax
         $endColumn = $header->span->endColumn;
         $terminator = null;
         while (($node = $nodes[++$index] ?? null) !== null) {
-            $boundary = str_starts_with($node->raw, "\t") ? null : LineSyntax::definitionBoundary($node->raw);
+            $boundary = str_starts_with($node->raw, "\t") ? null : LineParser::definitionBoundary($node->raw);
             if ($boundary !== null) {
                 if ($boundary[0] === 'define') {
                     $depth++;

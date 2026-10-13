@@ -6,8 +6,8 @@ namespace Tamiroh\Phmake\Engine\Evaluation\Internal;
 
 use Tamiroh\Phmake\Engine\Evaluation\LineReader;
 use Tamiroh\Phmake\Parser\Ast;
+use Tamiroh\Phmake\Parser\LineParser;
 use Tamiroh\Phmake\Parser\ParseException;
-use Tamiroh\Phmake\Parser\Syntax\LineSyntax;
 
 use function implode;
 use function rtrim;
@@ -36,7 +36,7 @@ final readonly class SyntaxReader
         $body = [];
         $depth = 1;
         while (($line = $this->lines->next($prefix, definition: true, posix: $posix)) !== null) {
-            $boundary = str_starts_with($line, $prefix) ? null : LineSyntax::definitionBoundary($line);
+            $boundary = str_starts_with($line, $prefix) ? null : LineParser::definitionBoundary($line);
             if ($boundary !== null) {
                 if ($boundary[0] === 'define') {
                     $depth++;
@@ -79,6 +79,6 @@ final readonly class SyntaxReader
         }
         // The only fallback: reclassify a logical line after contextual folding,
         // or after a recipe/define fragment acquires a different read-time meaning.
-        return LineSyntax::parse($span, $raw, $line);
+        return LineParser::parse($span, $raw, $line);
     }
 }

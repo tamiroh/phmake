@@ -10,7 +10,6 @@ use Tamiroh\Phmake\Parser\Ast\RecipeNode;
 use Tamiroh\Phmake\Parser\Ast\SourceSpan;
 use Tamiroh\Phmake\Parser\Ast\TriviaNode;
 use Tamiroh\Phmake\Parser\Internal\BlockSyntax;
-use Tamiroh\Phmake\Parser\Syntax\LineSyntax;
 
 use function rtrim;
 use function str_starts_with;
@@ -72,6 +71,6 @@ final readonly class MakefileParser
         $line = rtrim($raw, "\r\n");
         return str_starts_with($raw, "\t")
             ? new RecipeNode($span, $raw, substr($line, 1))
-            : LineSyntax::parse($span, $raw, $line);
+            : LineParser::parse($span, $raw, $line);
     }
 }

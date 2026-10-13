@@ -7,8 +7,7 @@ namespace Tamiroh\Phmake\Engine\Evaluation;
 use Tamiroh\Phmake\Parser\Ast\MakefileNode;
 use Tamiroh\Phmake\Parser\Ast\Node;
 use Tamiroh\Phmake\Parser\Ast\SourceSpan;
-use Tamiroh\Phmake\Parser\Syntax\AssignmentSyntax;
-use Tamiroh\Phmake\Parser\Syntax\LineSyntax;
+use Tamiroh\Phmake\Parser\LineParser;
 
 use function array_slice;
 use function count;
@@ -192,7 +191,7 @@ final class LineReader
         if ($hasRule && str_starts_with($line, $recipePrefix)) {
             return true;
         }
-        if (AssignmentSyntax::parse($line) !== null) {
+        if (LineParser::isAssignment($line)) {
             return false;
         }
         $hasColon = false;
@@ -204,8 +203,7 @@ final class LineReader
                 return false;
             } elseif ($line[$index] === ':') {
                 $value = substr($line, $index + 1);
-                [$value] = LineSyntax::modifiers($value, scoped: true);
-                if (AssignmentSyntax::parse($value) !== null) {
+                if (LineParser::isAssignment($value, scoped: true)) {
                     return false;
                 }
                 $hasColon = true;
