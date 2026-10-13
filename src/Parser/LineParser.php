@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Parser;
 
-use Tamiroh\Phmake\Parser\Internal\LineText;
+use LogicException;
 
+use function intdiv;
 use function ltrim;
 use function preg_match;
 use function str_contains;
+use function str_repeat;
 use function strcspn;
 use function strlen;
 use function strrpos;
@@ -28,7 +30,7 @@ final readonly class LineParser
      */
     public static function definitionBoundary(string $line): ?array
     {
-        $text = trim(LineText::removeComment($line));
+        $text = trim(self::removeComment($line));
         if (preg_match('/^define(?:[ \t]+(?![:+?!=])\S|$)/', $text) === 1) {
             return ['define', ''];
         }
@@ -49,7 +51,7 @@ final readonly class LineParser
 
     public static function parse(Ast\SourceSpan $span, string $raw, string $line): Ast\Node
     {
-        $text = LineText::removeComment($line);
+        $text = self::removeComment($line);
         if (trim($text, " \t\n\r\0\x0B\f") === '') {
             return new Ast\TriviaNode($span, $raw);
         }
@@ -144,7 +146,7 @@ final readonly class LineParser
                 );
             }
         }
-        [$header, $recipe] = LineText::splitRecipe($line);
+        [$header, $recipe] = self::splitRecipe($line);
         $inline = null;
         if ($recipe !== null) {
             $offset = strlen($line) - strlen($recipe);
@@ -246,6 +248,96 @@ final readonly class LineParser
             $text = ltrim($matches[2]);
         }
         return [$text, $modifiers];
+    }
+
+    private static function removeComment(string $line): string
+    {
+        if (!str_contains($line, '#')) {
+            return $line;
+        }
+        $result = '';
+        $depth = 0;
+        for ($index = 0; $index < strlen($line); $index++) {
+            if ($line[$index] === '\\') {
+                $start = $index;
+                while (($line[$index] ?? '') === '\\') {
+                    $index++;
+                }
+                $count = $index - $start;
+                if ($count < 0) {
+                    throw new LogicException('Backslash count must be non-negative');
+                }
+                if (($line[$index] ?? '') === '#' && $depth === 0) {
+                    /**
+                     * Dividing a non-negative count by 2 yields a non-negative result.
+                     * Dividing by 2 cannot cause division by zero or integer overflow.
+                     *
+                     * @mago-expect analysis:unhandled-thrown-type,unhandled-thrown-type,possibly-invalid-argument
+                     */
+                    $result .= str_repeat('\\', intdiv($count, num2: 2));
+                    if (($count % 2) === 0) {
+                        break;
+                    }
+                    $result .= '#';
+                    continue;
+                }
+                $result .= str_repeat('\\', $count);
+                $index--;
+                continue;
+            }
+            if (
+                ($line[$index] === '(' || $line[$index] === '{')
+                && ($depth > 0 || $index > 0 && $line[$index - 1] === '$')
+            ) {
+                $depth++;
+            } elseif (($line[$index] === ')' || $line[$index] === '}') && $depth > 0) {
+                $depth--;
+            }
+            if ($line[$index] === '#' && $depth === 0) {
+                break;
+            }
+            $result .= $line[$index];
+        }
+        return $result;
+    }
+
+    /**
+     * @return array{string, ?string}
+     */
+    private static function splitRecipe(string $line): array
+    {
+        if (!str_contains($line, ';')) {
+            return [self::removeComment($line), null];
+        }
+        $depth = 0;
+        for ($index = 0; $index < strlen($line); $index++) {
+            if ($line[$index] === '\\') {
+                $index++;
+                continue;
+            }
+            if ($line[$index] === '$' && isset($line[$index + 1])) {
+                if ($line[$index + 1] === '(' || $line[$index + 1] === '{') {
+                    $depth++;
+                }
+                $index++;
+                continue;
+            }
+            if (($line[$index] === '(' || $line[$index] === '{') && $depth > 0) {
+                $depth++;
+            } elseif (($line[$index] === ')' || $line[$index] === '}') && $depth > 0) {
+                $depth--;
+            }
+            if ($depth > 0) {
+                continue;
+            }
+            if ($line[$index] === '#') {
+                return [self::removeComment($line), null];
+            }
+            if ($line[$index] === ';') {
+                return [self::removeComment(substr($line, offset: 0, length: $index)), substr($line, $index + 1)];
+            }
+        }
+        return [self::removeComment($line), null];
     }
 
     private static function tailSpan(Ast\SourceSpan $span, string $raw, int $offset): Ast\SourceSpan
