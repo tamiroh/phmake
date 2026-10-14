@@ -3,6 +3,8 @@ PHPSTAN = vendor/bin/phpstan
 PHPUNIT = vendor/bin/phpunit
 PHP_CS_FIXER = vendor/bin/php-cs-fixer
 PHP = php
+ELEPHC = elephc
+ELEPHC_FLAGS =
 BOX = .local/box-4.7.0.phar
 PHAR_INTERPRETER = env
 VERSION = development
@@ -38,6 +40,14 @@ PHAR_CONFIG = dist/.phar-config-$(shell printf '%s\n' "$(PHP)" "$(PHAR_INTERPRET
 
 .PHONY: phar
 phar: dist/phmake.phar
+
+.PHONY: elephc
+elephc: | dist
+	mkdir -p dist/elephc
+	cp composer.json dist/elephc/composer.json
+	ln -sfn ../../src dist/elephc/src
+	sed '\|^require __DIR__ . '\''/vendor/autoload.php'\'';$$|d' phmake > dist/elephc/phmake.php
+	cd dist/elephc && $(ELEPHC) $(ELEPHC_FLAGS) phmake.php
 
 dist:
 	mkdir -p $@
