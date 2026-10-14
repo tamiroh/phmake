@@ -80,7 +80,7 @@ final class RuleDefinitions
         if ($rule->grouped && $recipe === null) {
             throw new MakefileErrorException('grouped targets must provide a recipe', $rule->source);
         }
-        if ($rule->targetPattern === null && Pattern::of($rule->targetNames[0])->hasWildcard()) {
+        if ($rule->targetPattern === null && new Pattern($rule->targetNames[0])->hasWildcard()) {
             $this->patterns = array_values(array_filter(
                 $this->patterns,
                 static fn(PatternRule $pattern): bool => (
@@ -114,7 +114,7 @@ final class RuleDefinitions
             return;
         }
         foreach ($rule->targetNames as $rawName) {
-            $name = Pattern::of($rawName)->substitute('%');
+            $name = new Pattern($rawName)->substitute('%');
             if ($name === '.WAIT') {
                 if ($rule->prerequisites->sequence !== []) {
                     $this->output?->writeWarning('.WAIT should not have prerequisites', $rule->source);
@@ -139,7 +139,7 @@ final class RuleDefinitions
                 }
                 continue;
             }
-            $stem = $rule->targetPattern === null ? '' : Pattern::of($rule->targetPattern)->match($name);
+            $stem = $rule->targetPattern === null ? '' : new Pattern($rule->targetPattern)->match($name);
             if ($stem === null) {
                 $this->output?->writeWarning("target '{$name}' doesn't match the target pattern", $rule->source);
             }
@@ -180,7 +180,7 @@ final class RuleDefinitions
                     $rule->doubleColon,
                     $stem ?? '',
                     $rule->grouped
-                        ? array_map(static fn(string $name): string => Pattern::of($name)->substitute(
+                        ? array_map(static fn(string $name): string => new Pattern($name)->substitute(
                             '%',
                         ), $rule->targetNames) : [],
                 ),
@@ -262,10 +262,10 @@ final class RuleDefinitions
             return;
         }
         foreach ($rule->targetNames as $rawName) {
-            if ($rule->targetPattern === null && Pattern::of($rawName)->hasWildcard()) {
+            if ($rule->targetPattern === null && new Pattern($rawName)->hasWildcard()) {
                 continue;
             }
-            $name = Pattern::of($rawName)->substitute('%');
+            $name = new Pattern($rawName)->substitute('%');
             if (!str_starts_with($name, '.') || str_contains($name, '/')) {
                 $this->defaultGoal = $name;
                 $expander->context->variables['.DEFAULT_GOAL'] = new Variable('.DEFAULT_GOAL', $name, false);
@@ -352,7 +352,7 @@ final class RuleDefinitions
     {
         $result = [];
         foreach ($names as $name) {
-            $name = Pattern::of($name)->substitute($stem);
+            $name = new Pattern($name)->substitute($stem);
             if ($name !== '') {
                 $result[] = $name;
             }

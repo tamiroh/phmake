@@ -117,13 +117,13 @@ final class SecondaryExpansion
             $part = DependencySyntax::parse(
                 ($orderOnly ? '| ' : '') . $text,
                 $filesystem,
-                Pattern::of($word)->hasWildcard() ? $directory : '',
+                new Pattern($word)->hasWildcard() ? $directory : '',
             );
             yield new Prerequisites(
                 $part->normal,
                 $part->orderOnly,
                 sequence: $part->sequence,
-                literal: Pattern::of($word)->hasWildcard() ? [] : $part->sequence,
+                literal: new Pattern($word)->hasWildcard() ? [] : $part->sequence,
             );
             $orderOnly = $orderOnly || DependencySyntax::delimiter($text, '|') !== null;
         }
@@ -155,7 +155,7 @@ final class SecondaryExpansion
         return (
             preg_replace_callback(
                 '/\\S+/',
-                static fn(array $match): string => Pattern::of($match[0])->substitute($stem),
+                static fn(array $match): string => new Pattern($match[0])->substitute($stem),
                 $text,
             ) ?? $text
         );

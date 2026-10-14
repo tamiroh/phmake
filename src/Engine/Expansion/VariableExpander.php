@@ -327,8 +327,8 @@ final readonly class VariableExpander
         $result = [];
         foreach ($words === false ? [] : $words as $word) {
             if (str_contains($from, '%')) {
-                $stem = Pattern::of($from)->match($word);
-                $result[] = $stem === null ? $word : Pattern::of($to)->substitute($stem);
+                $stem = new Pattern($from)->match($word);
+                $result[] = $stem === null ? $word : new Pattern($to)->substitute($stem);
             } else {
                 $result[] = str_ends_with($word, $from) ? substr($word, 0, strlen($word) - strlen($from)) . $to : $word;
             }

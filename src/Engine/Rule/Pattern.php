@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Engine\Rule;
 
-use function count;
 use function str_ends_with;
 use function str_replace;
 use function str_starts_with;
@@ -12,34 +11,15 @@ use function strlen;
 use function strpos;
 use function substr;
 
-final class Pattern
+final readonly class Pattern
 {
-    private const int CACHE_SIZE = 4096;
+    private string $prefix;
 
-    /** @var array<string, self> */
-    private static array $parsed = [];
+    private ?string $suffix;
 
-    private readonly string $prefix;
-
-    private readonly ?string $suffix;
-
-    private function __construct(string $expression)
+    public function __construct(string $expression)
     {
         [$this->prefix, $this->suffix] = self::parts($expression);
-    }
-
-    /**
-     * Rule searches match the same few patterns against every file, so parsed patterns are shared.
-     */
-    public static function of(string $expression): self
-    {
-        if (isset(self::$parsed[$expression])) {
-            return self::$parsed[$expression];
-        }
-        if (count(self::$parsed) >= self::CACHE_SIZE) {
-            self::$parsed = [];
-        }
-        return self::$parsed[$expression] = new self($expression);
     }
 
     /**

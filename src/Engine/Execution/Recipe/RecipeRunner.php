@@ -200,7 +200,7 @@ final readonly class RecipeRunner
         foreach ($target->rules as $rule) {
             if ($special === '.PRECIOUS') {
                 foreach ($rule->prerequisites->normal as $pattern) {
-                    if (Pattern::of($pattern)->match($name) !== null) {
+                    if (new Pattern($pattern)->match($name) !== null) {
                         return true;
                     }
                 }

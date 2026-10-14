@@ -49,7 +49,7 @@ final class RuleSyntax
                 throw new ParseException($line, 'multiple target patterns');
             }
             $pattern = FileName::normalize($patterns[0]);
-            if (!Pattern::of($pattern)->hasWildcard()) {
+            if (!new Pattern($pattern)->hasWildcard()) {
                 throw new ParseException($line, "target pattern contains no '%'");
             }
             $dependencies = substr($dependencies, $second + 1);
