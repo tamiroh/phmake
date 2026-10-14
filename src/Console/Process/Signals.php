@@ -67,6 +67,20 @@ final class Signals
     }
 
     /**
+     * Let signals terminate the process again, as in a newly started program.
+     */
+    public static function reset(): void
+    {
+        if (!function_exists('pcntl_signal')) {
+            return;
+        }
+        foreach ([SIGHUP, SIGINT, SIGQUIT, SIGTERM] as $signal) {
+            pcntl_signal($signal, SIG_DFL);
+        }
+        self::$received = 0;
+    }
+
+    /**
      * Signal descendants before their shell so that compound recipes cannot leave workers behind.
      */
     public static function stop(int $pid): void

@@ -144,6 +144,8 @@ final class RecursiveMake
             }
             if ($pid === 0) {
                 pcntl_sigprocmask(SIG_SETMASK, $mask, $previous);
+                // The inherited handlers only record signals, which commands such as --format never check.
+                Signals::reset();
                 self::child($directory, $arguments, $environment);
             }
             $observer($pid, null);
