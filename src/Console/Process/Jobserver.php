@@ -18,6 +18,7 @@ use function fopen;
 use function fread;
 use function fwrite;
 use function getenv;
+use function getmypid;
 use function is_resource;
 use function mkdir;
 use function preg_match;
@@ -53,6 +54,8 @@ final class Jobserver implements JobSlots
 
     private int $active = 0;
 
+    private readonly int|false $owner;
+
     /**
      * @throws MakefileErrorException
      */
@@ -60,6 +63,7 @@ final class Jobserver implements JobSlots
         private readonly ParallelOptions $options,
         Output $output,
     ) {
+        $this->owner = getmypid();
         if ($options->reset) {
             $output->writeWarning(
                 'warning: -j' . $options->jobs . ' forced in submake: resetting jobserver mode.',
@@ -150,6 +154,11 @@ final class Jobserver implements JobSlots
         }
     }
 
+    public function serial(): bool
+    {
+        return $this->options->jobs <= 1;
+    }
+
     #[Override]
     public function waitForJobs(): void
     {
@@ -238,6 +247,9 @@ final class Jobserver implements JobSlots
 
     public function __destruct()
     {
+        if ($this->owner !== getmypid()) {
+            return;
+        }
         if ($this->writer !== null && $this->writer !== $this->reader) {
             fclose($this->writer);
         }

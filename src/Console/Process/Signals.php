@@ -14,8 +14,6 @@ use function pcntl_async_signals;
 use function pcntl_signal;
 use function posix_kill;
 use function preg_match_all;
-use function proc_get_status;
-use function proc_terminate;
 
 use const PREG_SET_ORDER;
 use const SIG_DFL;
@@ -70,12 +68,9 @@ final class Signals
 
     /**
      * Signal descendants before their shell so that compound recipes cannot leave workers behind.
-     *
-     * @param resource $process
      */
-    public static function stop(mixed $process): void
+    public static function stop(int $pid): void
     {
-        $pid = proc_get_status($process)['pid'];
         $listing = CapturedProcess::run(['ps', '-eo', 'pid=,ppid='], interruptible: false);
         if ($listing['status'] === 0) {
             $rows = [];
@@ -97,7 +92,7 @@ final class Signals
                 }
             }
         }
-        proc_terminate($process, self::$received);
+        posix_kill($pid, self::$received);
     }
 
     public function finish(): void

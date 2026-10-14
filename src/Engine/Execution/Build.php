@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Engine\Execution;
 
+use Closure;
 use Tamiroh\Phmake\Engine\Execution\Files\BuildFiles;
 use Tamiroh\Phmake\Engine\Execution\Internal\MissingTargetException;
 use Tamiroh\Phmake\Engine\Execution\Internal\PrerequisiteChain;
@@ -99,14 +100,16 @@ final class Build
      *
      * @param list<string> $names
      * @param list<string> $unreadable
+     * @param ?Closure(): void $beforeRecipe called once before the first recipe runs
      *
      * @throws MakefileErrorException
      * @throws CommandFailedException
      *
      * @return array<string, MakefileErrorException|CommandFailedException>
      */
-    public function remake(array $names, array $unreadable = []): array
+    public function remake(array $names, array $unreadable = [], ?Closure $beforeRecipe = null): array
     {
+        $this->state->beforeRecipe = $beforeRecipe;
         $this->files->goals = $names;
         DebugTrace::write($this->options->reporting, $this->output, 'b', 'Updating makefiles....');
         $this->state->remaking = true;
@@ -169,6 +172,7 @@ final class Build
             }
         }
         $this->state->remaking = false;
+        $this->state->beforeRecipe = null;
         $this->options->reporting->remaking = false;
         $this->state->failed = false;
         return $errors;
@@ -381,6 +385,11 @@ final class Build
                 $peer,
                 new VariableExpander($chain->scope->context, $this->output, scope: $chain->scope),
             );
+        }
+        if ($this->state->beforeRecipe !== null) {
+            $beforeRecipe = $this->state->beforeRecipe;
+            $this->state->beforeRecipe = null;
+            $beforeRecipe();
         }
         $slot = $this->parallel() ? $this->jobs->acquire() : '';
         try {

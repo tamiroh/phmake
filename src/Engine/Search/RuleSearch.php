@@ -22,9 +22,11 @@ use Tamiroh\Phmake\Engine\Variable\VariableScope;
 
 use function array_filter;
 use function array_key_exists;
+use function array_keys;
 use function array_values;
 use function basename;
 use function count;
+use function implode;
 use function in_array;
 use function str_contains;
 use function str_starts_with;
@@ -38,6 +40,11 @@ use function usort;
 final class RuleSearch
 {
     public SearchState $state;
+
+    /** @var array<string, list<ImplicitCandidate>> */
+    private array $candidates = [];
+
+    private bool $compatible = false;
 
     public function __construct(
         private readonly Makefile $makefile,
@@ -122,14 +129,11 @@ final class RuleSearch
                 foreach ($rule->prerequisites->sequence as $dependency) {
                     $this->state->mentioned[$dependency] = true;
                 }
-                $implicit = $this->implicit($searchName, $rule, $scope, [], $this->state, false) ?? $this->implicit(
-                    $searchName,
-                    $rule,
-                    $scope,
-                    [],
-                    $this->state,
-                    true,
-                );
+                $this->compatible = $scope->context->reporting->enabled('i');
+                $implicit = $this->implicit($searchName, $rule, $scope, [], $this->state, false);
+                if ($implicit === null && $this->compatible) {
+                    $implicit = $this->implicit($searchName, $rule, $scope, [], $this->state, true);
+                }
                 if ($implicit !== null) {
                     $rule = $implicit;
                 }
@@ -174,10 +178,15 @@ final class RuleSearch
             if (!isset($branch->mentioned[$dependency]) && !in_array($dependency, $prerequisites->literal, true)) {
                 $branch->intermediates[$dependency] = true;
             }
-            $child = $this->makefile->targetVariables->scope($dependency, $scope->inherit(), $this->output);
-            if (
+            $known =
                 isset($this->makefile->targetsByName[$dependency])
-                || in_array($dependency, $explicit->prerequisites->sequence ?? [], true)
+                || in_array($dependency, $explicit->prerequisites->sequence ?? [], true);
+            // Target-specific scopes are built only for dependencies that must be searched.
+            $child = $known
+                ? $scope
+                : $this->makefile->targetVariables->scope($dependency, $scope->inherit(), $this->output);
+            if (
+                $known
                 || $this->locate(
                     $dependency,
                     new VariableExpander($child->context, $this->output, scope: $child),
@@ -190,6 +199,8 @@ final class RuleSearch
                 }
                 continue;
             }
+            // Only a mentioned dependency can make the compatibility search succeed where this one failed.
+            $this->compatible = $this->compatible || isset($branch->mentioned[$dependency]);
             if (!$chain) {
                 return false;
             }
@@ -216,51 +227,8 @@ final class RuleSearch
      */
     private function candidates(string $name, array $used): array
     {
-        $candidates = [];
-        $specific = false;
-        foreach ($this->makefile->patterns as $index => $pattern) {
-            foreach ($pattern->names as $text) {
-                $hasDirectory = str_contains($text, '/');
-                $member = ArchiveMember::parse($name);
-                $matchName = $member !== null && str_starts_with($text, '(') ? '(' . $member->member . ')' : $name;
-                $stem = new Pattern($text)->match($hasDirectory ? $matchName : basename($matchName));
-                if ($stem === null || $stem === '') {
-                    continue;
-                }
-                if ($text !== '%') {
-                    $specific = true;
-                }
-                if (
-                    $pattern->rule->recipe === null
-                    || isset($used[$index])
-                    || $used !== [] && $text === '%' && !$pattern->rule->doubleColon
-                ) {
-                    continue;
-                }
-                $candidates[] = new ImplicitCandidate(
-                    $pattern,
-                    $index,
-                    $stem,
-                    $hasDirectory ? '' : substr($matchName, 0, strlen($matchName) - strlen(basename($matchName))),
-                    $text === '%',
-                );
-            }
-        }
-        if ($specific) {
-            $candidates = array_values(array_filter(
-                $candidates,
-                static fn(ImplicitCandidate $candidate): bool => (
-                    !$candidate->matchAnything || $candidate->pattern->rule->doubleColon
-                ),
-            ));
-        }
-        usort(
-            $candidates,
-            static fn(ImplicitCandidate $a, ImplicitCandidate $b): int => (
-                strlen($a->directory . $a->stem) <=> strlen($b->directory . $b->stem)
-            ),
-        );
-        return $candidates;
+        $key = $used === [] ? $name : $name . "\0" . implode(',', array_keys($used));
+        return $this->candidates[$key] ??= $this->match($name, $used);
     }
 
     /**
@@ -284,6 +252,7 @@ final class RuleSearch
             count($used),
         );
         $candidates = $this->candidates($name, $used);
+        $expander = new VariableExpander($scope->context, $this->output, scope: $scope);
         $expanded = [];
         foreach ([false, true] as $chain) {
             foreach ($candidates as $candidate) {
@@ -303,7 +272,7 @@ final class RuleSearch
                 $rule = $candidate->expand(
                     $name,
                     $explicit,
-                    new VariableExpander($scope->context, $this->output, scope: $scope),
+                    $expander,
                     $this->filesystem,
                     /** @throws MakefileErrorException */
                     function (Prerequisites $prerequisites) use (
@@ -371,5 +340,62 @@ final class RuleSearch
         }
         $state->paths[$name] = $path;
         return true;
+    }
+
+    /**
+     * @param array<int, true> $used
+     *
+     * @return list<ImplicitCandidate>
+     */
+    private function match(string $name, array $used): array
+    {
+        $candidates = [];
+        $specific = false;
+        $member = ArchiveMember::parse($name);
+        $base = basename($name);
+        foreach ($this->makefile->patterns as $index => $pattern) {
+            foreach ($pattern->names as $text) {
+                $hasDirectory = str_contains($text, '/');
+                $matchName = $member !== null && str_starts_with($text, '(') ? '(' . $member->member . ')' : $name;
+                $stem = Pattern::of($text)->match(
+                    $hasDirectory ? $matchName : ($matchName === $name ? $base : basename($matchName)),
+                );
+                if ($stem === null || $stem === '') {
+                    continue;
+                }
+                if ($text !== '%') {
+                    $specific = true;
+                }
+                if (
+                    $pattern->rule->recipe === null
+                    || isset($used[$index])
+                    || $used !== [] && $text === '%' && !$pattern->rule->doubleColon
+                ) {
+                    continue;
+                }
+                $candidates[] = new ImplicitCandidate(
+                    $pattern,
+                    $index,
+                    $stem,
+                    $hasDirectory ? '' : substr($matchName, 0, strlen($matchName) - strlen(basename($matchName))),
+                    $text === '%',
+                );
+            }
+        }
+        if ($specific) {
+            $candidates = array_values(array_filter(
+                $candidates,
+                static fn(ImplicitCandidate $candidate): bool => (
+                    !$candidate->matchAnything || $candidate->pattern->rule->doubleColon
+                ),
+            ));
+        }
+        usort(
+            $candidates,
+            static fn(ImplicitCandidate $a, ImplicitCandidate $b): int => (
+                strlen($a->directory . $a->stem) <=> strlen($b->directory . $b->stem)
+            ),
+        );
+        return $candidates;
     }
 }

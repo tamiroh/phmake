@@ -56,7 +56,7 @@ final class RecipeProcess
             $stopped = false;
             do {
                 if (Signals::$received !== 0 && !$stopped) {
-                    Signals::stop($process);
+                    Signals::stop($pid);
                     $stopped = true;
                 }
                 if (Fiber::getCurrent() !== null) {

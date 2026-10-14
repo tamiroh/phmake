@@ -21,10 +21,14 @@ final class ModuleChannel
     /** @var array<int, resource> */
     private array $pipes = [];
 
+    private readonly int|false $owner;
+
     public function __construct(
         private readonly string $executable,
         private readonly Output $output,
-    ) {}
+    ) {
+        $this->owner = getmypid();
+    }
 
     /**
      * @param list<string> $arguments
@@ -128,6 +132,9 @@ final class ModuleChannel
 
     public function __destruct()
     {
+        if ($this->owner !== getmypid()) {
+            return;
+        }
         foreach ($this->pipes as $pipe) {
             fclose($pipe);
         }

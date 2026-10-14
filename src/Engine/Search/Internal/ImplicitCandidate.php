@@ -16,8 +16,6 @@ use Tamiroh\Phmake\Engine\Rule\PatternRule;
 use Tamiroh\Phmake\Engine\Rule\PrerequisiteExpression;
 use Tamiroh\Phmake\Engine\Rule\Prerequisites;
 
-use function array_filter;
-use function array_values;
 use function count;
 use function strpbrk;
 
@@ -50,15 +48,16 @@ final readonly class ImplicitCandidate
         Closure $accept,
         array &$expanded,
     ): ?BuildRule {
-        $prerequisites = new Prerequisites(
-            $this->substitute($this->pattern->rule->prerequisites->normal, $filesystem),
-            $this->substitute($this->pattern->rule->prerequisites->orderOnly, $filesystem),
-            sequence: $this->substitute($this->pattern->rule->prerequisites->sequence, $filesystem),
-            literal: array_values(array_filter(
-                $this->pattern->rule->prerequisites->sequence,
-                static fn(string $name): bool => !new Pattern($name)->hasWildcard(),
-            )),
-        );
+        $pattern = $this->pattern->rule->prerequisites;
+        $literal = [];
+        foreach ($pattern->sequence as $prerequisite) {
+            if (!Pattern::of($prerequisite)->hasWildcard()) {
+                $literal[] = $prerequisite;
+            }
+        }
+        // Most candidates are rejected, so the other lists are substituted only for an accepted one.
+        $sequence = $this->substitute($pattern->sequence, $filesystem);
+        $prerequisites = new Prerequisites(sequence: $sequence, literal: $literal);
         $secondary = false;
         foreach ($this->pattern->rule->prerequisites->expressions as $index => $expression) {
             if (!$expression->secondary) {
@@ -88,8 +87,16 @@ final readonly class ImplicitCandidate
                 $prerequisites = $prerequisites->merge($part);
             }
         }
-        if (!$secondary && !$accept($prerequisites)) {
-            return null;
+        if (!$secondary) {
+            if (!$accept($prerequisites)) {
+                return null;
+            }
+            $prerequisites = new Prerequisites(
+                $this->substitute($pattern->normal, $filesystem),
+                $this->substitute($pattern->orderOnly, $filesystem),
+                sequence: $sequence,
+                literal: $literal,
+            );
         }
         return new BuildRule(
             $prerequisites,
@@ -110,7 +117,7 @@ final readonly class ImplicitCandidate
     {
         $result = [];
         foreach ($names as $name) {
-            $pattern = new Pattern($name);
+            $pattern = Pattern::of($name);
             $name = FileName::normalize(
                 ($pattern->hasWildcard() ? $this->directory : '') . $pattern->substitute($this->stem),
             );

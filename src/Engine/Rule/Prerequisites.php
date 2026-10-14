@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Engine\Rule;
 use function array_diff;
 use function array_unique;
 use function array_values;
+use function in_array;
 
 final readonly class Prerequisites
 {
@@ -36,6 +37,11 @@ final readonly class Prerequisites
         public array $extra = [],
     ) {
         $this->sequence = $sequence ?? [...$normal, ...$orderOnly, ...$extra];
+        if ($orderOnly === [] && !in_array('.WAIT', $normal, true)) {
+            $this->normal = $normal;
+            $this->orderOnly = [];
+            return;
+        }
         $this->normal = array_values(array_diff($normal, ['.WAIT']));
         $orderOnly = array_values(array_diff($orderOnly, ['.WAIT']));
         $this->orderOnly = array_diff($orderOnly, $normal) |> array_unique(...) |> array_values(...);

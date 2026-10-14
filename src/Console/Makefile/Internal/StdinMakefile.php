@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Engine\MakefileErrorException;
 use function file_get_contents;
 use function file_put_contents;
 use function getenv;
+use function getmypid;
 use function is_writable;
 use function sys_get_temp_dir;
 use function tempnam;
@@ -23,11 +24,14 @@ final readonly class StdinMakefile
 
     public string $text;
 
+    private int|false $owner;
+
     /**
      * @throws MakefileErrorException
      */
     public function __construct(?string $path = null)
     {
+        $this->owner = getmypid();
         if ($path !== null) {
             $text = @file_get_contents($path);
             if ($text === false) {
@@ -54,6 +58,10 @@ final readonly class StdinMakefile
 
     public function __destruct()
     {
+        // A forked recursive make must not remove its parent's file.
+        if ($this->owner !== getmypid()) {
+            return;
+        }
         @unlink($this->path);
     }
 }

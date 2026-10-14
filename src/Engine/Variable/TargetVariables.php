@@ -40,7 +40,7 @@ final class TargetVariables
         ?bool $export,
         ?Output $output,
     ): void {
-        $targetPattern = new Pattern($target);
+        $targetPattern = Pattern::of($target);
         $pattern = $targetPattern->hasWildcard();
         $variables = $this->definitions[$target] ?? [];
         $scope = $pattern ? $expander : $this->definitionScope($variables, $expander);
@@ -100,7 +100,7 @@ final class TargetVariables
     {
         $names = [];
         foreach ($this->definitions as $name => $_) {
-            if (!new Pattern((string) $name)->hasWildcard()) {
+            if (!Pattern::of((string) $name)->hasWildcard()) {
                 $names[] = (string) $name;
             }
         }
@@ -166,7 +166,7 @@ final class TargetVariables
     {
         $exact = [];
         foreach ($this->definitions as $text => $variables) {
-            $pattern = new Pattern((string) $text);
+            $pattern = Pattern::of((string) $text);
             if (!$pattern->hasWildcard()) {
                 $exact[$pattern->substitute('%')] = $variables;
             }

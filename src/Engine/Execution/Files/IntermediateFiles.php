@@ -72,7 +72,7 @@ final readonly class IntermediateFiles
     private function matches(string $kind, string $name): bool
     {
         foreach ($this->special[$kind] ?? [] as $pattern) {
-            if (new Pattern($pattern)->match($name) !== null) {
+            if (Pattern::of($pattern)->match($name) !== null) {
                 return true;
             }
         }

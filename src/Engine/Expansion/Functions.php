@@ -918,8 +918,8 @@ final class Functions
         if ($from === null || $to === null || $text === null) {
             throw new MakefileErrorException("insufficient number of arguments to function 'patsubst'");
         }
-        $pattern = new Pattern($from);
-        $replacement = new Pattern($to);
+        $pattern = Pattern::of($from);
+        $replacement = Pattern::of($to);
         if (!$pattern->hasWildcard()) {
             return preg_replace_callback(
                 '/\S+/',
@@ -1268,7 +1268,7 @@ final class Functions
 
     private static function filterWords(string $patterns, string $text, bool $exclude): string
     {
-        $patterns = array_map(static fn(string $word): Pattern => new Pattern($word), self::splitWords($patterns));
+        $patterns = array_map(static fn(string $word): Pattern => Pattern::of($word), self::splitWords($patterns));
         return implode(' ', array_filter(self::splitWords($text), static function (string $word) use (
             $patterns,
             $exclude,

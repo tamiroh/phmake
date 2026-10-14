@@ -33,7 +33,7 @@ final readonly class ArchiveMember
 
     public static function parse(string $name): ?self
     {
-        if (preg_match('/^(.+)\(([^()]+)\)$/D', $name, $matches) !== 1) {
+        if (!str_ends_with($name, ')') || preg_match('/^(.+)\(([^()]+)\)$/D', $name, $matches) !== 1) {
             return null;
         }
         return new self($matches[1], $matches[2]);

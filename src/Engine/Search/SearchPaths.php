@@ -73,11 +73,11 @@ final class SearchPaths
         $patterns = DependencySyntax::words($expander->expand('$(.LIBPATTERNS)'));
         $names = [];
         foreach ($patterns as $pattern) {
-            if (!new Pattern($pattern)->hasWildcard()) {
+            if (!Pattern::of($pattern)->hasWildcard()) {
                 $expander->output?->writeWarning(".LIBPATTERNS element '{$pattern}' is not a pattern");
                 continue;
             }
-            $names[] = new Pattern($pattern)->substitute(substr($name, 2));
+            $names[] = Pattern::of($pattern)->substitute(substr($name, 2));
         }
         foreach ($names as $library) {
             if ($filesystem->exists($library)) {
@@ -111,7 +111,7 @@ final class SearchPaths
         foreach ([...$this->selective, ['%', self::directories($expander->expand('$(VPATH)'))]] as [$pattern, $paths]) {
             foreach ($paths as $directory) {
                 foreach ($names as $name) {
-                    if (str_starts_with($name, '/') || new Pattern($pattern)->match($name) === null) {
+                    if (str_starts_with($name, '/') || Pattern::of($pattern)->match($name) === null) {
                         continue;
                     }
                     $path = rtrim($directory, '/') . '/' . $name;

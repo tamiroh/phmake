@@ -49,9 +49,12 @@ final readonly class MakefileRemake
             }
         }
         // As in GNU make, only makefiles whose times change while remaking restart make.
-        $before = $this->filesystem->modifiedTimes($names);
-        $errors = $this->build->remake($names, $unreadable);
-        foreach ($this->filesystem->modifiedTimes($names) as $path => $modifiedAt) {
+        // Without a recipe the times cannot change, so they are read only before the first one.
+        $before = null;
+        $errors = $this->build->remake($names, $unreadable, function () use ($names, &$before): void {
+            $before = $this->filesystem->modifiedTimes($names);
+        });
+        foreach ($before === null ? [] : $this->filesystem->modifiedTimes($names) as $path => $modifiedAt) {
             if ($modifiedAt !== null && $modifiedAt !== ($before[$path] ?? null)) {
                 return true;
             }
