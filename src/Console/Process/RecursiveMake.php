@@ -22,6 +22,7 @@ use function fwrite;
 use function gc_collect_cycles;
 use function getcwd;
 use function getenv;
+use function in_array;
 use function ini_get;
 use function ini_parse_quantity;
 use function ini_set;
@@ -81,9 +82,11 @@ final class RecursiveMake
         if (($words[0] ?? null) === 'cd' && array_key_exists(2, $words) && $words[2] === null) {
             $directory = $words[1] ?? '';
             $search = $environment['CDPATH'] ?? getenv('CDPATH');
+            // The shell resolves `..` against PWD rather than through symbolic links.
             if (
                 $directory === ''
                 || str_starts_with($directory, '-')
+                || in_array('..', explode('/', $directory), true)
                 || is_string($search) && $search !== '' && !str_starts_with($directory, '/')
             ) {
                 return null;

@@ -31,6 +31,8 @@ final class RecursiveMakeTest extends TestCase
             self::make() . ' ~/target',
             'cd src; ' . self::make(),
             'cd -P src && ' . self::make(),
+            'cd link/.. && ' . self::make(),
+            'cd ../lib && ' . self::make(),
             'cd src && cd lib && ' . self::make(),
             'VALUE=1 ' . self::make(),
             'make all',
