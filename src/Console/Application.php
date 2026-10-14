@@ -14,6 +14,7 @@ use Tamiroh\Phmake\Console\Makefile\MakeCommand;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Output\OutputWriteException;
 use Tamiroh\Phmake\Console\Process\ModuleHost;
+use Tamiroh\Phmake\Console\Process\RecursiveMake;
 use Tamiroh\Phmake\Console\Process\RestartFailureException;
 use Tamiroh\Phmake\Console\Process\Signals;
 use Tamiroh\Phmake\Engine\Builtins;
@@ -23,18 +24,18 @@ use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
 use Tamiroh\Phmake\Engine\Variable\Variable;
 
+use function array_map;
 use function array_slice;
 use function basename;
 use function chdir;
-use function dirname;
 use function escapeshellarg;
 use function fwrite;
 use function getcwd;
 use function getenv;
+use function implode;
 use function max;
 use function preg_match;
 
-use const PHP_BINARY;
 use const STDERR;
 
 final readonly class Application
@@ -44,11 +45,24 @@ final readonly class Application
      */
     public function run(array $arguments): void
     {
+        $status = $this->status($arguments);
+        if ($status !== 0) {
+            exit($status);
+        }
+    }
+
+    /**
+     * @param list<string> $arguments
+     *
+     * @return int the exit status
+     */
+    public function status(array $arguments): int
+    {
         if (($arguments[0] ?? null) === '--format') {
-            exit(new FormatCommand()->run(array_slice($arguments, 1)));
+            return new FormatCommand()->run(array_slice($arguments, 1));
         }
         if (($arguments[0] ?? null) === '--lint') {
-            exit(new LintCommand()->run(array_slice($arguments, 1)));
+            return new LintCommand()->run(array_slice($arguments, 1));
         }
         $signals = new Signals();
         $status = 0;
@@ -59,9 +73,7 @@ final readonly class Application
         } finally {
             $signals->finish();
         }
-        if ($status !== 0) {
-            exit($status);
-        }
+        return $status;
     }
 
     /**
@@ -159,12 +171,13 @@ final readonly class Application
                 )
                 : $variable;
         }
-        $executable = Phar::running(false);
+        // RecursiveMake recognizes this command to run recursive invocations without starting PHP again.
+        $program = RecursiveMake::program();
         $variables['MAKE'] = new Variable(
             'MAKE',
-            $executable === ''
-                ? escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname(__DIR__, 2) . '/phmake')
-                : (preg_match('~^[a-zA-Z0-9_./-]+$~', $executable) === 1 ? $executable : escapeshellarg($executable)),
+            Phar::running(false) === ''
+                ? implode(' ', array_map(escapeshellarg(...), $program))
+                : (preg_match('~^[a-zA-Z0-9_./-]+$~', $program[0]) === 1 ? $program[0] : escapeshellarg($program[0])),
             false,
             'default',
         );

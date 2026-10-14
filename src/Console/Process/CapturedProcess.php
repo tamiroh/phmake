@@ -59,7 +59,7 @@ final class CapturedProcess
             $exitCode = null;
             do {
                 if ($interruptible && Signals::$received !== 0 && !$stopped) {
-                    Signals::stop($process);
+                    Signals::stop(proc_get_status($process)['pid']);
                     $stopped = true;
                 }
                 foreach ($pipes as $descriptor => $pipe) {

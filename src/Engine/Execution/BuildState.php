@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Engine\Execution;
 
+use Closure;
 use Tamiroh\Phmake\Engine\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Engine\IO\Output;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
@@ -33,6 +34,9 @@ final class BuildState
     public bool $failed = false;
 
     public bool $waiting = false;
+
+    /** @var ?Closure(): void */
+    public ?Closure $beforeRecipe = null;
 
     public function __construct(
         public readonly int $restarts = 0,

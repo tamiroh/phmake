@@ -1,0 +1,4 @@
+$ ./phmake
+restarts= X=
+$ tail -n 1 Makefile
+X = 1

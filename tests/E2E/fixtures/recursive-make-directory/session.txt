@@ -1,0 +1,8 @@
+$ mkdir sub && cp sub.mk sub/Makefile
+$ ./phmake
+pwd=ok
+sub|[a  b]|[it"s]
+$ ./phmake failing
+phmake[1]: *** [Makefile:6: fail] Error 3
+phmake: *** [Makefile:5: failing] Error 2
+[exit 2]

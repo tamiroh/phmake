@@ -16,6 +16,7 @@ use function fopen;
 use function fseek;
 use function fstat;
 use function ftruncate;
+use function getmypid;
 use function rewind;
 use function str_starts_with;
 use function stream_get_meta_data;
@@ -45,12 +46,15 @@ final class OutputBuffer
 
     private ?string $owned = null;
 
+    private readonly int|false $owner;
+
     /** @var array{string, string}|null */
     public ?array $directory = null;
 
     public function __construct(
         public ParallelOptions $options,
     ) {
+        $this->owner = getmypid();
         $this->groups = new WeakMap();
     }
 
@@ -217,6 +221,9 @@ final class OutputBuffer
 
     public function __destruct()
     {
+        if ($this->owner !== getmypid()) {
+            return;
+        }
         if ($this->lock !== null) {
             fclose($this->lock);
         }

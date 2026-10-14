@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Process;
 
+use Fiber;
 use Override;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Process\Internal\CommandInvocation;
@@ -92,27 +93,37 @@ final class Shell implements ShellInterface
             $environment = self::withoutPipeJobserver($environment);
         }
         $environment = [...$this->environment, ...$environment];
+        $descriptors = ($this->output?->buffer->descriptors() ?? []) + ($recursive ? $descriptors : []);
+        $observer = function (int $pid, ?int $exitCode): void {
+            if ($this->reporting !== null) {
+                DebugTrace::write(
+                    $this->reporting,
+                    $this->output,
+                    'j',
+                    $exitCode === null
+                        ? "Putting child PID {$pid} on the chain."
+                        : 'Reaping ' . ($exitCode === 0 ? 'winning' : 'losing') . " child PID {$pid}",
+                );
+            }
+        };
+        // A forked copy inherits every open fiber and descriptor, so only plain serial invocations qualify.
+        if (
+            $recursive
+            && $descriptors === []
+            && Fiber::getCurrent() === null
+            && ($this->jobserver?->serial() ?? true)
+            && ($make = RecursiveMake::parse($command, $environment, $shell, $flags)) !== null
+        ) {
+            $status = RecursiveMake::run($make[0], $make[1], $environment, $observer);
+            if ($status !== null) {
+                return $status;
+            }
+        }
         $invocation = CommandInvocation::parse($command, $shell, $flags);
         if ($this->failed($invocation, $environment)) {
             return 127;
         }
-        return RecipeProcess::run(
-            $invocation->launch(),
-            $environment,
-            ($this->output?->buffer->descriptors() ?? []) + ($recursive ? $descriptors : []),
-            function (int $pid, ?int $exitCode): void {
-                if ($this->reporting !== null) {
-                    DebugTrace::write(
-                        $this->reporting,
-                        $this->output,
-                        'j',
-                        $exitCode === null
-                            ? "Putting child PID {$pid} on the chain."
-                            : 'Reaping ' . ($exitCode === 0 ? 'winning' : 'losing') . " child PID {$pid}",
-                    );
-                }
-            },
-        );
+        return RecipeProcess::run($invocation->launch(), $environment, $descriptors, $observer);
     }
 
     /**

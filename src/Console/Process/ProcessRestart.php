@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Process;
 
-use Phar;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Output\OutputBuffer;
@@ -12,9 +11,9 @@ use Tamiroh\Phmake\Engine\Execution\Scheduling\ParallelOptions;
 use Tamiroh\Phmake\Engine\Reporting\DebugTrace;
 
 use function array_filter;
+use function array_slice;
 use function array_values;
 use function chdir;
-use function dirname;
 use function gc_collect_cycles;
 use function implode;
 use function pcntl_exec;
@@ -22,8 +21,6 @@ use function pcntl_get_last_error;
 use function pcntl_strerror;
 use function putenv;
 use function str_starts_with;
-
-use const PHP_BINARY;
 
 /**
  * Replace the process while retaining the makefile originally read from standard input.
@@ -38,11 +35,9 @@ final class ProcessRestart
             static fn(string $argument): bool => !str_starts_with($argument, '--temp-stdin='),
         ));
         $arguments[] = '--temp-stdin=' . $stdin;
-        $executable = Phar::running(false);
-        if ($executable === '') {
-            $executable = PHP_BINARY;
-            $arguments = [dirname(__DIR__, 3) . '/phmake', ...$arguments];
-        }
+        $program = RecursiveMake::program();
+        $executable = $program[0];
+        $arguments = [...array_slice($program, 1), ...$arguments];
         DebugTrace::write(
             $configuration->execution->reporting,
             $output,
