@@ -165,6 +165,7 @@ final class Build
             }
         } finally {
             $this->jobs->waitForUnfinishedJobs();
+            $this->state->beforeRecipe = null;
         }
         foreach ($this->state->results as $name => $result) {
             if ($result->failure !== null) {
@@ -172,7 +173,6 @@ final class Build
             }
         }
         $this->state->remaking = false;
-        $this->state->beforeRecipe = null;
         $this->options->reporting->remaking = false;
         $this->state->failed = false;
         return $errors;

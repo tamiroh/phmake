@@ -28,9 +28,11 @@ use function ini_parse_quantity;
 use function ini_set;
 use function is_array;
 use function is_dir;
+use function is_executable;
 use function is_int;
 use function is_string;
 use function memory_get_usage;
+use function min;
 use function pcntl_exec;
 use function pcntl_fork;
 use function pcntl_sigprocmask;
@@ -130,7 +132,10 @@ final class RecursiveMake
     public static function run(?string $directory, array $arguments, array $environment, Closure $observer): ?int
     {
         // The shell reports directories that cannot be entered.
-        if ($directory !== null && !is_dir($directory) || !function_exists('pcntl_fork')) {
+        if (
+            $directory !== null && (!is_dir($directory) || !is_executable($directory))
+            || !function_exists('pcntl_fork')
+        ) {
             return null;
         }
         Signals::check();
@@ -153,6 +158,7 @@ final class RecursiveMake
             }
             $observer($pid, null);
             $stopped = false;
+            $delay = 20;
             while (($result = pcntl_waitpid($pid, $status, WNOHANG)) === 0) {
                 if (Signals::$received !== 0 && !$stopped) {
                     Signals::stop($pid);
@@ -161,7 +167,8 @@ final class RecursiveMake
                 if (function_exists('pcntl_sigtimedwait')) {
                     pcntl_sigtimedwait([SIGCHLD], seconds: 1);
                 } else {
-                    usleep(200);
+                    usleep($delay);
+                    $delay = min(1000, $delay * 2);
                 }
             }
         } finally {
