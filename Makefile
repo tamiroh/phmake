@@ -18,6 +18,10 @@ VERSION = development
 HOMEBREW_PHAR = dist/phmake.phar
 HOMEBREW_FORMULA = dist/phmake.rb
 
+.PHONY: gnu-make-source
+gnu-make-source:
+	sh tools/clone-gnu-make.sh
+
 .PHONY: test
 test:
 	$(PHPUNIT) tests
