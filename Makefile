@@ -5,6 +5,13 @@ PHP_CS_FIXER = vendor/bin/php-cs-fixer
 PHP = php
 ELEPHC = elephc
 ELEPHC_FLAGS =
+KPHP_REPOSITORY = https://github.com/VKCOM/kphp.git
+KPHP_REF = HEAD
+DOCKER = docker
+KPHP_IMAGE = phmake-kphp:local
+KPHP_PLATFORM = linux/amd64
+KPHP_JOBS = 2
+KPHP_FLAGS =
 BOX = .local/box-4.7.0.phar
 PHAR_INTERPRETER = env
 VERSION = development
@@ -48,6 +55,27 @@ elephc: | dist
 	ln -sfn ../../src dist/elephc/src
 	sed '\|^require __DIR__ . '\''/vendor/autoload.php'\'';$$|d' phmake > dist/elephc/phmake.php
 	cd dist/elephc && $(ELEPHC) $(ELEPHC_FLAGS) phmake.php
+
+# Resolve HEAD on every invocation; Docker caches builds for unchanged commits.
+.PHONY: kphp-compiler
+kphp-compiler:
+	commit=$$(git ls-remote "$(KPHP_REPOSITORY)" "$(KPHP_REF)" | awk 'NR == 1 { print $$1 }') && \
+		test -n "$$commit" && \
+		$(DOCKER) build --platform "$(KPHP_PLATFORM)" \
+			--build-arg KPHP_REPOSITORY="$(KPHP_REPOSITORY)" \
+			--build-arg KPHP_COMMIT="$$commit" --build-arg KPHP_JOBS="$(KPHP_JOBS)" \
+			-t "$(KPHP_IMAGE)" -f tools/kphp/Dockerfile tools/kphp
+
+.PHONY: kphp
+kphp: kphp-compiler | dist
+	mkdir -p dist/kphp
+	sed -e '1{/^#!/d;}' -e '\|^require __DIR__ . '\''/vendor/autoload.php'\'';$$|d' phmake > dist/kphp/phmake.php
+	$(DOCKER) run --rm --platform "$(KPHP_PLATFORM)" --network none \
+		--user "$$(id -u):$$(id -g)" \
+		--mount "type=bind,src=$(CURDIR),dst=/work,readonly" \
+		--mount "type=bind,src=$(CURDIR)/dist/kphp,dst=/out" \
+		-w /work "$(KPHP_IMAGE)" sh -ec \
+		'kphp --version; kphp --mode cli --composer-root /work --jobs-num $(KPHP_JOBS) --destination-directory /out/build --output-file /out/phmake $(KPHP_FLAGS) /out/phmake.php'
 
 dist:
 	mkdir -p $@
