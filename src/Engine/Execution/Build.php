@@ -48,6 +48,10 @@ final class Build
 {
     private readonly BuildState $state;
 
+    private readonly ExtraPrerequisites $extra;
+
+    private readonly SecondaryExpansion $expansion;
+
     private readonly RecipeRunner $runner;
 
     private readonly RuleSearch $search;
@@ -75,6 +79,8 @@ final class Build
         private readonly bool $makefileFound = true,
     ) {
         $this->state = new BuildState($restarts);
+        $this->extra = new ExtraPrerequisites($makefile, $context, $filesystem, $output);
+        $this->expansion = new SecondaryExpansion();
         $this->search = new RuleSearch($makefile, $filesystem, $output);
         $this->files = new BuildFiles(
             $makefile,
@@ -271,7 +277,7 @@ final class Build
                 },
             );
         }
-        $rule = SecondaryExpansion::explicit(
+        $rule = $this->expansion->forTarget(
             $target->name,
             $rule,
             new VariableExpander($chain->scope->context, $this->output, scope: $chain->scope),
@@ -279,13 +285,7 @@ final class Build
         );
         [$prerequisites, $changed, $failure] = $this->dependencies(
             $target->name,
-            $rule->prerequisites->merge(ExtraPrerequisites::forTarget(
-                $target->name,
-                $this->makefile,
-                $this->context,
-                $this->filesystem,
-                $this->output,
-            )),
+            $rule->prerequisites->merge($this->extra->forTarget($target->name)),
             $executed,
             $chain,
             $modifiedAt,
@@ -326,11 +326,14 @@ final class Build
             || $alwaysMake && $rule->recipe !== null
             || $peerChanged->changed
             || $changed !== []
-            || $rule->doubleColon && $prerequisites->normal === [] && $prerequisites->orderOnly === [];
+            || $rule->doubleColon && $prerequisites->sequence === [];
         foreach ($rule->implicit ? [$target->name] : $peers as $peer) {
             $rebuild =
                 $rebuild
-                || $this->files->needsRebuild($rule, $peer === $target->name ? $modifiedAt : $this->files->time($peer));
+                || $this->files->needsRebuild(
+                    $rule,
+                    $peer === $target->name ? $modifiedAt : $this->files->targetTime($peer),
+                );
         }
         if (!$rebuild) {
             DebugTrace::write(
@@ -535,7 +538,7 @@ final class Build
                 ) {
                     $changed[] = $dependency;
                 }
-            } else {
+            } elseif (in_array($dependency, $prerequisites->orderOnly, true)) {
                 $orderOnly[] = $dependency;
             }
         }
@@ -555,6 +558,7 @@ final class Build
                 $prerequisites->expressions,
                 $prerequisites->sequence,
                 extra: $prerequisites->extra,
+                extraOrderOnly: $prerequisites->extraOrderOnly,
             ),
             $changed,
             $failure,
@@ -615,7 +619,7 @@ final class Build
                     ? $this->makefile->targetsByName[$peer]->rules ?? []
                     : $this->search->resolve($peer, $chain->scope)->rules ?? [] as $other) {
                     if ($rule->implicit || $other->recipe === $rule->recipe && $other->group === $rule->group) {
-                        $other = SecondaryExpansion::explicit(
+                        $other = $this->expansion->forTarget(
                             $peer,
                             $other,
                             new VariableExpander($chain->scope->context, $this->output, scope: $chain->scope),
@@ -628,7 +632,7 @@ final class Build
                         $changed =
                             $changed
                             || $updated !== []
-                            || !$rule->implicit && $this->files->needsRebuild($other, $this->files->time($peer));
+                            || !$rule->implicit && $this->files->needsRebuild($other, $this->files->targetTime($peer));
                     }
                     $rules[] = $other;
                 }
@@ -707,7 +711,7 @@ final class Build
                 }
                 throw new MissingTargetException($name, $neededBy);
             }
-            $modifiedAt = $force ? null : $this->files->time($name);
+            $modifiedAt = $force ? null : $this->files->targetTime($name);
             $deferred = $checking && $this->files->intermediate($name);
             $chain->ancestors[$name] = true;
             try {

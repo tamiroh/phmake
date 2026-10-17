@@ -16,8 +16,10 @@ use function filemtime;
 use function is_link;
 use function lstat;
 use function max;
+use function preg_match;
 use function readlink;
 use function rtrim;
+use function stat;
 use function str_starts_with;
 use function trim;
 
@@ -33,14 +35,14 @@ final class FileTimes
     public static function modified(string $path, bool $links = false): ?int
     {
         clearstatcache(true, $path);
-        $time = @filemtime($path);
+        $time = self::precise($path);
         if (!$links) {
-            return $time === false ? null : $time;
+            return $time;
         }
         for ($depth = 0; $depth < 40 && is_link($path); $depth++) {
-            $stat = @lstat($path);
-            if ($stat !== false) {
-                $time = $time === false ? $stat['mtime'] : max($time, $stat['mtime']);
+            $linkTime = self::precise($path, false);
+            if ($linkTime !== null) {
+                $time = $time === null ? $linkTime : max($time, $linkTime);
             }
             $link = @readlink($path);
             if ($link === false) {
@@ -49,7 +51,7 @@ final class FileTimes
             $path = str_starts_with($link, '/') ? $link : dirname($path) . '/' . $link;
             clearstatcache(true, $path);
         }
-        return $time === false ? null : $time;
+        return $time;
     }
 
     /**
@@ -94,6 +96,34 @@ final class FileTimes
         }
         $stat = CapturedProcess::run(self::statCommand([$path]));
         return $stat['status'] === 0 ? trim($stat['output']) : (string) $seconds;
+    }
+
+    /**
+     * Return epoch nanoseconds, preserving the precision supplied by stat.
+     */
+    private static function precise(string $path, bool $follow = true): ?int
+    {
+        $stat = $follow ? @stat($path) : @lstat($path);
+        if ($stat === false) {
+            return null;
+        }
+        $command = ['stat', ...($follow ? ['-L'] : [])];
+        $bsd = PHP_OS_FAMILY === 'Darwin' || PHP_OS_FAMILY === 'BSD';
+        $result = CapturedProcess::run([
+            ...$command,
+            ...($bsd ? ['-f', '%.9Fm'] : ['--format=%Y %y']),
+            '--',
+            $path,
+        ]);
+        if ($result['status'] === 0) {
+            $pattern = $bsd ? '/^(-?\d+)\.(\d{9})/' : '/^(-?\d+) .*\.(\d{9}) /';
+            $matches = [];
+            if (preg_match($pattern, $result['output'], $matches) === 1) {
+                /** @var array{non-falsy-string, non-empty-string, non-falsy-string&numeric-string} $matches */
+                return ((int) $matches[1] * 1_000_000_000) + (int) $matches[2];
+            }
+        }
+        return $stat['mtime'] * 1_000_000_000;
     }
 
     /**

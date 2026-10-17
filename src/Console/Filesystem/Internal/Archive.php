@@ -6,6 +6,8 @@ namespace Tamiroh\Phmake\Console\Filesystem\Internal;
 
 use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 
+use function intdiv;
+
 /**
  * Read Unix ar member headers, including GNU and BSD extended member names.
  */
@@ -93,7 +95,7 @@ final class Archive
     {
         $time = self::members($member->archive)[basename($member->member)]['time'] ?? null;
         $fileTime = FileTimes::modified($member->member, false);
-        return $time !== null && $fileTime !== null && $fileTime > $time ? null : $time;
+        return $time !== null && $fileTime !== null && intdiv($fileTime, 1_000_000_000) > $time ? null : $time;
     }
 
     public static function touch(ArchiveMember $member): bool

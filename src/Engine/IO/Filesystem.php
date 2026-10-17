@@ -22,6 +22,9 @@ interface Filesystem
      */
     public function isFile(string $path): bool;
 
+    /**
+     * Modification time in epoch nanoseconds, or null for a missing file.
+     */
     public function lastModified(string $path): ?int;
 
     /**

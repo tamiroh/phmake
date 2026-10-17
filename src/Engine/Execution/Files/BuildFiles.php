@@ -12,6 +12,7 @@ use Tamiroh\Phmake\Engine\IO\IntermediateDeletionOrder;
 use Tamiroh\Phmake\Engine\IO\Output;
 use Tamiroh\Phmake\Engine\Makefile;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
+use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 use Tamiroh\Phmake\Engine\Rule\BuildRule;
 use Tamiroh\Phmake\Engine\Rule\Prerequisites;
 use Tamiroh\Phmake\Engine\Search\RuleSearch;
@@ -161,6 +162,28 @@ final class BuildFiles
         if (!$this->search->state->existed[$name]) {
             $this->created[$name] = [$name, $this->path($name)];
         }
+    }
+
+    /**
+     * Round low-resolution targets up within their second when comparing prerequisites.
+     */
+    public function targetTime(string $name): ?int
+    {
+        $time = $this->time($name);
+        if ($time === null || $time === PHP_INT_MIN || $time === PHP_INT_MAX) {
+            return $time;
+        }
+        if (
+            ArchiveMember::parse($name) !== null
+            || in_array(
+                $name,
+                $this->makefile->targetsByName['.LOW_RESOLUTION_TIME']->rules[0]->prerequisites->normal ?? [],
+                true,
+            )
+        ) {
+            return $time + 999_999_999 - ((($time % 1_000_000_000) + 1_000_000_000) % 1_000_000_000);
+        }
+        return $time;
     }
 
     public function time(string $name): ?int

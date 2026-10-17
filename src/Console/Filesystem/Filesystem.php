@@ -66,7 +66,8 @@ final class Filesystem implements FilesystemInterface
     public function lastModified(string $path): ?int
     {
         if (($member = ArchiveMember::parse($path)) !== null) {
-            return Archive::modified($member);
+            $time = Archive::modified($member);
+            return $time === null ? null : $time * 1_000_000_000;
         }
         return FileTimes::modified($path, $this->options->checkSymlinkTimes ?? false);
     }

@@ -1,0 +1,3 @@
+$ ./phmake -rR --no-print-directory
+prep
+all: ////

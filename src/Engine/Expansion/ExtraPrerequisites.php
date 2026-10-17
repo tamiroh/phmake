@@ -10,6 +10,7 @@ use Tamiroh\Phmake\Engine\Makefile;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Rule\DependencySyntax;
 use Tamiroh\Phmake\Engine\Rule\Prerequisites;
+use Tamiroh\Phmake\Engine\Variable\Variable;
 
 use function in_array;
 
@@ -20,28 +21,48 @@ use function in_array;
  */
 final class ExtraPrerequisites
 {
+    private readonly Prerequisites $global;
+
+    /** @var array<string, Prerequisites> */
+    private array $local = [];
+
+    /**
+     * Capture extra dependencies before any recipes run, without target inheritance.
+     *
+     * @throws MakefileErrorException
+     */
+    public function __construct(Makefile $makefile, EvaluationContext $context, Filesystem $filesystem, Output $output)
+    {
+        $expander = new VariableExpander($context, $output);
+        $this->global = self::expand($context->variables['.EXTRA_PREREQS'] ?? null, $expander, $filesystem);
+        foreach ($makefile->targetVariables->mentioned() as $name) {
+            $definitions = $makefile->targetVariables->definitionsFor($name);
+            $this->local[$name] = self::expand($definitions['.EXTRA_PREREQS'] ?? null, $expander, $filesystem);
+        }
+    }
+
     /**
      * @throws MakefileErrorException
      */
-    public static function forTarget(
-        string $name,
-        Makefile $makefile,
-        EvaluationContext $context,
+    private static function expand(
+        ?Variable $variable,
+        VariableExpander $expander,
         Filesystem $filesystem,
-        Output $output,
     ): Prerequisites {
-        $local = $makefile->targetVariables->definitionsFor($name);
-        $variable = $local === null ? $context->variables['.EXTRA_PREREQS'] ?? null : $local['.EXTRA_PREREQS'] ?? null;
         if ($variable === null) {
             return new Prerequisites();
         }
-        $prerequisites = DependencySyntax::parse(
-            new VariableExpander($context, $output)->expand($variable->expression),
-            $filesystem,
+        $prerequisites = DependencySyntax::parse($expander->expand($variable->expression), $filesystem);
+        return new Prerequisites(
+            sequence: $prerequisites->sequence,
+            extra: $prerequisites->normal,
+            extraOrderOnly: $prerequisites->orderOnly,
         );
-        if (in_array($name, $prerequisites->sequence, true)) {
-            return new Prerequisites();
-        }
-        return new Prerequisites(extra: $prerequisites->normal);
+    }
+
+    public function forTarget(string $name): Prerequisites
+    {
+        $prerequisites = $this->local[$name] ?? $this->global;
+        return in_array($name, $prerequisites->sequence, true) ? new Prerequisites() : $prerequisites;
     }
 }

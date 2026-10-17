@@ -25,7 +25,8 @@ final readonly class Prerequisites
      * @param list<PrerequisiteExpression> $expressions
      * @param list<string>|null $sequence
      * @param list<string> $literal names produced without stem substitution during implicit expansion
-     * @param list<string> $extra dependencies excluded from automatic variables
+     * @param list<string> $extra normal dependencies excluded from automatic variables
+     * @param list<string> $extraOrderOnly order-only dependencies excluded from automatic variables
      */
     public function __construct(
         array $normal = [],
@@ -34,8 +35,9 @@ final readonly class Prerequisites
         ?array $sequence = null,
         public array $literal = [],
         public array $extra = [],
+        public array $extraOrderOnly = [],
     ) {
-        $this->sequence = $sequence ?? [...$normal, ...$orderOnly, ...$extra];
+        $this->sequence = $sequence ?? [...$normal, ...$orderOnly, ...$extra, ...$extraOrderOnly];
         $this->normal = array_values(array_diff($normal, ['.WAIT']));
         $orderOnly = array_values(array_diff($orderOnly, ['.WAIT']));
         $this->orderOnly = array_diff($orderOnly, $normal) |> array_unique(...) |> array_values(...);
@@ -50,6 +52,7 @@ final readonly class Prerequisites
             [...$this->sequence, ...$other->sequence],
             [...$this->literal, ...$other->literal],
             [...$this->extra, ...$other->extra],
+            [...$this->extraOrderOnly, ...$other->extraOrderOnly],
         );
     }
 }

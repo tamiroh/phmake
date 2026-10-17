@@ -1,0 +1,9 @@
+$ python3 setup.py
+$ ./phmake -rR --no-print-directory -f low-resolution.mk -q output
+$ ./phmake -rR --no-print-directory -q output
+[exit 1]
+$ ./phmake -rR --no-print-directory output
+rebuild
+$ cat output
+input
+$ ./phmake -rR --no-print-directory -q output

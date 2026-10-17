@@ -1,0 +1,4 @@
+$ ./phmake -rR --no-print-directory
+expand-mid
+mid
+all

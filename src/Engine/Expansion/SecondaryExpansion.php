@@ -13,6 +13,7 @@ use Tamiroh\Phmake\Engine\Rule\PrerequisiteExpression;
 use Tamiroh\Phmake\Engine\Rule\Prerequisites;
 use Tamiroh\Phmake\Engine\Variable\AutomaticVariables;
 use Tamiroh\Phmake\Engine\Variable\Variable;
+use WeakMap;
 
 use function ksort;
 use function preg_replace_callback;
@@ -24,6 +25,14 @@ use function str_replace;
  */
 final class SecondaryExpansion
 {
+    /** @var WeakMap<BuildRule, array<string, BuildRule>> */
+    private readonly WeakMap $expanded;
+
+    public function __construct()
+    {
+        $this->expanded = new WeakMap();
+    }
+
     /**
      * @throws MakefileErrorException
      */
@@ -88,6 +97,7 @@ final class SecondaryExpansion
             $rule->stem,
             $rule->group,
             $rule->firstPrerequisite,
+            $rule->implicit,
         );
     }
 
@@ -159,5 +169,24 @@ final class SecondaryExpansion
                 $text,
             ) ?? $text
         );
+    }
+
+    /**
+     * Keep explicit dependencies fixed after their first secondary expansion.
+     *
+     * @throws MakefileErrorException
+     */
+    public function forTarget(
+        string $name,
+        BuildRule $rule,
+        VariableExpander $expander,
+        Filesystem $filesystem,
+    ): BuildRule {
+        $expanded = $this->expanded[$rule] ?? [];
+        if (!isset($expanded[$name])) {
+            $expanded[$name] = self::explicit($name, $rule, $expander, $filesystem);
+            $this->expanded[$rule] = $expanded;
+        }
+        return $expanded[$name];
     }
 }
