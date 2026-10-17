@@ -1,0 +1,3 @@
+$ touch all
+$ ./phmake -rR --no-print-directory
+ran

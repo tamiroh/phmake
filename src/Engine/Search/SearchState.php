@@ -19,6 +19,12 @@ final class SearchState
     /** @var array<string, true> */
     public array $intermediates = [];
 
+    /** @var array<string, true> attributes inherited from accepted implicit rules */
+    public array $precious = [];
+
+    /** @var array<string, true> */
+    public array $notIntermediate = [];
+
     /** @var array<string, true> */
     public array $terminal = [];
 

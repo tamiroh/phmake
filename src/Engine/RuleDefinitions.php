@@ -134,7 +134,7 @@ final class RuleDefinitions
                 continue;
             }
             if ($name === '.PHONY') {
-                foreach ($rule->prerequisites->normal as $dependency) {
+                foreach ([...$rule->prerequisites->normal, ...$rule->prerequisites->orderOnly] as $dependency) {
                     $this->phonyNames[$dependency] = $dependency;
                 }
                 continue;

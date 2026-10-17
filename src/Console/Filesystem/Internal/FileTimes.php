@@ -119,7 +119,6 @@ final class FileTimes
             $pattern = $bsd ? '/^(-?\d+)\.(\d{9})/' : '/^(-?\d+) .*\.(\d{9}) /';
             $matches = [];
             if (preg_match($pattern, $result['output'], $matches) === 1) {
-                /** @var array{non-falsy-string, non-empty-string, non-falsy-string&numeric-string} $matches */
                 return ((int) $matches[1] * 1_000_000_000) + (int) $matches[2];
             }
         }

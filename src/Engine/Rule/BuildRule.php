@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Engine\Rule;
 
+use Closure;
+
+use function array_map;
+
 /**
  * A rule's prerequisites and recipe, with its stem when selected for a target.
  * Target updates and recipe execution are handled by Execution/Build.
@@ -22,4 +26,25 @@ final readonly class BuildRule
         public ?string $firstPrerequisite = null,
         public bool $implicit = false,
     ) {}
+
+    /**
+     * Map visible prerequisites for recipe automatic variables.
+     *
+     * @param Closure(string): string $path
+     */
+    public function mapped(Closure $path): self
+    {
+        return new self(
+            new Prerequisites(
+                array_map($path, $this->prerequisites->normal),
+                array_map($path, $this->prerequisites->orderOnly),
+            ),
+            $this->recipe,
+            $this->doubleColon,
+            $this->stem,
+            $this->group,
+            $this->firstPrerequisite === null ? null : $path($this->firstPrerequisite),
+            $this->implicit,
+        );
+    }
 }

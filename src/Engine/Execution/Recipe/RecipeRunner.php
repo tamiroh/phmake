@@ -19,7 +19,6 @@ use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
 use Tamiroh\Phmake\Engine\Reporting\RecipeTrace;
 use Tamiroh\Phmake\Engine\Rule\BuildRule;
 use Tamiroh\Phmake\Engine\Rule\Command;
-use Tamiroh\Phmake\Engine\Rule\Pattern;
 use Tamiroh\Phmake\Engine\Rule\Target;
 use Tamiroh\Phmake\Engine\Variable\AutomaticVariables;
 use Tamiroh\Phmake\Engine\Variable\Environment\ExportingShell;
@@ -71,7 +70,7 @@ final readonly class RecipeRunner
                 scope: $scope,
             )->withVariables(AutomaticVariables::forRule(
                 $this->files->path($target->name),
-                $this->files->mapped($rule),
+                $rule->mapped($this->files->path(...)),
                 $modifiedAt,
                 array_map($this->files->path(...), $changed),
                 $this->filesystem,
@@ -127,7 +126,7 @@ final readonly class RecipeRunner
                     if (isset($this->makefile->targetsByName['.DELETE_ON_ERROR'])) {
                         foreach ([$target->name, ...$rule->group] as $name) {
                             if (
-                                !$this->applies('.PRECIOUS', $name)
+                                !$this->files->precious($name)
                                 && !($this->makefile->targetsByName[$name]->isPhony ?? false)
                                 && $this->filesystem->lastModified($name) !== ($timestamps[$name] ?? null)
                                 && $this->filesystem->remove($name)
@@ -172,7 +171,7 @@ final readonly class RecipeRunner
             );
             foreach ($timestamps ?? [] as $name => $timestamp) {
                 if (
-                    !$this->applies('.PRECIOUS', $name)
+                    !$this->files->precious($name)
                     && !($this->makefile->targetsByName[$name]->isPhony ?? false)
                     && $this->filesystem->lastModified($name) !== $timestamp
                     && $this->filesystem->remove($name)
@@ -198,13 +197,7 @@ final readonly class RecipeRunner
             return false;
         }
         foreach ($target->rules as $rule) {
-            if ($special === '.PRECIOUS') {
-                foreach ($rule->prerequisites->normal as $pattern) {
-                    if (new Pattern($pattern)->match($name) !== null) {
-                        return true;
-                    }
-                }
-            } elseif ($rule->prerequisites->normal === [] || in_array($name, $rule->prerequisites->normal, true)) {
+            if ($rule->prerequisites->sequence === [] || in_array($name, $rule->prerequisites->sequence, true)) {
                 return true;
             }
         }

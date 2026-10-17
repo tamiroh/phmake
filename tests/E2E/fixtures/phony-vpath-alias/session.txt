@@ -1,0 +1,3 @@
+$ mkdir src && touch src/all
+$ ./phmake -rR --no-print-directory
+local=all

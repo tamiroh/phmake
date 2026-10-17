@@ -1,0 +1,4 @@
+$ ./phmake -rR --no-print-directory
+rm a b
+$ test ! -f a
+$ test ! -f b

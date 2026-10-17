@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Engine;
 
 use Tamiroh\Phmake\Engine\Rule\PatternRule;
+use Tamiroh\Phmake\Engine\Rule\SpecialTargets;
 use Tamiroh\Phmake\Engine\Rule\Target;
 use Tamiroh\Phmake\Engine\Search\SearchPaths;
 use Tamiroh\Phmake\Engine\Variable\Environment\Exports;
@@ -20,6 +21,8 @@ final readonly class Makefile
 {
     /** @var array<string, Target> */
     public array $targetsByName;
+
+    public SpecialTargets $special;
 
     /**
      * @param list<Target> $targets
@@ -40,5 +43,6 @@ final readonly class Makefile
             $indexed[$target->name] = $target;
         }
         $this->targetsByName = $indexed;
+        $this->special = new SpecialTargets($indexed);
     }
 }

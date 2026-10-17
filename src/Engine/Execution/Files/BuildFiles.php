@@ -14,10 +14,8 @@ use Tamiroh\Phmake\Engine\Makefile;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 use Tamiroh\Phmake\Engine\Rule\BuildRule;
-use Tamiroh\Phmake\Engine\Rule\Prerequisites;
 use Tamiroh\Phmake\Engine\Search\RuleSearch;
 
-use function array_map;
 use function implode;
 use function in_array;
 use function preg_replace;
@@ -53,7 +51,7 @@ final class BuildFiles
         private readonly BuildState $state,
         private readonly IntermediateDeletionOrder $deletionOrder,
     ) {
-        $this->intermediates = new IntermediateFiles($makefile->targetsByName);
+        $this->intermediates = new IntermediateFiles($makefile->special);
         foreach ($makefile->targets as $target) {
             $this->deletionOrder->enter($target->name);
             foreach ($target->rules as $rule) {
@@ -78,7 +76,7 @@ final class BuildFiles
     {
         $removable = [];
         foreach ($this->created as [$name, $path]) {
-            if ($this->intermediate($name) && !$this->intermediates->preserve($name)) {
+            if ($this->intermediate($name) && !$this->intermediates->preserve($name) && !$this->precious($name)) {
                 $removable[$name] = $path;
             }
         }
@@ -103,23 +101,11 @@ final class BuildFiles
         return (
             !in_array($name, $this->goals, true)
             && !($this->makefile->targetsByName[$name]->isPhony ?? false)
-            && $this->intermediates->intermediate($name, isset($this->search->state->intermediates[$name]))
-        );
-    }
-
-    public function mapped(BuildRule $rule): BuildRule
-    {
-        return new BuildRule(
-            new Prerequisites(
-                array_map($this->path(...), $rule->prerequisites->normal),
-                array_map($this->path(...), $rule->prerequisites->orderOnly),
-            ),
-            $rule->recipe,
-            $rule->doubleColon,
-            $rule->stem,
-            $rule->group,
-            $rule->firstPrerequisite === null ? null : $this->path($rule->firstPrerequisite),
-            $rule->implicit,
+            && $this->intermediates->intermediate(
+                $name,
+                isset($this->search->state->intermediates[$name]),
+                isset($this->search->state->notIntermediate[$name]),
+            )
         );
     }
 
@@ -140,6 +126,11 @@ final class BuildFiles
     public function path(string $name): string
     {
         return $this->search->state->paths[$name] ?? $name;
+    }
+
+    public function precious(string $name): bool
+    {
+        return $this->makefile->special->contains('.PRECIOUS', $name) || isset($this->search->state->precious[$name]);
     }
 
     /**
@@ -173,14 +164,7 @@ final class BuildFiles
         if ($time === null || $time === PHP_INT_MIN || $time === PHP_INT_MAX) {
             return $time;
         }
-        if (
-            ArchiveMember::parse($name) !== null
-            || in_array(
-                $name,
-                $this->makefile->targetsByName['.LOW_RESOLUTION_TIME']->rules[0]->prerequisites->normal ?? [],
-                true,
-            )
-        ) {
+        if (ArchiveMember::parse($name) !== null || $this->makefile->special->contains('.LOW_RESOLUTION_TIME', $name)) {
             return $time + 999_999_999 - ((($time % 1_000_000_000) + 1_000_000_000) % 1_000_000_000);
         }
         return $time;
@@ -191,6 +175,9 @@ final class BuildFiles
         $path = $this->path($name);
         if ($this->assumedOld($name)) {
             return PHP_INT_MIN;
+        }
+        if ($this->makefile->targetsByName[$name]->isPhony ?? false) {
+            return null;
         }
         if (isset($this->state->simulated[$path])) {
             return PHP_INT_MAX;

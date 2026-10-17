@@ -1,0 +1,11 @@
+$ ./phmake -rR --no-print-directory
+phmake: *** [Makefile:4: x.out] Error 1
+phmake: *** Deleting file 'x.out'
+[exit 2]
+$ test ! -f x.out
+$ rm -f x.out && printf 'input\n' > mid.in
+$ ./phmake -rR --no-print-directory -f retention.mk
+rm x.mid
+$ cat x.out
+input
+$ test ! -f x.mid

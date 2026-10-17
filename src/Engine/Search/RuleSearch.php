@@ -72,7 +72,7 @@ final class RuleSearch
      */
     public function refresh(Target $target, VariableScope $scope): void
     {
-        if (isset($this->state->paths[$target->name])) {
+        if ($target->isPhony || isset($this->state->paths[$target->name])) {
             return;
         }
         $this->locate($target->name, new VariableExpander($scope->context, $this->output, scope: $scope), $this->state);
@@ -94,6 +94,10 @@ final class RuleSearch
     {
         if (array_key_exists($name, $this->state->targets)) {
             return $this->state->targets[$name];
+        }
+        $declared = $this->makefile->targetsByName[$name] ?? null;
+        if ($declared?->isPhony === true) {
+            return $this->state->targets[$name] = $declared;
         }
         $expander = new VariableExpander($scope->context, $this->output, scope: $scope);
         $this->locate($name, $expander, $this->state);
@@ -303,6 +307,15 @@ final class RuleSearch
                 foreach ($rule->prerequisites->literal as $literal) {
                     $branch->mentioned[$literal] = true;
                     unset($branch->intermediates[$literal]);
+                }
+                foreach ($candidate->pattern->names as $index => $patternName) {
+                    $member = $rule->group[$index] ?? $name;
+                    if ($this->makefile->special->contains('.PRECIOUS', $patternName)) {
+                        $branch->precious[$member] = true;
+                    }
+                    if ($this->makefile->special->contains('.NOTINTERMEDIATE', $patternName)) {
+                        $branch->notIntermediate[$member] = true;
+                    }
                 }
                 $state = $branch;
                 DebugTrace::write(
