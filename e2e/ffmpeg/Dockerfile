@@ -4,9 +4,9 @@ FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential ca-certificates curl git nasm pkg-config unzip xz-utils \
+        libffi-dev build-essential ca-certificates curl git nasm pkg-config unzip xz-utils \
     && rm -rf /var/lib/apt/lists/* \
-    && docker-php-ext-install pcntl
+    && docker-php-ext-install pcntl ffi
 
 # FFmpeg 8.1.1, pinned by the official release archive's SHA-256.
 RUN curl -fsSL https://ffmpeg.org/releases/ffmpeg-8.1.1.tar.xz -o /tmp/ffmpeg.tar.xz \

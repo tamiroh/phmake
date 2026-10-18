@@ -135,7 +135,6 @@ final class Filesystem implements FilesystemInterface
     #[Override]
     public function remove(string $path): bool
     {
-        FilesystemChanges::reset();
         return @unlink($path);
     }
 
@@ -145,7 +144,6 @@ final class Filesystem implements FilesystemInterface
     #[Override]
     public function touch(string $path): void
     {
-        FilesystemChanges::reset();
         $member = ArchiveMember::parse($path);
         if (!($member === null ? @touch($path) : Archive::touch($member))) {
             throw $this->failure('touch', $path);
@@ -165,7 +163,6 @@ final class Filesystem implements FilesystemInterface
     #[Override]
     public function write(string $path, string $text, bool $append): void
     {
-        FilesystemChanges::reset();
         if (
             @file_put_contents(str_starts_with($path, '/') ? $path : './' . $path, $text, $append ? FILE_APPEND : 0)
             === false

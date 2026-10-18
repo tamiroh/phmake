@@ -17,6 +17,8 @@ use-tabs = false
 integrations = ["phpunit"]
 
 [linter.rules]
+# Native timestamp access is deliberately isolated to this OS adapter.
+no-ffi = { exclude = ["src/Console/Filesystem/Internal/NativeFileTimes.php"] }
 prefer-early-continue = { enabled = false }
 ambiguous-function-call = { enabled = true }
 cyclomatic-complexity = { enabled = false }

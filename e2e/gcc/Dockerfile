@@ -4,10 +4,10 @@ FROM php:8.5-cli-bookworm@sha256:97c41462ce985a92b3fcb29dc02d5da568c7865ccb9fb9b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential ca-certificates curl git unzip xz-utils \
+        libffi-dev build-essential ca-certificates curl git unzip xz-utils \
         bison flex texinfo python3 libgmp-dev libmpfr-dev libmpc-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && docker-php-ext-install pcntl
+    && docker-php-ext-install pcntl ffi
 
 RUN echo 'memory_limit=1G' > /usr/local/etc/php/conf.d/phmake.ini
 

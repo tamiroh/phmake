@@ -6,7 +6,6 @@ namespace Tamiroh\Phmake\Console\Makefile;
 
 use Tamiroh\Phmake\Console\Filesystem\DeletionOrder;
 use Tamiroh\Phmake\Console\Filesystem\Filesystem;
-use Tamiroh\Phmake\Console\Filesystem\FilesystemChanges;
 use Tamiroh\Phmake\Console\Input\CommandLine;
 use Tamiroh\Phmake\Console\Makefile\Internal\StdinMakefile;
 use Tamiroh\Phmake\Console\Output\Output;
@@ -67,7 +66,6 @@ final readonly class MakeCommand
         while (true) {
             Signals::check();
             $configuration = clone $this->commandLine;
-            FilesystemChanges::reset();
             $filesystem = new Filesystem();
             $filesystem->options = $configuration->execution->files;
             $sources = new MakefileSources(
