@@ -6,6 +6,7 @@ namespace Tamiroh\Phmake\Console\Process;
 
 use Fiber;
 use Override;
+use Tamiroh\Phmake\Console\Filesystem\FilesystemChanges;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Process\Internal\CommandInvocation;
 use Tamiroh\Phmake\Engine\IO\Shell as ShellInterface;
@@ -61,19 +62,24 @@ final class Shell implements ShellInterface
         string $shell = '/bin/sh',
         string $flags = '-c',
     ): array {
-        $environment = self::withoutPipeJobserver($environment);
-        $environment = [...$this->environment, ...$environment];
-        $invocation = CommandInvocation::parse($command, $shell, $flags);
-        if ($this->failed($invocation, $environment)) {
-            return ['output' => '', 'status' => 127];
-        }
-        return CapturedProcess::run($invocation->launch(), $environment, function (string $buffer): void {
-            if ($this->output !== null) {
-                $this->output->buffer->write($buffer, true);
-            } else {
-                fwrite(STDERR, $buffer);
+        FilesystemChanges::begin();
+        try {
+            $environment = self::withoutPipeJobserver($environment);
+            $environment = [...$this->environment, ...$environment];
+            $invocation = CommandInvocation::parse($command, $shell, $flags);
+            if ($this->failed($invocation, $environment)) {
+                return ['output' => '', 'status' => 127];
             }
-        });
+            return CapturedProcess::run($invocation->launch(), $environment, function (string $buffer): void {
+                if ($this->output !== null) {
+                    $this->output->buffer->write($buffer, true);
+                } else {
+                    fwrite(STDERR, $buffer);
+                }
+            });
+        } finally {
+            FilesystemChanges::end();
+        }
     }
 
     /**
@@ -88,42 +94,47 @@ final class Shell implements ShellInterface
         bool $ignoreErrors = false,
         bool $recursive = false,
     ): int {
-        $descriptors = $this->jobserver?->descriptors() ?? [];
-        if (!$recursive) {
-            $environment = self::withoutPipeJobserver($environment);
-        }
-        $environment = [...$this->environment, ...$environment];
-        $descriptors = ($this->output?->buffer->descriptors() ?? []) + ($recursive ? $descriptors : []);
-        $observer = function (int $pid, ?int $exitCode): void {
-            if ($this->reporting !== null) {
-                DebugTrace::write(
-                    $this->reporting,
-                    $this->output,
-                    'j',
-                    $exitCode === null
-                        ? "Putting child PID {$pid} on the chain."
-                        : 'Reaping ' . ($exitCode === 0 ? 'winning' : 'losing') . " child PID {$pid}",
-                );
+        FilesystemChanges::begin();
+        try {
+            $descriptors = $this->jobserver?->descriptors() ?? [];
+            if (!$recursive) {
+                $environment = self::withoutPipeJobserver($environment);
             }
-        };
-        // A forked copy inherits every open fiber and descriptor, so only plain serial invocations qualify.
-        if (
-            $recursive
-            && $descriptors === []
-            && Fiber::getCurrent() === null
-            && ($this->jobserver?->serial() ?? true)
-            && ($make = RecursiveMake::parse($command, $environment, $shell, $flags)) !== null
-        ) {
-            $status = RecursiveMake::run($make[0], $make[1], $environment, $observer);
-            if ($status !== null) {
-                return $status;
+            $environment = [...$this->environment, ...$environment];
+            $descriptors = ($this->output?->buffer->descriptors() ?? []) + ($recursive ? $descriptors : []);
+            $observer = function (int $pid, ?int $exitCode): void {
+                if ($this->reporting !== null) {
+                    DebugTrace::write(
+                        $this->reporting,
+                        $this->output,
+                        'j',
+                        $exitCode === null
+                            ? "Putting child PID {$pid} on the chain."
+                            : 'Reaping ' . ($exitCode === 0 ? 'winning' : 'losing') . " child PID {$pid}",
+                    );
+                }
+            };
+            // A forked copy inherits every open fiber and descriptor, so only plain serial invocations qualify.
+            if (
+                $recursive
+                && $descriptors === []
+                && Fiber::getCurrent() === null
+                && ($this->jobserver?->serial() ?? true)
+                && ($make = RecursiveMake::parse($command, $environment, $shell, $flags)) !== null
+            ) {
+                $status = RecursiveMake::run($make[0], $make[1], $environment, $observer);
+                if ($status !== null) {
+                    return $status;
+                }
             }
+            $invocation = CommandInvocation::parse($command, $shell, $flags);
+            if ($this->failed($invocation, $environment)) {
+                return 127;
+            }
+            return RecipeProcess::run($invocation->launch(), $environment, $descriptors, $observer);
+        } finally {
+            FilesystemChanges::end();
         }
-        $invocation = CommandInvocation::parse($command, $shell, $flags);
-        if ($this->failed($invocation, $environment)) {
-            return 127;
-        }
-        return RecipeProcess::run($invocation->launch(), $environment, $descriptors, $observer);
     }
 
     /**

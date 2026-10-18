@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Console\Process\Internal;
 
 use Closure;
+use Tamiroh\Phmake\Console\Filesystem\FilesystemChanges;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 
@@ -37,6 +38,22 @@ final class ModuleChannel
      * @throws MakefileErrorException
      */
     public function request(string $operation, array $arguments, Closure $callback): string
+    {
+        FilesystemChanges::begin();
+        try {
+            return $this->exchange($operation, $arguments, $callback);
+        } finally {
+            FilesystemChanges::end();
+        }
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @param Closure(string, list<string>): ?string $callback
+     *
+     * @throws MakefileErrorException
+     */
+    private function exchange(string $operation, array $arguments, Closure $callback): string
     {
         if ($this->process === null) {
             $pipes = [];
@@ -135,6 +152,7 @@ final class ModuleChannel
         if ($this->owner !== getmypid()) {
             return;
         }
+        FilesystemChanges::reset();
         foreach ($this->pipes as $pipe) {
             fclose($pipe);
         }
