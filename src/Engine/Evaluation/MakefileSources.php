@@ -24,6 +24,9 @@ final class MakefileSources
     /** @var list<string> */
     private array $directories;
 
+    /** @var list<string> */
+    private array $directoryOptions;
+
     /**
      * @param list<string> $main
      * @param list<string> $evaluations
@@ -37,6 +40,7 @@ final class MakefileSources
         public readonly array $evaluations = [],
         public readonly bool $restarted = false,
     ) {
+        $this->directoryOptions = $configuration->includeDirectories ?? [];
         $this->directories = $this->findDirectories();
     }
 
@@ -45,6 +49,11 @@ final class MakefileSources
      */
     public function directories(): array
     {
+        $options = $this->configuration->includeDirectories ?? [];
+        if ($options !== $this->directoryOptions) {
+            $this->directoryOptions = $options;
+            $this->directories = $this->findDirectories();
+        }
         return $this->directories;
     }
 

@@ -288,7 +288,8 @@ jobs:
         run: make format-check
 
   test:
-    runs-on: ubuntu-latest
+    # The parallel fixtures require atomic mkdir locking with GNU coreutils.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

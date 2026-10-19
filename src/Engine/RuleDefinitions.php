@@ -371,7 +371,7 @@ final class RuleDefinitions
     private function suffixPattern(Target $target): ?PatternRule
     {
         $rule = $target->rules[0] ?? null;
-        if ($rule === null || $target->isPhony) {
+        if ($rule === null || $rule->recipe === null || $target->isPhony) {
             return null;
         }
         foreach ($this->suffixes as $source) {
@@ -386,7 +386,7 @@ final class RuleDefinitions
                     }
                     $this->output?->writeWarning(
                         'warning: ignoring prerequisites on suffix rule definition',
-                        $rule->recipe?->source,
+                        $rule->recipe->source,
                     );
                 }
                 return new PatternRule(
