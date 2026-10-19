@@ -233,11 +233,11 @@ final readonly class Evaluator
         switch ($node->directive) {
             case 'undefine':
                 [$origin] = Assignments::modifiers($node->modifiers);
-                Assignment::undefine(
-                    $variables,
-                    new Assignment($node->expression, '=', '')->resolveName($expander)->name,
-                    $origin,
-                );
+                $name = trim(new Assignment($node->expression, '=', '')->resolveName($expander)->name);
+                Assignment::undefine($variables, $name, $origin);
+                if (!isset($variables[$name])) {
+                    $exports->forget($name);
+                }
                 return;
             case 'endef':
                 throw new ParseException($node->span->startLine, "extraneous 'endef'");
@@ -292,8 +292,9 @@ final readonly class Evaluator
             }
             return;
         }
-        if (in_array($file->path, $included, true)) {
-            throw new MakefileErrorException("Recursive include `{$file->path}'", $file->source);
+        // Guard resource consumption, without rejecting include-guard recursion.
+        if (count($included) >= 256) {
+            throw new MakefileErrorException('Maximum makefile include depth (256) exceeded', $file->source);
         }
         $scope->context->variables['MAKEFILE_LIST'] = new Variable(
             'MAKEFILE_LIST',
@@ -400,7 +401,7 @@ final readonly class Evaluator
                 continue;
             }
             if ($node instanceof Ast\IncludeNode) {
-                foreach (self::words($expander->expand($node->expression)) as $pattern) {
+                foreach (DependencySyntax::words($expander->expand($node->expression)) as $pattern) {
                     foreach ($this->sources->matching($pattern) as $path) {
                         $this->readFile(
                             $this->sources->open(

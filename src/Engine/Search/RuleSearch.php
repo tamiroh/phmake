@@ -122,7 +122,7 @@ final class RuleSearch
         }
         $path = $this->state->paths[$name] ?? $name;
         $searchName = str_starts_with($name, '-l')
-        || $this->makefile->searchPaths->retain($path, $expander)
+        || $this->makefile->searchPaths->retain($path)
         || isset($this->makefile->targetsByName[$path])
             ? $path
             : $name;
@@ -157,7 +157,7 @@ final class RuleSearch
                 $rules[] = $rule;
             }
         }
-        return $this->state->targets[$name] = $rules === [] ? null : new Target($name, $rules);
+        return $this->state->targets[$name] = $rules === [] ? null : new Target($searchName, $rules);
     }
 
     /**
@@ -367,6 +367,9 @@ final class RuleSearch
         $member = ArchiveMember::parse($name);
         $base = basename($name);
         foreach ($this->makefile->patterns as $index => $pattern) {
+            if ($pattern->rule->recipe === null && $pattern->rule->prerequisites->sequence !== []) {
+                continue;
+            }
             foreach ($pattern->names as $text) {
                 $hasDirectory = str_contains($text, '/');
                 $matchName = $member !== null && str_starts_with($text, '(') ? '(' . $member->member . ')' : $name;

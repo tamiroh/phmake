@@ -57,7 +57,7 @@ final class Conditionals
                 throw new ParseException($lineNumber, "extraneous 'endif'");
             }
             if ($argument !== '') {
-                throw new ParseException($lineNumber, "extraneous text after 'endif'");
+                $expander->output?->writeWarning("extraneous text after 'endif' directive", $expander->source);
             }
             array_pop($this->stack);
             return;
@@ -77,10 +77,14 @@ final class Conditionals
                 $frame['else'] = true;
             } else {
                 if (preg_match('/^(ifdef|ifndef|ifeq|ifneq)[ \t]+(.*)$/s', $argument, $matches) !== 1) {
-                    throw new ParseException($lineNumber, "extraneous text after 'else'");
+                    $expander->output?->writeWarning("extraneous text after 'else' directive", $expander->source);
+                    $frame['active'] = $eligible;
+                    $frame['else'] = true;
+                } else {
+                    /** @var array{non-falsy-string, 'ifdef'|'ifndef'|'ifeq'|'ifneq', string} $matches */
+                    $frame['active'] =
+                        $eligible && $this->evaluate($matches[1], trim($matches[2]), $expander, $lineNumber);
                 }
-                /** @var array{non-falsy-string, 'ifdef'|'ifndef'|'ifeq'|'ifneq', string} $matches */
-                $frame['active'] = $eligible && $this->evaluate($matches[1], trim($matches[2]), $expander, $lineNumber);
             }
             $frame['matched'] = $frame['matched'] || $frame['active'];
             $this->stack[$index] = $frame;
@@ -96,7 +100,7 @@ final class Conditionals
      *
      * @return array{string, string}
      */
-    private function comparison(string $argument, int $lineNumber): array
+    private function comparison(string $argument, int $lineNumber, string $directive, VariableExpander $expander): array
     {
         if (($argument[0] ?? '') === '(') {
             $depth = 0;
@@ -106,7 +110,13 @@ final class Conditionals
                     $depth++;
                 } elseif ($argument[$index] === ')') {
                     if ($depth === 0) {
-                        if ($comma !== null && trim(substr($argument, $index + 1)) === '') {
+                        if ($comma !== null) {
+                            if (trim(substr($argument, $index + 1)) !== '') {
+                                $expander->output?->writeWarning(
+                                    "extraneous text after '{$directive}' directive",
+                                    $expander->source,
+                                );
+                            }
                             return [
                                 rtrim(substr($argument, 1, $comma - 1), " \t"),
                                 ltrim(substr($argument, $comma + 1, $index - $comma - 1), " \t"),
@@ -126,7 +136,13 @@ final class Conditionals
                 $rest = ltrim(substr($argument, $end + 1));
                 if (in_array($rest[0] ?? '', ["'", '"'], true)) {
                     $end = strpos($rest, $rest[0], 1);
-                    if ($end !== false && trim(substr($rest, $end + 1)) === '') {
+                    if ($end !== false) {
+                        if (trim(substr($rest, $end + 1)) !== '') {
+                            $expander->output?->writeWarning(
+                                "extraneous text after '{$directive}' directive",
+                                $expander->source,
+                            );
+                        }
                         return [$left, substr($rest, 1, $end - 1)];
                     }
                 }
@@ -149,7 +165,7 @@ final class Conditionals
             $defined = ($expander->variable($name)->expression ?? '') !== '';
             return $directive === 'ifdef' ? $defined : !$defined;
         }
-        [$left, $right] = $this->comparison($argument, $lineNumber);
+        [$left, $right] = $this->comparison($argument, $lineNumber, $directive, $expander);
         $equal = $expander->expand($left) === $expander->expand($right);
         return $directive === 'ifeq' ? $equal : !$equal;
     }

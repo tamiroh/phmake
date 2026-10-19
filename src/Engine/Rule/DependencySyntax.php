@@ -25,7 +25,7 @@ final class DependencySyntax
     /**
      * @pure
      */
-    public static function delimiter(string $text, string $delimiter): ?int
+    public static function delimiter(string $text, string $delimiter, bool $skipVariables = true): ?int
     {
         if (!str_contains($text, $delimiter)) {
             return null;
@@ -38,7 +38,8 @@ final class DependencySyntax
             if ($text[$index] === '\\') {
                 $index++;
             } elseif (
-                ($text[$index] === '(' || $text[$index] === '{')
+                $skipVariables
+                && ($text[$index] === '(' || $text[$index] === '{')
                 && ($depth > 0 || $index > 0 && $text[$index - 1] === '$')
             ) {
                 $depth++;

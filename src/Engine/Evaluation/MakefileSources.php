@@ -21,6 +21,9 @@ final class MakefileSources
 
     public bool $defaultGoal = true;
 
+    /** @var list<string> */
+    private array $directories;
+
     /**
      * @param list<string> $main
      * @param list<string> $evaluations
@@ -33,30 +36,16 @@ final class MakefileSources
         private readonly bool $optionalMain = false,
         public readonly array $evaluations = [],
         public readonly bool $restarted = false,
-    ) {}
+    ) {
+        $this->directories = $this->findDirectories();
+    }
 
     /**
      * @return list<string>
      */
     public function directories(): array
     {
-        $paths = [];
-        $defaults = ['/usr/local/include', '/usr/include'];
-        foreach ($this->configuration->includeDirectories ?? [] as $path) {
-            if ($path === '-') {
-                $paths = [];
-                $defaults = [];
-            } else {
-                $paths[] = rtrim($path, '/') === '' ? '/' : rtrim($path, '/');
-            }
-        }
-        $result = [];
-        foreach ([...$paths, ...$defaults] as $path) {
-            if ($this->filesystem->isDirectory($path) && !in_array($path, $result, true)) {
-                $result[] = $path;
-            }
-        }
-        return $result;
+        return $this->directories;
     }
 
     /**
@@ -115,5 +104,29 @@ final class MakefileSources
             error: $contents['error'],
             displayPath: $name,
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function findDirectories(): array
+    {
+        $paths = [];
+        $defaults = ['/usr/local/include', '/usr/include'];
+        foreach ($this->configuration->includeDirectories ?? [] as $path) {
+            if ($path === '-') {
+                $paths = [];
+                $defaults = [];
+            } else {
+                $paths[] = rtrim($path, '/') === '' ? '/' : rtrim($path, '/');
+            }
+        }
+        $result = [];
+        foreach ([...$paths, ...$defaults] as $path) {
+            if ($this->filesystem->isDirectory($path) && !in_array($path, $result, true)) {
+                $result[] = $path;
+            }
+        }
+        return $result;
     }
 }

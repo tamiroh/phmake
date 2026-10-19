@@ -24,13 +24,9 @@ final class DependencyOrder
      *
      * @return list<string>
      */
-    public static function arrange(
-        array $names,
-        ParallelOptions $options,
-        Makefile $makefile,
-        ?string $target = null,
-    ): array {
-        if ($options->shuffle === null || self::serial($makefile, $target) || in_array('.WAIT', $names, true)) {
+    public static function arrange(array $names, ParallelOptions $options, Makefile $makefile): array
+    {
+        if ($options->shuffle === null || self::serial($makefile) || in_array('.WAIT', $names, true)) {
             return $names;
         }
         if ($options->shuffle === 'reverse') {
@@ -39,14 +35,10 @@ final class DependencyOrder
         return self::shuffle($names, $options->shuffle);
     }
 
-    public static function serial(Makefile $makefile, ?string $name = null): bool
+    public static function serial(Makefile $makefile): bool
     {
-        foreach ($makefile->targetsByName['.NOTPARALLEL']->rules ?? [] as $rule) {
-            if ($rule->prerequisites->normal === [] || in_array($name, $rule->prerequisites->normal, true)) {
-                return true;
-            }
-        }
-        return false;
+        $rule = $makefile->targetsByName['.NOTPARALLEL']->rules[0] ?? null;
+        return $rule !== null && $rule->prerequisites->sequence === [];
     }
 
     /**

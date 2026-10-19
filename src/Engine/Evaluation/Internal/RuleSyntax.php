@@ -39,7 +39,7 @@ final class RuleSyntax
         $double = ($header[$colon + 1] ?? '') === ':';
         $dependencies = ltrim(substr($header, $colon + ($double ? 2 : 1)));
         $pattern = null;
-        $second = DependencySyntax::delimiter($dependencies, ':');
+        $second = DependencySyntax::delimiter($dependencies, ':', false);
         if ($second !== null) {
             $patterns = DependencySyntax::words(substr($dependencies, 0, $second));
             if ($patterns === []) {

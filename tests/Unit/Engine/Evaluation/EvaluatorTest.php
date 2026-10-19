@@ -351,6 +351,19 @@ final class EvaluatorTest extends TestCase
     }
 
     /**
+     * @throws ParseException
+     */
+    #[Test]
+    public function limitsUnboundedIncludeRecursion(): void
+    {
+        self::assertRejected(
+            self::sources(['Makefile' => "include Makefile\n"]),
+            'Maximum makefile include depth (256) exceeded',
+            'Makefile:1',
+        );
+    }
+
+    /**
      * @throws MakefileErrorException
      * @throws ParseException
      */
@@ -377,19 +390,6 @@ final class EvaluatorTest extends TestCase
         self::assertSame(
             ['echo hi'],
             self::commands(self::target(self::parse(".RECIPEPREFIX = >\nall:\n>echo hi\n"), 'all')),
-        );
-    }
-
-    /**
-     * @throws ParseException
-     */
-    #[Test]
-    public function rejectsRecursiveIncludes(): void
-    {
-        self::assertRejected(
-            self::sources(['Makefile' => "include Makefile\n"]),
-            "Recursive include `Makefile'",
-            'Makefile:1',
         );
     }
 

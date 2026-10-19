@@ -46,6 +46,8 @@ final readonly class CommandRunner
         $active = false;
         $simulated = false;
         $needsUpdate = false;
+        $started = false;
+        $recursive = $this->command->recursive;
         $pending = '';
         foreach (explode("\n", $this->command->expression) as $line) {
             $pending .= $line;
@@ -57,13 +59,21 @@ final readonly class CommandRunner
             $active = $active || $result->active;
             $simulated = $simulated || $result->simulated;
             $needsUpdate = $needsUpdate || $result->needsUpdate;
-            if ($result->exitCode !== 0) {
+            $started = $started || $result->started;
+            $recursive = $recursive || $result->recursive;
+            if ($result->exitCode !== 0 || $result->needsUpdate) {
                 return $result;
             }
             $pending = '';
         }
         return $pending === ''
-            ? new CommandResult($active, $simulated, needsUpdate: $needsUpdate)
+            ? new CommandResult(
+                $active,
+                $simulated,
+                needsUpdate: $needsUpdate,
+                started: $started,
+                recursive: $recursive,
+            )
             : $this->runLine($pending, $shell, $output, $options, $target);
     }
 
@@ -81,16 +91,16 @@ final readonly class CommandRunner
         $prefixLength = strspn($expanded, "@-+ \t");
         $prefix = $this->command->prefix . substr($expanded, 0, $prefixLength);
         $expanded = ltrim(substr($expanded, $prefixLength));
-        if (trim(str_replace("\\\n", '', $expanded)) === '') {
-            return new CommandResult();
-        }
         $recursive = $this->command->recursive || str_contains($prefix, '+');
+        if (trim(str_replace("\\\n", '', $expanded)) === '') {
+            return new CommandResult(recursive: $recursive);
+        }
         if ($output instanceof RecipeOutput) {
             $output->beginCommand($recursive);
         }
         try {
             if ($options->question && !$recursive) {
-                return new CommandResult(true, true, needsUpdate: true);
+                return new CommandResult(true, true, needsUpdate: true, started: true, recursive: $recursive);
             }
             if (
                 $options->dryRun && !$options->touch
@@ -100,16 +110,13 @@ final readonly class CommandRunner
                 $output->write($expanded . "\n");
             }
             if (!$recursive && ($options->dryRun || $options->touch)) {
-                return new CommandResult(true, true);
+                return new CommandResult(true, true, started: !$options->touch);
             }
             $exitCode = $shell->exec(
                 $expanded,
                 ignoreErrors: $options->ignoreErrors || str_contains($prefix, '-'),
                 recursive: $recursive,
             );
-            if ($exitCode === 1 && $options->question) {
-                return new CommandResult(true, true, needsUpdate: true);
-            }
             if ($exitCode !== 0 && ($options->ignoreErrors || str_contains($prefix, '-'))) {
                 $output->writeWarning(
                     (
@@ -118,9 +125,12 @@ final readonly class CommandRunner
                             : new CommandFailedException($target, $exitCode, $this->command->source)->getMessage()
                     ) . ' (ignored)',
                 );
-                return new CommandResult(true);
+                return new CommandResult(true, started: true, recursive: $recursive);
             }
-            return new CommandResult(true, exitCode: $exitCode);
+            if ($exitCode === 1 && $options->question) {
+                return new CommandResult(true, true, needsUpdate: true, started: true, recursive: $recursive);
+            }
+            return new CommandResult(true, exitCode: $exitCode, started: true, recursive: $recursive);
         } finally {
             if ($output instanceof RecipeOutput) {
                 $output->endCommand();

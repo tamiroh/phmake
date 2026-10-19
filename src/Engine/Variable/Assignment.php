@@ -117,6 +117,8 @@ final readonly class Assignment
         ?string $source = null,
         ?VariableExpander $expander = null,
         bool $private = false,
+        bool $target = false,
+        ?string $evaluated = null,
     ): Variable {
         $shellValue = null;
         if ($this->operator === '!=') {
@@ -133,37 +135,59 @@ final readonly class Assignment
         if ($previous !== null && $this->operator !== '?=') {
             $previous = $variables[$this->name] = $previous->promoteEnvironment();
         }
-        if (
-            $previous !== null && self::priority($previous->origin) > self::priority($origin)
-            || $this->operator === '?=' && $previous !== null
-        ) {
-            return $previous;
+        if ($this->operator === '?=' && $previous !== null) {
+            return $variables[$this->name] = $previous->withAttributes(
+                $private || $previous->private,
+                $previous->export,
+            );
         }
         $recursive = $this->operator === '+='
             ? $previous->recursive ?? true
             : $this->operator !== ':=' && $this->operator !== '::=';
-        $value = $recursive && $this->operator !== ':::='
-            ? $this->expression
-            : ($expander ?? new VariableExpander(
-                array_values($variables),
-                $output,
-                source: $source,
-            ))->expand($this->expression);
+        $value =
+            $evaluated
+            ?? (
+                $recursive && $this->operator !== ':::='
+                    ? $this->expression
+                    : ($expander ?? new VariableExpander(
+                        array_values($variables),
+                        $output,
+                        source: $source,
+                    ))->expand($this->expression)
+            );
         if ($shellValue !== null) {
             $value = $shellValue;
         }
         if ($this->operator === ':::=') {
             $value = str_replace('$', '$$', $value);
         }
+        if ($previous !== null && self::priority($previous->origin) > self::priority($origin)) {
+            return $variables[$this->name] = $previous->withAttributes(
+                $private || $previous->private,
+                $previous->export,
+            );
+        }
         if ($this->operator === '+=' && $previous !== null) {
             if ($value === '') {
-                return $previous;
+                return $variables[$this->name] = $previous->withAttributes(
+                    $private || $previous->private,
+                    $previous->export,
+                );
             }
             $separator = $this->name === 'MAKEFLAGS' ? strpos($previous->expression, ' -- ') : false;
             $before = $separator === false ? $previous->expression : substr($previous->expression, 0, $separator);
             $value = ($before === '' ? '' : $before . ' ') . $value;
         }
-        return $variables[$this->name] = new Variable($this->name, $value, $recursive, $origin, $source, $private);
+        return $variables[$this->name] = new Variable(
+            $this->name,
+            $value,
+            $recursive,
+            $origin,
+            $source,
+            $private || ($previous->private ?? false),
+            $previous?->export,
+            $target && $this->operator === '+=' && ($previous === null || $previous->append),
+        );
     }
 
     /**
@@ -171,7 +195,7 @@ final readonly class Assignment
      */
     public function resolveName(VariableExpander $expander): self
     {
-        $name = trim($expander->expand($this->name));
+        $name = $expander->expand($this->name);
         if ($name === '') {
             throw new MakefileErrorException('empty variable name', $expander->source);
         }

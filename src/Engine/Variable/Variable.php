@@ -19,7 +19,6 @@ final readonly class Variable
         public bool $private = false,
         public ?bool $export = null,
         public bool $append = false,
-        public bool $conditional = false,
         public bool $environmentOverrides = false,
     ) {}
 
@@ -37,8 +36,22 @@ final readonly class Variable
             $this->private,
             $this->export,
             $this->append,
-            $this->conditional,
             true,
+        );
+    }
+
+    public function withAttributes(bool $private, ?bool $export): self
+    {
+        return new self(
+            $this->name,
+            $this->expression,
+            $this->recursive,
+            $this->origin,
+            $this->source,
+            $private,
+            $export,
+            $this->append,
+            $this->environmentOverrides,
         );
     }
 

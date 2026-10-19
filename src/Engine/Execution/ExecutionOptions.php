@@ -42,13 +42,15 @@ final class ExecutionOptions
 
     public bool $ignoreErrors = false;
 
-    public function forMakefiles(int $restarts): self
+    public function forMakefiles(int $restarts, bool $commandGoal = false): self
     {
         $options = clone $this;
         $options->reporting->remaking = true;
-        $options->dryRun = false;
-        $options->question = false;
-        $options->touch = false;
+        if (!$commandGoal) {
+            $options->dryRun = false;
+            $options->question = false;
+            $options->touch = false;
+        }
         if ($restarts > 0) {
             $options->alwaysMake = false;
             $options->files->newFiles = [];

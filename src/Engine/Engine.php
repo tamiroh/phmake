@@ -46,12 +46,10 @@ final readonly class Engine
             $restarts,
         );
         try {
-            $remade = new MakefileRemake(
-                $this->build,
-                $this->filesystem,
-                $this->output,
-                $this->execution->keepGoing,
-            )->run($read);
+            $remade = new MakefileRemake($this->build, $this->filesystem, $this->output, $this->execution)->run(
+                $read,
+                $targets,
+            );
             if (!$remade) {
                 $this->context->loadedObjects->reload(new VariableExpander($this->context, $this->output));
             }

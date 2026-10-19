@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Engine\IO\Output;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Rule\Pattern;
 
+use function array_replace;
 use function array_values;
 use function in_array;
 use function strlen;
@@ -19,14 +20,25 @@ use function usort;
  */
 final class TargetVariables
 {
-    /** @var array<array-key, array<string, Variable>> */
+    /** @var array<array-key, VariableSet> */
     private array $definitions = [];
 
-    /** @var list<array{Pattern, Variable}> */
+    /** @var list<PatternAssignment> */
     private array $patterns = [];
 
-    /** @var array<string, array<string, Variable>>|null */
+    /** @var array<string, VariableSet>|null */
     private ?array $exact = null;
+
+    /** @var array<string, VariableSet> */
+    private array $installedPatterns = [];
+
+    public function alias(string $name, string $canonical): void
+    {
+        $this->exact ??= $this->exactDefinitions();
+        $set = $this->exact[$canonical] ??= new VariableSet();
+        $set->definitions = array_replace($this->exact[$name]->definitions ?? [], $set->definitions);
+        $this->exact[$name] = $set;
+    }
 
     /**
      * @throws MakefileErrorException
@@ -42,47 +54,68 @@ final class TargetVariables
     ): void {
         $targetPattern = new Pattern($target);
         $pattern = $targetPattern->hasWildcard();
-        $variables = $this->definitions[$target] ?? [];
+        $variables = $this->definitions[$target]->definitions ?? [];
         $scope = $pattern ? $expander : $this->definitionScope($variables, $expander);
         $assignment = $assignment->resolveName($scope);
-        if ($assignment->operator === '?=' && !$pattern && $scope->variable($assignment->name) !== null) {
+        if ($pattern) {
+            $evaluated = in_array($assignment->operator, [':=', '::='], true)
+                ? $scope->expand($assignment->expression)
+                : null;
+            $global = $expander->context->variables[$assignment->name] ?? null;
+            if (
+                $origin !== 'override'
+                && $global !== null
+                && in_array($global->origin, ['command line', 'environment override'], true)
+            ) {
+                $assignment = new Assignment($assignment->name, $assignment->operator, $global->expression);
+                $origin = $global->origin;
+                $evaluated = $evaluated === null ? null : $global->expression;
+            }
+            $this->patterns[] = new PatternAssignment(
+                $targetPattern,
+                $assignment,
+                $origin,
+                $private,
+                $export,
+                $expander->source,
+                $evaluated,
+            );
             return;
         }
-        $previous = $variables[$assignment->name] ?? null;
-        if ($pattern && $assignment->operator === '+=') {
-            if ($previous?->origin === 'override' && $origin !== 'override') {
+        $set = $this->definitions[$target] ??= new VariableSet();
+        $this->exact = null;
+        // A conditional definition can find an existing global binding. Modifiers
+        // apply to that binding even though no target-local value is created.
+        if ($assignment->operator === '?=' && !isset($variables[$assignment->name])) {
+            $global = $expander->context->variables[$assignment->name] ?? null;
+            if ($global !== null) {
+                $expander->context->variables[$assignment->name] = $global->withAttributes(
+                    $private,
+                    $export ?? $global->export,
+                );
                 return;
             }
-            // Pattern appends are evaluated when the pattern is installed on a target.
+        }
+        $value = $assignment->apply($variables, $origin, $output, $expander->source, $scope, target: true);
+        $global = $expander->context->variables[$assignment->name] ?? null;
+        if (
+            $value->origin !== 'override'
+            && $global !== null
+            && in_array($global->origin, ['command line', 'environment override'], true)
+        ) {
+            // Command-line precedence replaces the value, not the local modifiers.
             $value = new Variable(
-                $assignment->name,
-                $assignment->expression,
-                $previous->recursive ?? true,
-                $origin,
-                $expander->source,
+                $value->name,
+                $global->expression,
+                $global->recursive,
+                $global->origin,
+                $value->source,
+                $value->private,
+                $value->export,
             );
-        } else {
-            $value = $assignment->apply($variables, $origin, $output, $expander->source, $scope);
         }
-        if ($value === $previous) {
-            return;
-        }
-        $variables[$assignment->name] = new Variable(
-            $value->name,
-            $value->expression,
-            $value->recursive,
-            $value->origin,
-            $value->source,
-            $private,
-            $export ?? $previous?->export,
-            $assignment->operator === '+=' && ($pattern || $previous === null || $previous->append),
-            $pattern && $assignment->operator === '?=',
-        );
-        $this->definitions[$target] = $variables;
-        $this->exact = null;
-        if ($pattern) {
-            $this->patterns[] = [$targetPattern, $variables[$assignment->name]];
-        }
+        $variables[$assignment->name] = $value->withAttributes($private, $export ?? $value->export);
+        $set->definitions = $variables;
     }
 
     /**
@@ -90,7 +123,7 @@ final class TargetVariables
      */
     public function definitionsFor(string $name): ?array
     {
-        return $this->definitions[$name] ?? null;
+        return $this->definitions[$name]->definitions ?? null;
     }
 
     /**
@@ -112,31 +145,46 @@ final class TargetVariables
      */
     public function scope(string $name, VariableScope $parent, ?Output $output = null): VariableScope
     {
-        $patterns = [];
-        foreach ($this->patterns as [$pattern, $variable]) {
-            $stem = $pattern->match($name);
-            if ($stem !== null) {
-                $patterns[] = [strlen($stem), $variable];
+        if (!isset($this->installedPatterns[$name])) {
+            $patterns = [];
+            foreach ($this->patterns as $definition) {
+                $stem = $definition->pattern->match($name);
+                if ($stem !== null) {
+                    $patterns[] = [strlen($stem), $definition];
+                }
             }
-        }
-        usort($patterns, static fn(array $a, array $b): int => $b[0] <=> $a[0]);
-        foreach ($patterns as [, $variable]) {
-            if ($variable->append && !$variable->recursive) {
-                $variable = new Variable(
-                    $variable->name,
-                    new VariableExpander($parent->context, $output, scope: $parent)->expand($variable->expression),
-                    false,
-                    $variable->origin,
-                    $variable->source,
-                    $variable->private,
-                    $variable->export,
-                    true,
+            usort($patterns, static fn(array $a, array $b): int => $b[0] <=> $a[0]);
+            $set = new VariableSet();
+            $this->installedPatterns[$name] = $set;
+            foreach ($patterns as [, $definition]) {
+                $scope = $parent->withSet($set);
+                $expander = new VariableExpander($parent->context, $output, scope: $scope);
+                $assignment = $definition->assignment;
+                if (
+                    $assignment->operator === '?='
+                    && $scope->setAttributes($assignment->name, $definition->private, $definition->export)
+                ) {
+                    continue;
+                }
+                $value = $assignment->apply(
+                    $set->definitions,
+                    $definition->origin,
+                    $output,
+                    $definition->source,
+                    $expander,
+                    target: true,
+                    evaluated: $definition->evaluated,
+                );
+                $set->definitions[$assignment->name] = $value->withAttributes(
+                    $definition->private,
+                    $definition->export ?? $value->export,
                 );
             }
-            $parent = $parent->with([$variable->name => $variable]);
         }
+        $parent = $parent->withSet($this->installedPatterns[$name]);
         $this->exact ??= $this->exactDefinitions();
-        return $parent->with($this->exact[$name] ?? []);
+        $this->exact[$name] ??= new VariableSet();
+        return $parent->withSet($this->exact[$name]);
     }
 
     /**
@@ -160,7 +208,7 @@ final class TargetVariables
     /**
      * Index definitions without wildcards by target name; the last matching definition wins.
      *
-     * @return array<string, array<string, Variable>>
+     * @return array<string, VariableSet>
      */
     private function exactDefinitions(): array
     {

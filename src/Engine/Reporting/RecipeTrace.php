@@ -41,8 +41,8 @@ final class RecipeTrace
             if ($reason === '') {
                 $missing = [];
                 foreach (array_unique([...$rule->prerequisites->normal, ...$rule->prerequisites->orderOnly]) as $name) {
-                    if ($files->time($name) === null) {
-                        $missing[] = $files->path($name);
+                    if ($files->states->time($name) === null) {
+                        $missing[] = $files->states->path($name);
                     }
                 }
                 $reason = $missing === [] ? 'unknown reasons' : implode(' ', $missing);

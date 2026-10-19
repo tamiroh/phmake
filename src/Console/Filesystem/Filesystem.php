@@ -145,7 +145,9 @@ final class Filesystem implements FilesystemInterface
     public function touch(string $path): void
     {
         $member = ArchiveMember::parse($path);
-        if (!($member === null ? @touch($path) : Archive::touch($member))) {
+        if ($member !== null) {
+            Archive::touch($member);
+        } elseif (!@touch($path)) {
             throw $this->failure('touch', $path);
         }
         clearstatcache(true, $path);

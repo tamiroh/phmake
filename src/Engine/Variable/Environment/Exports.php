@@ -43,7 +43,7 @@ final class Exports
             }
         }
         $expander = $variables instanceof VariableExpander ? $variables : new VariableExpander($variables, $output);
-        foreach ($expander->variables() as $variable) {
+        foreach ($expander->variables(true) as $variable) {
             if ($variable->export === false) {
                 $environment[$variable->name] = false;
                 continue;
@@ -75,7 +75,11 @@ final class Exports
                 $environment[$variable->name] = $variable->name !== 'MAKEFLAGS'
                 && in_array($variable->origin, ['environment', 'environment override'], true)
                     ? $variable->expression
-                    : $expander->expand('$(' . $variable->name . ')');
+                    : (
+                        ($binding = $expander->binding($variable->name, true)) === null
+                            ? ''
+                            : $expander->expandBinding($binding)
+                    );
             } elseif (in_array($variable->name, $this->inherited, true)) {
                 $environment[$variable->name] = false;
             }
@@ -85,6 +89,11 @@ final class Exports
             $environment['MAKELEVEL'] = (string) (max(0, (int) $expander->expand('$(MAKELEVEL)')) + 1);
         }
         return $environment;
+    }
+
+    public function forget(string $name): void
+    {
+        unset($this->directives[$name]);
     }
 
     /**

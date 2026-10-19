@@ -47,4 +47,17 @@ final readonly class BuildRule
             $this->implicit,
         );
     }
+
+    public function withPrerequisites(Prerequisites $prerequisites): self
+    {
+        return new self(
+            $prerequisites,
+            $this->recipe,
+            $this->doubleColon,
+            $this->stem,
+            $this->group,
+            $this->firstPrerequisite,
+            $this->implicit,
+        );
+    }
 }

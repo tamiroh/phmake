@@ -45,7 +45,7 @@ final class VariableExpanderTest extends TestCase
         yield 'empty results keep separators' => ['$(foreach x,a b c,)', '  '];
         yield 'body whitespace and commas' => ['$(foreach x,a b, [$x], )', ' [a],   [b], '];
         yield 'expanded name uses first word' => ['$(foreach $(NAME),a b,$x)', 'a b'];
-        yield 'empty name still expands body' => ['$(foreach ,a b,[$()])', '[] []'];
+        yield 'empty name binds each word' => ['$(foreach ,a b,[$()])', '[a] [b]'];
         yield 'list uses outer scope' => ['$(foreach x,$x,$x)', 'outer'];
         yield 'nested scope restores outer variable' => [
             '$(foreach x,a b,$x:$(foreach x,1 2,$x):$x)|$x',

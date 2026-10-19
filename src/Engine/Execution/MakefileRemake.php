@@ -11,6 +11,7 @@ use Tamiroh\Phmake\Engine\IO\Output;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\ReadFile;
 use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
+use Tamiroh\Phmake\Engine\Rule\FileName;
 
 /**
  * Updates the makefiles that were read and decides whether make must restart.
@@ -21,23 +22,27 @@ final readonly class MakefileRemake
         private Build $build,
         private Filesystem $filesystem,
         private Output $output,
-        private bool $keepGoing,
+        private ExecutionOptions $options,
     ) {}
 
     /**
      * @param list<ReadFile> $read
+     * @param list<string> $commandGoals
      *
      * @throws MakefileErrorException
      * @throws CommandFailedException
      *
      * @return bool whether any makefile changed and make must read them again
      */
-    public function run(array $read): bool
+    public function run(array $read, array $commandGoals = []): bool
     {
+        $commandGoals = array_map(FileName::normalize(...), $commandGoals);
         $names = [];
         $inputs = [];
         $unreadable = [];
+        $locations = [];
         foreach ($read as $file) {
+            $locations[$file->path] ??= $file->source;
             if ($file->rebuild) {
                 $inputs[$file->path] = $file;
             }
@@ -51,14 +56,24 @@ final readonly class MakefileRemake
         // As in GNU make, only makefiles whose times change while remaking restart make.
         // Without a recipe the times cannot change, so they are read only before the first one.
         $before = null;
-        $errors = $this->build->remake($names, $unreadable, function () use ($names, &$before): void {
-            $before = $this->filesystem->modifiedTimes($names);
-        });
+        $errors = $this->build->remake(
+            $names,
+            $unreadable,
+            function () use ($names, &$before): void {
+                $before = $this->filesystem->modifiedTimes($names);
+            },
+            $commandGoals,
+        );
+        $changed = [];
         foreach ($before === null ? [] : $this->filesystem->modifiedTimes($names) as $path => $modifiedAt) {
-            if ($modifiedAt !== null && $modifiedAt !== ($before[$path] ?? null)) {
-                return true;
+            if (
+                $modifiedAt !== ($before[$path] ?? null)
+                && !(in_array($path, $commandGoals, true) && ($this->options->dryRun || $this->options->question))
+            ) {
+                $changed[$path] = $modifiedAt;
             }
         }
+        $failure = null;
         foreach ($read as $file) {
             if (
                 !$file->optional
@@ -82,19 +97,33 @@ final readonly class MakefileRemake
                 if ($file->text === null && $file->source !== null) {
                     $this->output->writeWarning(
                         $file->path . ': ' . ($file->error ?? 'No such file or directory'),
-                        $file->source,
+                        $locations[$file->path] ?? $file->source,
                     );
                 }
                 if ($errors[$file->path] instanceof UnremadeMakefileException) {
                     $errors[$file->path]->reported = true;
                     throw $errors[$file->path];
                 }
-                if ($this->keepGoing) {
+                if ($this->options->keepGoing) {
                     Diagnostics::report($errors[$file->path], $this->output, false);
                     $this->output->writeWarning("Failed to remake makefile '{$file->path}'.", $file->source);
                 }
-                throw $errors[$file->path];
+                if (!$this->options->keepGoing) {
+                    throw $errors[$file->path];
+                }
+                $failure ??= $errors[$file->path];
             }
+        }
+        foreach ($changed as $path => $modifiedAt) {
+            if (
+                !isset($errors[$path])
+                || $this->options->keepGoing && !($inputs[$path]->optional ?? true) && $modifiedAt !== null
+            ) {
+                return true;
+            }
+        }
+        if ($failure !== null) {
+            throw $failure;
         }
         return false;
     }

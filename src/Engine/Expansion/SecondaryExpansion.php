@@ -44,7 +44,16 @@ final class SecondaryExpansion
         Filesystem $filesystem,
     ): Prerequisites {
         $expander = self::automatic($name, $expression, $previous, $expander, $filesystem);
-        $text = $expression->stem === null ? $expression->text : self::substitute($expression->text, '$*');
+        $text = $expression->stem === null
+            ? $expression->text
+            : preg_replace_callback(
+                '/\S+/',
+                static function (array $match): string {
+                    $percent = strpos($match[0], '%');
+                    return $percent === false ? $match[0] : substr_replace($match[0], '$*', $percent, 1);
+                },
+                $expression->text,
+            ) ?? $expression->text;
         return DependencySyntax::parse(
             $expression->secondary ? $expander->expand(str_replace('\\:', ':', $text)) : $text,
             $filesystem,

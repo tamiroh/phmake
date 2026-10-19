@@ -7,6 +7,7 @@ namespace Tamiroh\Phmake\Engine\Rule;
 use function array_diff;
 use function array_unique;
 use function array_values;
+use function str_contains;
 
 final readonly class Prerequisites
 {
@@ -53,6 +54,51 @@ final readonly class Prerequisites
             [...$this->literal, ...$other->literal],
             [...$this->extra, ...$other->extra],
             [...$this->extraOrderOnly, ...$other->extraOrderOnly],
+        );
+    }
+
+    /**
+     * Snapshot .NOTPARALLEL on the edges present now. A deferred expression is
+     * replaced during secondary expansion, so its future edges get no waits.
+     */
+    public function withBarriers(bool $leading = false): self
+    {
+        $sequence = [];
+        $seen = $leading;
+        foreach ($this->sequence as $name) {
+            if ($seen && $name !== '.WAIT') {
+                $sequence[] = '.WAIT';
+            }
+            $sequence[] = $name;
+            $seen = true;
+        }
+        $expressions = [];
+        $seen = $leading;
+        foreach ($this->expressions as $expression) {
+            if ($expression->secondary && str_contains($expression->text, '$')) {
+                $expressions[] = $expression;
+                $seen = true;
+                continue;
+            }
+            $initial = $expression->initial?->withBarriers($seen);
+            $expressions[] = new PrerequisiteExpression(
+                $expression->text,
+                $expression->stem,
+                $expression->hasRecipe,
+                $expression->source,
+                $expression->secondary,
+                $initial,
+            );
+            $seen = $seen || $initial !== null && $initial->sequence !== [];
+        }
+        return new self(
+            $this->normal,
+            $this->orderOnly,
+            $expressions,
+            $sequence,
+            $this->literal,
+            $this->extra,
+            $this->extraOrderOnly,
         );
     }
 }

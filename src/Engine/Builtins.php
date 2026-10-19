@@ -37,6 +37,8 @@ final class Builtins
     ];
 
     /** Makefiles tried in order when none is named with -f. */
+    public const array SUFFIXES = ['.o', '.c', '.cc', '.C', '.cpp', '.f'];
+
     public const array MAKEFILES = ['GNUmakefile', 'makefile', 'Makefile'];
 
     /**
@@ -144,6 +146,30 @@ final class Builtins
                     new Recipe([new Command('$(COMPILE.f) $(OUTPUT_OPTION) $<')]),
                 ),
             ),
+            ...array_map(
+                static fn(string $suffix): PatternRule => new PatternRule(
+                    ['%.o'],
+                    new BuildRule(
+                        new Prerequisites(['%' . $suffix]),
+                        new Recipe([new Command('$(COMPILE' . $suffix . ') $(OUTPUT_OPTION) $<')]),
+                    ),
+                ),
+                ['.cc', '.C', '.cpp'],
+            ),
+            ...array_map(
+                static fn(string $suffix): PatternRule => new PatternRule(
+                    ['%'],
+                    new BuildRule(
+                        new Prerequisites(['%' . $suffix]),
+                        new Recipe([new Command('$(LINK' . $suffix . ') $^ $(LOADLIBES) $(LDLIBS) -o $@')]),
+                    ),
+                ),
+                ['.cc', '.C', '.cpp'],
+            ),
+            ...array_map(
+                static fn(string $suffix): PatternRule => new PatternRule(['%' . $suffix], new BuildRule()),
+                ['.cc', '.C', '.cpp'],
+            ),
             new PatternRule(['%.c'], new BuildRule()),
             new PatternRule(['%.f'], new BuildRule()),
         ];
@@ -159,10 +185,22 @@ final class Builtins
             new Variable('.RECIPEPREFIX', '', false, 'default'),
             new Variable('.LOADED', '', false, 'default'),
             new Variable('GNUMAKEFLAGS', '', true, 'default'),
-            new Variable('SUFFIXES', '.o .c .f', false, 'default'),
+            new Variable('SUFFIXES', implode(' ', self::SUFFIXES), false, 'default'),
             new Variable('.LIBPATTERNS', 'lib%.so lib%.a', origin: 'default'),
-            new Variable('.FEATURES', 'jobserver jobserver-fifo output-sync check-symlink archives', false, 'default'),
+            new Variable(
+                '.FEATURES',
+                'target-specific order-only second-expansion else-if shortest-stem undefine oneshell nocomment grouped-target extra-prereqs notintermediate shell-export jobserver jobserver-fifo output-sync check-symlink archives',
+                false,
+                'default',
+            ),
             new Variable('CC', 'cc', origin: 'default'),
+            new Variable('CXX', 'g++', origin: 'default'),
+            new Variable('COMPILE.cc', '$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c', origin: 'default'),
+            new Variable('COMPILE.C', '$(COMPILE.cc)', origin: 'default'),
+            new Variable('COMPILE.cpp', '$(COMPILE.cc)', origin: 'default'),
+            new Variable('LINK.cc', '$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) $(TARGET_ARCH)', origin: 'default'),
+            new Variable('LINK.C', '$(LINK.cc)', origin: 'default'),
+            new Variable('LINK.cpp', '$(LINK.cc)', origin: 'default'),
             new Variable('FC', 'f77', origin: 'default'),
             new Variable('LEX', 'lex', origin: 'default'),
             new Variable('YACC', 'yacc', origin: 'default'),

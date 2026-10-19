@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Engine\Variable;
 
 use Tamiroh\Phmake\Engine\Expansion\EvaluationContext;
-use Tamiroh\Phmake\Engine\Rule\Target;
 
-use function array_filter;
 use function array_replace;
-use function in_array;
-use function str_replace;
+use function array_reverse;
+use function count;
 
 /**
  * Target-local layers over live global definitions.
@@ -18,72 +16,72 @@ use function str_replace;
 final readonly class VariableScope
 {
     /**
-     * @param list<array<string, Variable>> $layers
+     * @param list<array{VariableSet, bool}> $layers
      */
     public function __construct(
         public EvaluationContext $context,
         private array $layers = [],
     ) {}
 
+    public function binding(string $name, bool $environment = false): ?VariableBinding
+    {
+        $global = $this->context->variables[$name] ?? null;
+        $binding = $global === null || $global->private ? null : new VariableBinding($global);
+        $last = count($this->layers) - 1;
+        foreach ($this->layers as $index => [$set, $inherited]) {
+            $local = $set->definitions[$name] ?? null;
+            if ($local === null || $local->private && ($inherited || $environment && $index !== $last)) {
+                continue;
+            }
+            $definition = $local->withAttributes($local->private, $local->export ?? $binding?->definition->export);
+            $binding = new VariableBinding($definition, $local->append ? $binding : null);
+        }
+        return $binding;
+    }
+
     public function inherit(): self
     {
         $layers = [];
-        foreach ($this->layers as $layer) {
-            $layers[] = array_filter($layer, static fn(Variable $variable): bool => !$variable->private);
+        foreach ($this->layers as [$set]) {
+            $layers[] = [$set, true];
         }
         return new self($this->context, $layers);
     }
 
+    public function setAttributes(string $name, bool $private, ?bool $export): bool
+    {
+        foreach (array_reverse($this->layers) as [$set, $inherited]) {
+            $variable = $set->definitions[$name] ?? null;
+            if ($variable !== null && !($inherited && $variable->private)) {
+                $set->definitions[$name] = $variable->withAttributes($private, $export ?? $variable->export);
+                return true;
+            }
+        }
+        $global = $this->context->variables[$name] ?? null;
+        if ($global === null || $global->private) {
+            return false;
+        }
+        $this->context->variables[$name] = $global->withAttributes($private, $export ?? $global->export);
+        return true;
+    }
+
     public function variable(string $name): ?Variable
     {
-        $global = $this->context->variables[$name] ?? null;
-        $value = $global->private ?? false ? null : $global;
-        foreach ($this->layers as $layer) {
-            $local = $layer[$name] ?? null;
-            if ($local === null || $local->conditional && $value !== null) {
-                continue;
-            }
-            if (
-                $global !== null
-                && $local->origin !== 'override'
-                && in_array($global->origin, ['command line', 'environment override'], true)
-            ) {
-                $local = $global;
-            }
-            $expression = $local->expression;
-            if ($local->append && $value !== null && $value->expression !== '') {
-                $expression =
-                    (
-                        $value->recursive || !$local->recursive
-                            ? $value->expression
-                            : str_replace('$', '$$', $value->expression)
-                    ) . ($expression === '' ? '' : ' ' . $expression);
-            }
-            $value = new Variable(
-                $local->name,
-                $expression,
-                $local->recursive,
-                $local->origin,
-                $local->source,
-                $local->private,
-                $local->export ?? $value?->export,
-            );
-        }
-        return $value;
+        return $this->binding($name)?->definition;
     }
 
     /**
      * @return list<Variable>
      */
-    public function variables(): array
+    public function variables(bool $environment = false): array
     {
         $names = $this->context->variables;
-        foreach ($this->layers as $layer) {
-            $names = array_replace($names, $layer);
+        foreach ($this->layers as [$set]) {
+            $names = array_replace($names, $set->definitions);
         }
         $result = [];
         foreach ($names as $definition) {
-            $variable = $this->variable($definition->name);
+            $variable = $this->binding($definition->name, $environment)?->definition;
             if ($variable !== null) {
                 $result[] = $variable;
             }
@@ -91,11 +89,8 @@ final readonly class VariableScope
         return $result;
     }
 
-    /**
-     * @param array<string, Variable> $variables
-     */
-    public function with(array $variables): self
+    public function withSet(VariableSet $set): self
     {
-        return new self($this->context, [...$this->layers, $variables]);
+        return new self($this->context, [...$this->layers, [$set, false]]);
     }
 }

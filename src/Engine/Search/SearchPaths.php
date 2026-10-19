@@ -31,6 +31,12 @@ final class SearchPaths
     /** @var list<array{string, list<string>}> */
     private array $selective = [];
 
+    /** @var list<string> */
+    private array $general = [];
+
+    /** @var list<string> */
+    private array $retained = [];
+
     /**
      * @return list<string>
      */
@@ -68,9 +74,10 @@ final class SearchPaths
             return $name;
         }
         if (!str_starts_with($name, '-l')) {
-            return $this->search([$name], $filesystem, $expander, $targets);
+            return $this->search([$name], $filesystem, $targets);
         }
-        $patterns = DependencySyntax::words($expander->expand('$(.LIBPATTERNS)'));
+        $global = new VariableExpander($expander->context, $expander->output, source: $expander->source);
+        $patterns = DependencySyntax::words($global->expand('$(.LIBPATTERNS)'));
         $names = [];
         foreach ($patterns as $pattern) {
             if (!new Pattern($pattern)->hasWildcard()) {
@@ -84,15 +91,23 @@ final class SearchPaths
                 return $library;
             }
         }
-        return $this->search($names, $filesystem, $expander, []);
+        return $this->search($names, $filesystem, []);
     }
 
     /**
+     * GNU build_vpath_lists runs once after reading, before updating makefiles.
+     *
      * @throws MakefileErrorException
      */
-    public function retain(string $path, VariableExpander $expander): bool
+    public function initialize(VariableExpander $global): void
     {
-        foreach (self::directories($expander->expand('$(GPATH)')) as $directory) {
+        $this->general = self::directories($global->expand('$(strip $(VPATH))'));
+        $this->retained = self::directories($global->expand('$(strip $(GPATH))'));
+    }
+
+    public function retain(string $path): bool
+    {
+        foreach ($this->retained as $directory) {
             if (rtrim($directory, '/') === dirname($path)) {
                 return true;
             }
@@ -106,9 +121,9 @@ final class SearchPaths
      *
      * @throws MakefileErrorException
      */
-    private function search(array $names, Filesystem $filesystem, VariableExpander $expander, array $targets): ?string
+    private function search(array $names, Filesystem $filesystem, array $targets): ?string
     {
-        foreach ([...$this->selective, ['%', self::directories($expander->expand('$(VPATH)'))]] as [$pattern, $paths]) {
+        foreach ([...$this->selective, ['%', $this->general]] as [$pattern, $paths]) {
             foreach ($paths as $directory) {
                 foreach ($names as $name) {
                     if (str_starts_with($name, '/') || new Pattern($pattern)->match($name) === null) {

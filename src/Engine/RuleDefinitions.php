@@ -122,22 +122,18 @@ final class RuleDefinitions
                 if ($recipe !== null) {
                     $this->output?->writeWarning('.WAIT should not have commands', $recipe->source);
                 }
-                continue;
             }
             if ($name === '.SUFFIXES') {
-                if ($rule->prerequisites->normal === []) {
+                $suffixes = [...$rule->prerequisites->normal, ...$rule->prerequisites->orderOnly];
+                if ($suffixes === []) {
                     $this->builtinSuffixes = false;
                 }
-                $this->suffixes = $rule->prerequisites->normal === []
-                    ? []
-                    : [...$this->suffixes, ...$rule->prerequisites->normal];
-                continue;
+                $this->suffixes = $suffixes === [] ? [] : [...$this->suffixes, ...$suffixes];
             }
             if ($name === '.PHONY') {
                 foreach ([...$rule->prerequisites->normal, ...$rule->prerequisites->orderOnly] as $dependency) {
                     $this->phonyNames[$dependency] = $dependency;
                 }
-                continue;
             }
             $stem = $rule->targetPattern === null ? '' : new Pattern($rule->targetPattern)->match($name);
             if ($stem === null) {
@@ -157,7 +153,13 @@ final class RuleDefinitions
                 $prerequisites->orderOnly,
                 array_map(
                     fn(PrerequisiteExpression $expression): PrerequisiteExpression => new PrerequisiteExpression(
-                        $expression->text,
+                        $rule->targetPattern === null
+                            ? $expression->text
+                            : preg_replace_callback(
+                                '/\S+/',
+                                static fn(array $match): string => new Pattern($match[0])->substitute('%'),
+                                $expression->text,
+                            ) ?? $expression->text,
                         $rule->targetPattern === null ? null : $stem,
                         $recipe !== null,
                         $expression->source,
@@ -203,7 +205,10 @@ final class RuleDefinitions
         ?EvaluationContext $context = null,
     ): Makefile {
         if ($builtinSuffixes && $this->builtinSuffixes) {
-            $this->suffixes = ['.o', '.c', '.f', ...$this->suffixes];
+            $this->suffixes = [...Builtins::SUFFIXES, ...$this->suffixes];
+        }
+        foreach ($this->suffixes as $name) {
+            $this->targets[$name] ??= new Target($name, [new BuildRule()]);
         }
         foreach ($this->phonyNames as $name) {
             $this->targets[$name] = new Target($name, $this->targets[$name]->rules ?? [new BuildRule()], true);
@@ -286,6 +291,9 @@ final class RuleDefinitions
         if ($previous === null || $rule->doubleColon) {
             $this->targets[$name] = new Target($name, [...($this->targets[$name]->rules ?? []), $rule]);
             return;
+        }
+        if ($name === '.SUFFIXES' && $rule->prerequisites->sequence === []) {
+            $previous = $previous->withPrerequisites(new Prerequisites());
         }
         if ($rule->recipe !== null && $previous->recipe !== null) {
             $this->output?->writeWarning("warning: overriding recipe for target '{$name}'", $rule->recipe->source);

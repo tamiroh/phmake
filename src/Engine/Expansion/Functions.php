@@ -10,6 +10,7 @@ use Tamiroh\Phmake\Engine\IO\Output;
 use Tamiroh\Phmake\Engine\IO\Shell;
 use Tamiroh\Phmake\Engine\Makefile;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
+use Tamiroh\Phmake\Engine\Rule\DependencySyntax;
 use Tamiroh\Phmake\Engine\Rule\Pattern;
 use Tamiroh\Phmake\Engine\Variable\Environment\ExportingShell;
 use Tamiroh\Phmake\Engine\Variable\Variable;
@@ -415,7 +416,11 @@ final class Functions
                     }
                 }
                 $contents = $read['text'] ?? '';
-                return str_ends_with($contents, "\n") ? substr($contents, 0, -1) : $contents;
+                return (
+                    str_ends_with($contents, "\r\n")
+                        ? substr($contents, 0, -2)
+                        : (str_ends_with($contents, "\n") ? substr($contents, 0, -1) : $contents)
+                );
             }
             $files->write($path, $text === null ? '' : $text . (str_ends_with($text, "\n") ? '' : "\n"), $append);
             return '';
@@ -583,9 +588,10 @@ final class Functions
         $words = self::splitWords($expander->expand($list, $expanding));
         $result = [];
         foreach ($words as $word) {
-            $result[] = $expander->withVariables(
-                $name === '' ? [] : [new Variable($name, $word, false, 'automatic')],
-            )->expand($body, $expanding);
+            $result[] = $expander->withVariables([new Variable($name, $word, false, 'automatic')])->expand(
+                $body,
+                $expanding,
+            );
         }
         return implode(' ', $result);
     }
@@ -1186,7 +1192,7 @@ final class Functions
             throw new MakefileErrorException("insufficient number of arguments to function 'wildcard'");
         }
         $paths = [];
-        foreach (self::splitWords($patterns) as $pattern) {
+        foreach (DependencySyntax::words($patterns) as $pattern) {
             $paths = [...$paths, ...$files->matching($pattern)];
         }
         return implode(' ', $paths);
@@ -1287,13 +1293,13 @@ final class Functions
      */
     private static function index(string $value, string $function, string $position, int $minimum): int
     {
-        if (preg_match('/^[0-9]+$/D', trim($value)) !== 1) {
+        if (preg_match('/^[+-]?[0-9]+$/D', trim($value)) !== 1) {
             throw new MakefileErrorException(
                 "invalid {$position} argument to '{$function}' function: "
                 . ($value === '' ? 'empty value' : "'{$value}'"),
             );
         }
-        $digits = ltrim(trim($value), '0');
+        $digits = ltrim(ltrim(trim($value), '+'), '0');
         if (
             strlen($digits) > strlen((string) PHP_INT_MAX)
             || strlen($digits) === strlen((string) PHP_INT_MAX) && strcmp($digits, (string) PHP_INT_MAX) > 0

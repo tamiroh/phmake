@@ -10,8 +10,6 @@ use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 use Tamiroh\Phmake\Engine\Rule\BuildRule;
 
 use function array_unique;
-use function basename;
-use function dirname;
 use function implode;
 use function in_array;
 
@@ -60,16 +58,8 @@ final class AutomaticVariables
                 $words = array_map(ArchiveMember::prerequisite(...), $words);
             }
             $variables[] = new Variable($key, implode(' ', $words), false, 'automatic');
-            $directories = [];
-            $files = [];
-            foreach ($words as $word) {
-                if ($word !== '') {
-                    $directories[] = dirname($word);
-                    $files[] = basename($word);
-                }
-            }
-            $variables[] = new Variable($key . 'D', implode(' ', $directories), false, 'automatic');
-            $variables[] = new Variable($key . 'F', implode(' ', $files), false, 'automatic');
+            $variables[] = new Variable($key . 'D', '$(patsubst %/,%,$(dir $' . $key . '))', true, 'automatic');
+            $variables[] = new Variable($key . 'F', '$(notdir $' . $key . ')', true, 'automatic');
         }
         return $variables;
     }

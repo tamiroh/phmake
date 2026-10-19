@@ -8,6 +8,7 @@ use Tamiroh\Phmake\Engine\Execution\ExecutionOptions;
 use Tamiroh\Phmake\Engine\Execution\Files\BuildFiles;
 use Tamiroh\Phmake\Engine\Execution\InterruptedException;
 use Tamiroh\Phmake\Engine\Expansion\CommandExpander;
+use Tamiroh\Phmake\Engine\Expansion\ExpandedCommand;
 use Tamiroh\Phmake\Engine\Expansion\VariableExpander;
 use Tamiroh\Phmake\Engine\IO\Filesystem;
 use Tamiroh\Phmake\Engine\IO\Output;
@@ -17,6 +18,7 @@ use Tamiroh\Phmake\Engine\Makefile;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
 use Tamiroh\Phmake\Engine\Reporting\RecipeTrace;
+use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 use Tamiroh\Phmake\Engine\Rule\BuildRule;
 use Tamiroh\Phmake\Engine\Rule\Command;
 use Tamiroh\Phmake\Engine\Rule\Target;
@@ -69,12 +71,12 @@ final readonly class RecipeRunner
                 $this->output,
                 scope: $scope,
             )->withVariables(AutomaticVariables::forRule(
-                $this->files->path($target->name),
-                $rule->mapped($this->files->path(...)),
+                $this->files->states->path($target->name),
+                $rule->mapped($this->files->states->path(...)),
                 $modifiedAt,
-                array_map($this->files->path(...), $changed),
+                array_map($this->files->states->path(...), $changed),
                 $this->filesystem,
-                $this->files->time(...),
+                $this->files->states->time(...),
             ));
             $options = clone $options;
             $options->reporting->silent = $options->reporting->silent || $this->applies('.SILENT', $target->name);
@@ -86,14 +88,26 @@ final readonly class RecipeRunner
                     static fn(Command $command): string => $command->expression,
                     $commands,
                 ));
-                if (preg_match('~(?:^|/)(?:ba|da|a|k|z|po)?sh(?:[ \t]|$)~', $expander->expand('$(SHELL)')) === 1) {
-                    $text = preg_replace('/(?<=\n)[ \t@+-]+/', '', $text) ?? $text;
-                }
                 $commands = [new Command($text, $commands[0]->source)];
             }
+            $process =
+                !$options->touch || array_any($commands, static fn(Command $command): bool => $command->isRecursive());
             $expanded = [];
-            foreach ($commands as $command) {
-                $expanded[] = CommandExpander::expand($command, $expander);
+            foreach ($process ? $commands : [] as $command) {
+                $expandedCommand = CommandExpander::expand($command, $expander);
+                if (
+                    $oneShell
+                    && preg_match('~(?:^|/)(?:ba|da|a|k|z|po)?sh(?:[ \t]|$)~', $expander->expand('$(SHELL)')) === 1
+                ) {
+                    $expandedCommand = new ExpandedCommand(
+                        preg_replace('/(?<=\n)[ \t@+-]+/', '', $expandedCommand->expression)
+                        ?? $expandedCommand->expression,
+                        $expandedCommand->prefix,
+                        $expandedCommand->recursive,
+                        $expandedCommand->source,
+                    );
+                }
+                $expanded[] = $expandedCommand;
             }
             if (
                 $options->reporting->why
@@ -116,6 +130,8 @@ final readonly class RecipeRunner
             $active = false;
             $simulated = false;
             $needsUpdate = false;
+            $started = false;
+            $nonrecursive = !$process || $commands === [];
             foreach ($expanded as $command) {
                 $result = new CommandRunner($command)->run($shell, $this->output, $options, $oneShell, $target->name);
                 if ($result->exitCode !== 0) {
@@ -125,43 +141,53 @@ final readonly class RecipeRunner
                     }
                     if (isset($this->makefile->targetsByName['.DELETE_ON_ERROR'])) {
                         foreach ([$target->name, ...$rule->group] as $name) {
-                            if (
-                                !$this->files->precious($name)
-                                && !($this->makefile->targetsByName[$name]->isPhony ?? false)
-                                && $this->filesystem->lastModified($name) !== ($timestamps[$name] ?? null)
-                                && $this->filesystem->remove($name)
-                            ) {
-                                $this->output->writeWarning(
-                                    '*** '
-                                    . ($name === $target->name ? '' : "[{$target->name}] ")
-                                    . "Deleting file '{$name}'",
-                                );
-                            }
+                            $this->deleteFailedTarget(
+                                $name,
+                                $timestamps[$name] ?? null,
+                                $name === $target->name ? null : $target->name,
+                            );
                         }
                     }
                     throw $error;
                 }
                 $active = $active || $result->active;
                 $simulated = $simulated || $result->simulated;
-                $needsUpdate = $needsUpdate || $result->needsUpdate;
+                $needsUpdate = $result->needsUpdate;
+                $started = $started || $result->started;
+                $nonrecursive = $nonrecursive || !$result->recursive;
+                if ($needsUpdate) {
+                    break;
+                }
             }
             if (
                 $options->touch
                 && !$options->question
-                && ($simulated || !$active && $commands !== [])
+                && $rule->recipe !== null
+                && $nonrecursive
                 && !$target->isPhony
             ) {
                 if (!$options->reporting->silent) {
                     $this->output->write('touch ' . $target->name . "\n");
                 }
                 if (!$options->dryRun) {
-                    $this->filesystem->touch($target->name);
+                    try {
+                        $this->filesystem->touch($target->name);
+                    } catch (MakefileErrorException $error) {
+                        if (ArchiveMember::parse($target->name) !== null) {
+                            $this->output->writeWarning($error->getMessage());
+                            $error->reported = true;
+                        }
+                        throw $error;
+                    }
                 }
                 $active = true;
                 $simulated = $options->dryRun;
             }
-            return new CommandResult($active, $simulated, needsUpdate: $needsUpdate);
+            return new CommandResult($active, $simulated, needsUpdate: $needsUpdate, started: $started);
         } catch (InterruptedException $error) {
+            foreach ($timestamps ?? [] as $name => $timestamp) {
+                $this->deleteFailedTarget($name, $timestamp);
+            }
             $this->output->writeWarning(
                 '*** ['
                 . ($rule->recipe?->source === null ? '' : $rule->recipe->source . ': ')
@@ -169,16 +195,6 @@ final readonly class RecipeRunner
                 . '] '
                 . $error->signal,
             );
-            foreach ($timestamps ?? [] as $name => $timestamp) {
-                if (
-                    !$this->files->precious($name)
-                    && !($this->makefile->targetsByName[$name]->isPhony ?? false)
-                    && $this->filesystem->lastModified($name) !== $timestamp
-                    && $this->filesystem->remove($name)
-                ) {
-                    $this->output->writeWarning("*** Deleting file '{$name}'");
-                }
-            }
             throw $error;
         } catch (MakefileErrorException $error) {
             Diagnostics::report($error, $this->output);
@@ -192,15 +208,36 @@ final readonly class RecipeRunner
 
     private function applies(string $special, string $name): bool
     {
-        $target = $this->makefile->targetsByName[$special] ?? null;
-        if ($target === null) {
+        // GNU applies .IGNORE and .SILENT from the root double-colon entry.
+        $rule = $this->makefile->targetsByName[$special]->rules[0] ?? null;
+        if ($rule === null) {
             return false;
         }
-        foreach ($target->rules as $rule) {
-            if ($rule->prerequisites->sequence === [] || in_array($name, $rule->prerequisites->sequence, true)) {
+        if ($rule->prerequisites->sequence === []) {
+            return true;
+        }
+        foreach ($this->files->states->record($name)->names as $alias => $_) {
+            if (in_array($alias, $rule->prerequisites->sequence, true)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private function deleteFailedTarget(string $name, ?int $timestamp, ?string $onBehalfOf = null): void
+    {
+        if (
+            $this->files->precious($name)
+            || ($this->makefile->targetsByName[$name]->isPhony ?? false)
+            || $this->filesystem->lastModified($name) === $timestamp
+        ) {
+            return;
+        }
+        $prefix = '*** ' . ($onBehalfOf === null ? '' : "[{$onBehalfOf}] ");
+        if (ArchiveMember::parse($name) !== null) {
+            $this->output->writeWarning($prefix . "Archive member '{$name}' may be bogus; not deleted");
+        } elseif ($this->filesystem->remove($name)) {
+            $this->output->writeWarning($prefix . "Deleting file '{$name}'");
+        }
     }
 }

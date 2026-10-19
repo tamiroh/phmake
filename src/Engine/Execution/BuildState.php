@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Engine\Execution;
 
 use Closure;
+use Tamiroh\Phmake\Engine\Execution\Files\FileState;
 use Tamiroh\Phmake\Engine\Execution\Recipe\CommandFailedException;
 use Tamiroh\Phmake\Engine\IO\Output;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
@@ -15,14 +16,11 @@ use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
  */
 final class BuildState
 {
-    /** @var array<string, UpdateResult> */
-    public array $results = [];
+    /** @var array<string, FileState> */
+    public array $files = [];
 
     /** @var array<string, UpdateResult> */
     public array $recipes = [];
-
-    /** @var array<string, true> */
-    public array $simulated = [];
 
     /** @var array<string, array<string, true>> */
     public array $dropped = [];

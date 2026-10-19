@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Console\Filesystem\Internal;
 
+use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 
 use function intdiv;
@@ -98,14 +99,41 @@ final class Archive
         return $time !== null && $fileTime !== null && intdiv($fileTime, 1_000_000_000) > $time ? null : $time;
     }
 
-    public static function touch(ArchiveMember $member): bool
+    /**
+     * @throws MakefileErrorException
+     */
+    public static function touch(ArchiveMember $member): void
     {
-        $entry = self::members($member->archive)[basename($member->member)] ?? null;
-        if ($entry === null || ($stream = @fopen($member->archive, 'r+b')) === false) {
-            return false;
+        $stream = @fopen($member->archive, 'r+b');
+        if ($stream === false) {
+            $reason = ucfirst(
+                preg_replace('/^.*Failed to open stream: /', '', error_get_last()['message'] ?? 'I/O error')
+                ?? 'I/O error',
+            );
+            throw new MakefileErrorException(
+                file_exists($member->archive)
+                    ? "touch: {$member->archive}: {$reason}"
+                    : "touch: Archive '{$member->archive}' does not exist",
+                contextual: false,
+            );
         }
         try {
-            return fseek($stream, $entry['offset'] + 16) === 0 && fwrite($stream, str_pad((string) time(), 12)) === 12;
+            if (fread($stream, 8) !== "!<arch>\n") {
+                throw new MakefileErrorException(
+                    "touch: '{$member->archive}' is not a valid archive",
+                    contextual: false,
+                );
+            }
+            $entry = self::members($member->archive)[basename($member->member)] ?? null;
+            if ($entry === null) {
+                throw new MakefileErrorException(
+                    "touch: Member '{$member->member}' does not exist in '{$member->archive}'",
+                    contextual: false,
+                );
+            }
+            if (fseek($stream, $entry['offset'] + 16) !== 0 || fwrite($stream, str_pad((string) time(), 12)) !== 12) {
+                throw new MakefileErrorException("touch: {$member->archive}: I/O error", contextual: false);
+            }
         } finally {
             fclose($stream);
         }

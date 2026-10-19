@@ -29,8 +29,26 @@ final readonly class ExpansionApi implements LoadedObjectApi
     #[Override]
     public function define(string $name, int $minimum, int $maximum, bool $expand): void
     {
-        if (preg_match('/^[A-Za-z0-9_.-]+$/D', $name) !== 1) {
-            throw new MakefileErrorException("Invalid loaded function name '{$name}'");
+        if ($name === '') {
+            throw new MakefileErrorException('Empty function name', $this->expander->source);
+        }
+        if ($name[0] === '.' || preg_match('/^[A-Za-z0-9_.-]+$/D', $name) !== 1) {
+            throw new MakefileErrorException("Invalid function name: {$name}", $this->expander->source);
+        }
+        if (strlen($name) > 255) {
+            throw new MakefileErrorException("Function name too long: {$name}", $this->expander->source);
+        }
+        if ($minimum < 0 || $minimum > 255) {
+            throw new MakefileErrorException(
+                "Invalid minimum argument count ({$minimum}) for function {$name}",
+                $this->expander->source,
+            );
+        }
+        if ($maximum < 0 || $maximum > 255 || $maximum !== 0 && $maximum < $minimum) {
+            throw new MakefileErrorException(
+                "Invalid maximum argument count ({$maximum}) for function {$name}",
+                $this->expander->source,
+            );
         }
         $this->loadedObjects->functions[$name] = new LoadedFunction($this->object, $minimum, $maximum, $expand);
     }

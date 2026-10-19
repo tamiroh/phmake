@@ -19,5 +19,6 @@ final class PrerequisiteChain
 
     public function __construct(
         public VariableScope $scope,
+        public bool $commandGoal = false,
     ) {}
 }
