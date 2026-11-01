@@ -72,6 +72,9 @@ final readonly class FileStates
         return $this->search->state->paths[$name] ?? $name;
     }
 
+    /**
+     * @phpstan-impure
+     */
     public function record(string $name): FileState
     {
         $path = $this->path($name);

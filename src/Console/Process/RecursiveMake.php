@@ -143,7 +143,6 @@ final class RecursiveMake
         $previous = [];
         pcntl_sigprocmask(SIG_BLOCK, [SIGCHLD], $previous);
         $mask = is_array($previous) ? $previous : [];
-        $result = -1;
         $status = 0;
         try {
             $pid = pcntl_fork();
