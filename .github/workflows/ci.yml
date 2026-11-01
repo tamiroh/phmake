@@ -6,6 +6,38 @@ on:
   pull_request:
 
 jobs:
+  git-footprint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.x'
+          cache: false
+
+      - name: Install git-footprint
+        run: go install github.com/tamiroh/git-footprint@latest
+
+      - name: Check repository footprint
+        run: |
+          git footprint --no-color --no-pager --fail-on info \
+            --allow-identity 'tamiroh <tamiroh71@gmail.com>' \
+            --allow-identity 'GitHub <noreply@github.com>' \
+            --allow-identity 'dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>' \
+            --allow-identity 'dependabot[bot] <support@github.com>' \
+            --allow-identity 'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>' \
+            --allow-identity 'Copilot <175728472+copilot@users.noreply.github.com>' \
+            --allow-identity 'copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>'
+
   build-php:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
