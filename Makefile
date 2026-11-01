@@ -28,11 +28,13 @@ test:
 
 .PHONY: lint
 lint:
-	$(PHPSTAN) analyse --memory-limit=2G
-	$(MAGO) --colors always lint
-	$(MAGO) --colors always analyze
-	$(MAGO) --colors always guard
-	$(PHP_CS_FIXER) fix --dry-run --diff --using-cache=no --sequential
+	@status=0; \
+	$(PHPSTAN) analyse --memory-limit=2G || status=1; \
+	$(MAGO) --colors always lint || status=1; \
+	$(MAGO) --colors always analyze || status=1; \
+	$(MAGO) --colors always guard || status=1; \
+	$(PHP_CS_FIXER) fix --dry-run --diff --using-cache=no --sequential || status=1; \
+	exit $$status
 
 .PHONY: format
 format:
