@@ -8,6 +8,7 @@ use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Console\Output\OutputWriteException;
 use Tamiroh\Phmake\Linter\Linter;
 use Tamiroh\Phmake\Linter\Rules\MissingPhony;
+use Tamiroh\Phmake\Linter\Rules\RecursiveMake;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
 use function count;
@@ -42,7 +43,10 @@ final readonly class LintCommand
                 @fwrite(STDERR, "phmake: cannot read '{$file}'\n");
                 return 2;
             }
-            $diagnostics = new Linter([new MissingPhony()])->lint(MakefileParser::parse($source, $file));
+            $diagnostics = new Linter([new MissingPhony(), new RecursiveMake()])->lint(MakefileParser::parse(
+                $source,
+                $file,
+            ));
             foreach ($diagnostics as $diagnostic) {
                 $span = $diagnostic->span;
                 $output->write(
