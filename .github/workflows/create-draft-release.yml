@@ -31,14 +31,14 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Calculate release version
         id: version
-        uses: reecetech/version-increment@28d33de033e97a304f77238d6a5db26039ca15d6 # 2026.8.4
+        uses: reecetech/version-increment@2026.8.4
         with:
           scheme: semver
           increment: ${{ inputs.bump }}
@@ -47,7 +47,7 @@ jobs:
           use_api: true
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # master
+        uses: shivammathur/setup-php@2.40.0
         with:
           php-version: '8.5'
           extensions: pcntl, posix, ffi
