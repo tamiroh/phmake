@@ -11,6 +11,7 @@ use Tamiroh\Phmake\Parser\Ast\RecipeNode;
 
 use function in_array;
 use function ltrim;
+use function min;
 use function preg_match;
 use function preg_replace;
 use function str_contains;
@@ -74,23 +75,9 @@ final readonly class RecursiveMake implements Rule
         $plain = true;
         $started = false;
         $length = strlen($text);
-        $finishWord = static function () use (&$words, &$word, &$plain, &$started): void {
-            if ($started) {
-                $words[] = [$word, $plain];
-            }
-            $word = '';
-            $plain = true;
-            $started = false;
-        };
-        $finishCommand = static function () use (&$commands, &$words, $finishWord): void {
-            $finishWord();
-            if ($words !== []) {
-                $commands[] = $words;
-            }
-            $words = [];
-        };
-        for ($index = 0; $index < $length; $index++) {
-            $character = $text[$index];
+        // A virtual newline past the end finishes the last word and command.
+        for ($index = 0; $index <= $length; $index++) {
+            $character = $index < $length ? $text[$index] : "\n";
             if ($character === "'" || $character === '"') {
                 $end = self::closingQuote($text, $index);
                 $word .= substr($text, $index, $end - $index + 1);
@@ -101,7 +88,7 @@ final readonly class RecursiveMake implements Rule
                 $word .= substr($text, $index, 2);
                 $plain = false;
                 $started = true;
-                $index++;
+                $index = min($index + 1, $length - 1);
             } elseif ($character === '$') {
                 $end = self::referenceEnd($text, $index);
                 $word .= substr($text, $index, $end - $index + 1);
@@ -112,16 +99,22 @@ final readonly class RecursiveMake implements Rule
                 while (($index + 1) < $length && $text[$index + 1] !== "\n") {
                     $index++;
                 }
-            } elseif (str_contains(";&|()\n", $character)) {
-                $finishCommand();
-            } elseif ($character === ' ' || $character === "\t") {
-                $finishWord();
+            } elseif (str_contains(" \t;&|()\n", $character)) {
+                if ($started) {
+                    $words[] = [$word, $plain];
+                }
+                $word = '';
+                $plain = true;
+                $started = false;
+                if ($character !== ' ' && $character !== "\t" && $words !== []) {
+                    $commands[] = $words;
+                    $words = [];
+                }
             } else {
                 $word .= $character;
                 $started = true;
             }
         }
-        $finishCommand();
         return $commands;
     }
 

@@ -134,6 +134,7 @@ final class RecursiveMakeTest extends TestCase
             	-/usr/bin/make clean
             	MAKEFLAGS= make
             	exec env CC=cc make
+            	make "unterminated
             MAKEFILE;
 
         // Act
@@ -149,6 +150,7 @@ final class RecursiveMakeTest extends TestCase
                 "6: Use \$(MAKE) instead of '/usr/bin/make' to run make recursively",
                 "7: Use \$(MAKE) instead of 'make' to run make recursively",
                 "8: Use \$(MAKE) instead of 'make' to run make recursively",
+                "9: Use \$(MAKE) instead of 'make' to run make recursively",
             ],
             $reported,
         );
