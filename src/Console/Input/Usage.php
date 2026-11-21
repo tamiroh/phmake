@@ -24,6 +24,7 @@ final class Usage
             . "  -C DIR, --directory=DIR    Change directory before reading makefiles.\n"
             . "  -j [N], --jobs[=N]        Run recipes in parallel.\n"
             . "  -n, --dry-run             Print recipes without executing them.\n"
+            . "  -p, --print-data-base      Print the variables and rules after building.\n"
             . "  -k, --keep-going          Continue independent targets after errors.\n"
             . "  -s, --silent              Do not echo recipes.\n"
             . "  -rR                       Disable built-in rules and variables.\n"

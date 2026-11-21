@@ -18,6 +18,8 @@ final class InvocationOptions
 {
     public OptionOverrides $switches;
 
+    public bool $printDatabase = false;
+
     public bool $noBuiltinRules = false;
 
     public bool $noBuiltinVariables = false;

@@ -260,6 +260,7 @@ final class CommandLine implements Configuration
             '--include-dir' => '-I',
             '--eval' => '-E',
             '--just-print', '--dry-run', '--recon' => '-n',
+            '--print-data-base' => '-p',
             '--question' => '-q',
             '--touch' => '-t',
             '--always-make' => '-B',
@@ -407,6 +408,9 @@ final class CommandLine implements Configuration
                     break;
                 case 'n':
                     $this->execution->dryRun = true;
+                    break;
+                case 'p':
+                    $this->options->printDatabase = true;
                     break;
                 case 'q':
                     $this->execution->question = true;

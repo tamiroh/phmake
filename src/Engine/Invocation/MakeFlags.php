@@ -62,6 +62,7 @@ final class MakeFlags
             . ($execution->keepGoing ? 'k' : '')
             . ($execution->files->checkSymlinkTimes ? 'L' : '')
             . ($execution->dryRun ? 'n' : '')
+            . ($options->printDatabase ? 'p' : '')
             . ($execution->question ? 'q' : '')
             . ($options->noBuiltinRules ? 'r' : '')
             . ($options->noBuiltinVariables ? 'R' : '')

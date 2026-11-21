@@ -132,7 +132,13 @@ final readonly class MakeCommand
                 $configuration->options,
                 $configuration->execution,
             );
-            $result = $engine->run($sources->read, $this->commandLine->targets, $restarts);
+            try {
+                $result = $engine->run($sources->read, $this->commandLine->targets, $restarts);
+            } finally {
+                if ($configuration->options->printDatabase) {
+                    $this->output->write(DatabasePrinter::format($makefile, $context));
+                }
+            }
             if ($result === RunResult::NeedsReevaluation) {
                 $restarts++;
                 if ($stdin !== null && function_exists('pcntl_exec')) {

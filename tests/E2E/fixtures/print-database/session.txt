@@ -1,0 +1,14 @@
+$ ./phmake -rR --print-data-base > dump && grep -E '^(ran$|LATE =|EARLY :=|all:)' dump | LC_ALL=C sort
+EARLY := before $$literal
+LATE = $(VALUE)
+all: LOCAL := after
+all: second first | directory
+ran
+$ ./phmake -rRqp > dump || echo "exit $?"; grep '^MAKEFLAGS =' dump
+exit 1
+MAKEFLAGS = pqrR
+$ grep -E '^(all: LOCAL|%.result:)|^[[:space:]]+@echo' dump | LC_ALL=C sort
+	@echo $<
+	@echo ran
+%.result: %.input
+all: LOCAL := after
