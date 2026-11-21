@@ -43,8 +43,7 @@ final class Shell implements ShellInterface
                 (
                     preg_replace('/(^| )--jobserver-auth=[0-9]+,[0-9]+(?= |$)/', '$1--jobserver-auth=-2,-2', $parts[0])
                     ?? $parts[0]
-                )
-                . (isset($parts[1]) ? ' -- ' . $parts[1] : '');
+                ) . (isset($parts[1]) ? ' -- ' . $parts[1] : '');
         }
         return $environment;
     }

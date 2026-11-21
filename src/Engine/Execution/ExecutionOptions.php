@@ -23,25 +23,6 @@ final class ExecutionOptions
         $this->files = new FileOptions();
     }
 
-    public function __clone(): void
-    {
-        $this->parallel = clone $this->parallel;
-        $this->reporting = clone $this->reporting;
-        $this->files = clone $this->files;
-    }
-
-    public bool $dryRun = false;
-
-    public bool $question = false;
-
-    public bool $touch = false;
-
-    public bool $alwaysMake = false;
-
-    public bool $keepGoing = false;
-
-    public bool $ignoreErrors = false;
-
     public function forMakefiles(int $restarts, bool $commandGoal = false): self
     {
         $options = clone $this;
@@ -56,5 +37,24 @@ final class ExecutionOptions
             $options->files->newFiles = [];
         }
         return $options;
+    }
+
+    public bool $dryRun = false;
+
+    public bool $question = false;
+
+    public bool $touch = false;
+
+    public bool $alwaysMake = false;
+
+    public bool $keepGoing = false;
+
+    public bool $ignoreErrors = false;
+
+    public function __clone(): void
+    {
+        $this->parallel = clone $this->parallel;
+        $this->reporting = clone $this->reporting;
+        $this->files = clone $this->files;
     }
 }
