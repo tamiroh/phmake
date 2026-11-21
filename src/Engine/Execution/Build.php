@@ -739,8 +739,10 @@ final class Build
                 return $this->files->states->record($name)->result = new UpdateResult();
             }
             $result = $this->files->states->record($name)->result;
+            // @phpstan-ignore notIdentical.alwaysFalse (Resolution can select an already completed file record. See phpstan/phpstan#15785.)
             if ($result !== null) {
                 if ($result->failure !== null && !$this->options->keepGoing && !$this->state->remaking) {
+                    // @phpstan-ignore throw.notThrowable (The resolved record's non-null failure is an exception. See phpstan/phpstan#15785.)
                     throw $result->failure;
                 }
                 return $result;
