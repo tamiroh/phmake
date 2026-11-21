@@ -72,12 +72,12 @@ final class NativeFileTimes
             );
             // Also detect unavailable statx kernels / sandbox restrictions before selecting this backend.
             if (is_int($native->modified('.'))) {
-                self::$instance = $native;
+                return self::$instance = $native;
             }
         } catch (Exception) {
             // FFI can be installed but disabled, or libc may lack the requested symbols.
         }
-        return self::$instance;
+        return null;
     }
 
     /**

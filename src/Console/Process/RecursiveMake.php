@@ -143,7 +143,6 @@ final class RecursiveMake
         $previous = [];
         pcntl_sigprocmask(SIG_BLOCK, [SIGCHLD], $previous);
         $mask = is_array($previous) ? $previous : [];
-        $result = -1;
         $status = 0;
         try {
             $pid = pcntl_fork();
@@ -159,7 +158,11 @@ final class RecursiveMake
             $observer($pid, null);
             $stopped = false;
             $delay = 20;
-            while (($result = pcntl_waitpid($pid, $status, WNOHANG)) === 0) {
+            while (true) {
+                $result = pcntl_waitpid($pid, $status, WNOHANG);
+                if ($result !== 0) {
+                    break;
+                }
                 if (Signals::$received !== 0 && !$stopped) {
                     Signals::stop($pid);
                     $stopped = true;

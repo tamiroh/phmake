@@ -52,12 +52,14 @@ final class CommandLine implements Configuration
 
     #[Override]
     public bool $noBuiltinRules {
+        #[Override]
         get => $this->options->noBuiltinRules;
     }
 
     /** @var list<string> */
     #[Override]
     public array $includeDirectories {
+        #[Override]
         get => $this->options->includes;
     }
 

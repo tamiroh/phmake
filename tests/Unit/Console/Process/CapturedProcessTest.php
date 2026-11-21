@@ -44,12 +44,12 @@ final class CapturedProcessTest extends TestCase
     {
         $stderr = '';
         $result = CapturedProcess::run([PHP_BINARY, '-r', <<<'PHP'
-                for ($i = 0; $i < 128; $i++) {
-                    fwrite(STDOUT, str_repeat('o', 8192));
-                    fwrite(STDERR, str_repeat('e', 8192));
-                }
-                exit(7);
-                PHP], stderr: static function (string $buffer) use (&$stderr): void {
+            for ($i = 0; $i < 128; $i++) {
+                fwrite(STDOUT, str_repeat('o', 8192));
+                fwrite(STDERR, str_repeat('e', 8192));
+            }
+            exit(7);
+            PHP], stderr: static function (string $buffer) use (&$stderr): void {
             $stderr .= $buffer;
         });
         self::assertSame(str_repeat('o', 1_048_576), $result['output']);

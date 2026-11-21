@@ -96,7 +96,9 @@ final class RuleDefinitions
                         $rule->prerequisites->normal,
                         $rule->prerequisites->orderOnly,
                         array_map(
-                            fn(PrerequisiteExpression $expression): PrerequisiteExpression => new PrerequisiteExpression(
+                            fn(
+                                PrerequisiteExpression $expression,
+                            ): PrerequisiteExpression => new PrerequisiteExpression(
                                 $expression->text,
                                 null,
                                 $recipe !== null,
