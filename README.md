@@ -25,3 +25,26 @@ sudo mv phmake /usr/local/bin/phmake
 ```bash
 phmake [target]
 ```
+
+## GitHub Actions
+
+To check your Makefile on pushes and pull requests, add this workflow to
+`.github/workflows/makefile.yml`:
+
+```yaml
+name: Check Makefile
+on: [push, pull_request]
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: tamiroh/phmake@main
+```
+
+The action checks `Makefile` without modifying it and fails if lint reports a
+problem or formatting differs. To check another file, set `with.file` to its
+path relative to the repository root.

@@ -1,0 +1,33 @@
+name: phmake
+description: Lint a Makefile and check its formatting
+inputs:
+  file:
+    description: Path to the Makefile relative to the repository root
+    default: Makefile
+runs:
+  using: composite
+  steps:
+    - name: Set up PHP
+      uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962
+      with:
+        php-version: '8.5'
+        coverage: none
+        tools: composer:v2
+
+    - name: Install phmake
+      id: install
+      shell: bash
+      run: composer install --working-dir="$GITHUB_ACTION_PATH" --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts --no-plugins
+
+    - name: Lint Makefile
+      shell: bash
+      env:
+        MAKEFILE_PATH: ${{ inputs.file }}
+      run: php "$GITHUB_ACTION_PATH/phmake" --lint "./$MAKEFILE_PATH"
+
+    - name: Check Makefile formatting
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      shell: bash
+      env:
+        MAKEFILE_PATH: ${{ inputs.file }}
+      run: php "$GITHUB_ACTION_PATH/phmake" --format --check "./$MAKEFILE_PATH"
