@@ -66,15 +66,14 @@ final readonly class Application
             return new LintCommand()->run(array_slice($arguments, offset: 1));
         }
         $signals = new Signals();
-        $status = 0;
         try {
-            $status = $this->execute($arguments);
+            return $this->execute($arguments);
         } catch (InterruptedException) {
             // Active recipes report their own interruption before the process exits by signal.
+            return 0;
         } finally {
             $signals->finish();
         }
-        return $status;
     }
 
     /**
