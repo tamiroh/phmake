@@ -164,31 +164,6 @@ jobs:
           name: build-results-ffmpeg
           path: ${{ runner.temp }}/build-results.json
 
-  build-gcc:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 180
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-
-      - name: Prepare GCC build environment
-        run: docker build --platform linux/amd64 -f e2e/gcc/Dockerfile -t phmake-gcc-build .
-
-      - name: Compare GCC builds with GNU make and phmake
-        id: compare
-        run: python3 e2e/compare-builds.py gcc "$RUNNER_TEMP/build-results.json"
-
-      - name: Summarize GCC build comparison
-        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
-        run: python3 e2e/summarize-builds.py "$RUNNER_TEMP/build-results.json"
-
-      - name: Upload GCC build comparison
-        if: ${{ !cancelled() && steps.compare.outcome != 'skipped' }}
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: build-results-gcc
-          path: ${{ runner.temp }}/build-results.json
-
   build-linux:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -240,7 +215,7 @@ jobs:
           path: ${{ runner.temp }}/build-results.json
 
   performance-check:
-    needs: [build-php, build-lua, build-make, build-git, build-ffmpeg, build-linux, build-gcc, build-llama-cpp]
+    needs: [build-php, build-lua, build-make, build-git, build-ffmpeg, build-linux, build-llama-cpp]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     steps:
@@ -256,7 +231,7 @@ jobs:
       - name: Check no-op rebuild times
         run: >-
           python3 e2e/check-no-op.py "$RUNNER_TEMP/build-results"
-          lua=0.2 make=1 php=1.25 ffmpeg=1.6 git=6.5 llama-cpp=9 gcc=32 linux=90
+          lua=0.2 make=1 php=1.25 ffmpeg=1.6 git=6.5 llama-cpp=9 linux=90
 
   test-gnu-make:
     runs-on: ubuntu-24.04

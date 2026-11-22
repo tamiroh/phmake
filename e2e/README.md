@@ -1,6 +1,6 @@
 # Build comparisons
 
-CI builds PHP, Lua, GNU make, Git, Linux, FFmpeg, and GCC with both GNU make and phmake.
+CI builds PHP, Lua, GNU make, Git, Linux, FFmpeg, and llama.cpp with both GNU make and phmake.
 Each project uses one Docker image and the same verification script for both
 implementations. GNU make is the image's `/usr/bin/make`; its version is printed
 in the log. The GNU make compatibility suite separately uses its pinned 4.4.1
@@ -14,7 +14,8 @@ python3 e2e/compare-builds.py lua /tmp/lua-results.json
 python3 e2e/summarize-builds.py /tmp/lua-results.json
 ```
 
-Replace `lua` with `php`, `make`, `git`, `linux`, `ffmpeg`, or `gcc` to run another project.
+Replace `lua` with `php`, `make`, `git`, `linux`, `ffmpeg`, or `llama-cpp` to run another CI project.
+The `gcc` comparison is available for local runs.
 The comparison runner requires Python 3 and Docker on the host. It runs GNU make
 first and phmake second, sequentially on the same host, each in a fresh container
 with no network access. Build products are not shared. The container's `make`
