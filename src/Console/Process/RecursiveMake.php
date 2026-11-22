@@ -199,13 +199,11 @@ final class RecursiveMake
         }
         self::enter($directory);
         clearstatcache(true);
-        /**
-         * Memory inherited from the parent should not count against this invocation.
-         *
-         * @mago-expect analysis:possibly-false-argument
-         */
+        // @mago-expect analysis:possibly-false-argument
         $limit = ini_parse_quantity(ini_get('memory_limit'));
         if ($limit > 0) {
+            // After fork, raise only the child's limit to account for the PHP heap inherited from its parent.
+            // @mago-expect lint:no-ini-set
             ini_set('memory_limit', (string) ($limit + memory_get_usage(true)));
         }
         try {
