@@ -22,6 +22,7 @@ no-ffi = { exclude = ["src/Console/Filesystem/Internal/NativeFileTimes.php"] }
 prefer-early-continue = { enabled = false }
 no-else-clause = { enabled = false }
 no-boolean-flag-parameter = { enabled = false }
+no-nested-ternary = { enabled = false }
 ambiguous-function-call = { enabled = true, level = "error" }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }
