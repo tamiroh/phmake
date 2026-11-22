@@ -12,7 +12,8 @@ version=$(cat "$root/GNU_MAKE_VERSION")
 test "$version" = 4.4.1
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-curl -fsSL "https://ftp.gnu.org/gnu/make/make-$version.tar.gz" -o "$work/make.tar.gz"
+curl -fsSL --connect-timeout 15 "https://ftp.gnu.org/gnu/make/make-$version.tar.gz" -o "$work/make.tar.gz" \
+    || curl -fsSL --connect-timeout 15 "https://ftpmirror.gnu.org/make/make-$version.tar.gz" -o "$work/make.tar.gz"
 (cd "$work" && echo 'dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3  make.tar.gz' | sha256sum -c -)
 tar -xzf "$work/make.tar.gz" -C "$work"
 cd "$work/make-$version"
