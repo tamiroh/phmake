@@ -24,16 +24,16 @@ final readonly class ArchiveMember
      */
     public static function expand(string $text): string
     {
-        return preg_replace_callback(
-            '/([^\s()]+)\(([^()]*)\)(?=\s|$)/',
-            static function (array $matches): string {
-                return implode(' ', array_map(
+        return (
+            preg_replace_callback(
+                '/([^\s()]+)\(([^()]*)\)(?=\s|$)/',
+                static fn(array $matches): string => implode(' ', array_map(
                     static fn(string $member): string => $matches[1] . '(' . $member . ')',
                     DependencySyntax::words($matches[2]),
-                ));
-            },
-            $text,
-        ) ?? $text;
+                )),
+                $text,
+            ) ?? $text
+        );
     }
 
     public static function parse(string $name): ?self

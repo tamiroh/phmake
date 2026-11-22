@@ -932,14 +932,15 @@ final class Functions
         $pattern = new Pattern($from);
         $replacement = new Pattern($to);
         if (!$pattern->hasWildcard()) {
-            return preg_replace_callback(
-                '/\S+/',
-                static function (array $match) use ($pattern, $replacement): string {
-                    /** @var array{non-empty-string} $match */
-                    return $pattern->match($match[0]) === null ? $match[0] : $replacement->substitute('%');
-                },
-                $text,
-            ) ?? $text;
+            return (
+                preg_replace_callback(
+                    '/\S+/',
+                    static fn(array $match): string => $pattern->match($match[0]) === null
+                        ? $match[0]
+                        : $replacement->substitute('%'),
+                    $text,
+                ) ?? $text
+            );
         }
         $result = [];
         foreach (self::splitWords($text) as $word) {
