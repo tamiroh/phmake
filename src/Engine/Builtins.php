@@ -231,7 +231,7 @@ final class Builtins
             $variables,
             static fn(Variable $variable, string $name): bool => (
                 $variable->origin !== 'default'
-                || in_array($name, self::INTERNAL_VARIABLES, true)
+                || in_array($name, self::INTERNAL_VARIABLES, strict: true)
             ),
             ARRAY_FILTER_USE_BOTH,
         );

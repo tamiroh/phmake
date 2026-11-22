@@ -63,6 +63,6 @@ final class ExtraPrerequisites
     public function forTarget(string $name): Prerequisites
     {
         $prerequisites = $this->local[$name] ?? $this->global;
-        return in_array($name, $prerequisites->sequence, true) ? new Prerequisites() : $prerequisites;
+        return in_array($name, $prerequisites->sequence, strict: true) ? new Prerequisites() : $prerequisites;
     }
 }

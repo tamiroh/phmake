@@ -27,21 +27,21 @@ final class RuleSyntax
      */
     public static function parse(string $header, int $line, ?string $source, ?Filesystem $filesystem): Rule
     {
-        $colon = DependencySyntax::delimiter($header, ':');
+        $colon = DependencySyntax::delimiter($header, delimiter: ':');
         if ($colon === null) {
             throw new ParseException($line, 'missing separator');
         }
-        $targets = rtrim(substr($header, 0, $colon));
+        $targets = rtrim(substr($header, offset: 0, length: $colon));
         $grouped = str_ends_with($targets, '&') && !str_ends_with($targets, '\\&');
         if ($grouped) {
-            $targets = substr($targets, 0, -1);
+            $targets = substr($targets, offset: 0, length: -1);
         }
         $double = ($header[$colon + 1] ?? '') === ':';
         $dependencies = ltrim(substr($header, $colon + ($double ? 2 : 1)));
         $pattern = null;
-        $second = DependencySyntax::delimiter($dependencies, ':', false);
+        $second = DependencySyntax::delimiter($dependencies, delimiter: ':', skipVariables: false);
         if ($second !== null) {
-            $patterns = DependencySyntax::words(substr($dependencies, 0, $second));
+            $patterns = DependencySyntax::words(substr($dependencies, offset: 0, length: $second));
             if ($patterns === []) {
                 throw new ParseException($line, 'missing target pattern');
             }
@@ -54,11 +54,14 @@ final class RuleSyntax
             }
             $dependencies = substr($dependencies, $second + 1);
         }
-        $order = DependencySyntax::delimiter($dependencies, '|');
+        $order = DependencySyntax::delimiter($dependencies, delimiter: '|');
         return new Rule(
             self::paths($targets, $filesystem),
             new Prerequisites(
-                self::paths($order === null ? $dependencies : substr($dependencies, 0, $order), $filesystem),
+                self::paths(
+                    $order === null ? $dependencies : substr($dependencies, offset: 0, length: $order),
+                    $filesystem,
+                ),
                 $order === null ? [] : self::paths(substr($dependencies, $order + 1), $filesystem),
                 [new PrerequisiteExpression($dependencies, source: $source)],
             ),
@@ -77,7 +80,7 @@ final class RuleSyntax
         $result = [];
         foreach (DependencySyntax::words(ArchiveMember::expand($text)) as $word) {
             $word = FileName::normalize($word);
-            $paths = strpbrk($word, '*?[') === false ? [] : $filesystem?->matching($word) ?? [];
+            $paths = strpbrk($word, characters: '*?[') === false ? [] : $filesystem?->matching($word) ?? [];
             $result = [...$result, ...($paths === [] ? [$word] : $paths)];
         }
         return $result;

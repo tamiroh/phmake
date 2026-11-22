@@ -59,10 +59,10 @@ final readonly class MakeCommand
      */
     public function run(): int
     {
-        $stdin = in_array('-', $this->commandLine->input->makefiles, true)
+        $stdin = in_array('-', $this->commandLine->input->makefiles, strict: true)
             ? new StdinMakefile($this->commandLine->input->temporaryStdin)
             : null;
-        $restarts = (int) ltrim((string) $this->commandLine->input->restarts, '-');
+        $restarts = (int) ltrim((string) $this->commandLine->input->restarts, characters: '-');
         while (true) {
             Signals::check();
             $configuration = clone $this->commandLine;
@@ -79,7 +79,12 @@ final readonly class MakeCommand
                 $configuration->options->evaluations,
                 $restarts > 0,
             );
-            DebugTrace::write($configuration->execution->reporting, $this->output, 'b', 'Reading makefiles...');
+            DebugTrace::write(
+                $configuration->execution->reporting,
+                $this->output,
+                level: 'b',
+                message: 'Reading makefiles...',
+            );
             $this->output->beginTarget();
             try {
                 [$makefile, $context] = new Evaluator(

@@ -36,7 +36,7 @@ final class AutomaticVariables
                 $modifiedAt === null
                 || $time === null
                 || $time > $modifiedAt
-                || in_array($dependency, $changed, true)
+                || in_array($dependency, $changed, strict: true)
             ) {
                 $newer[] = $dependency;
             }
@@ -54,7 +54,7 @@ final class AutomaticVariables
         ];
         $variables = [];
         foreach ($values as $key => $words) {
-            if (in_array($key, ['^', '+', '|', '?'], true)) {
+            if (in_array($key, ['^', '+', '|', '?'], strict: true)) {
                 $words = array_map(ArchiveMember::prerequisite(...), $words);
             }
             $variables[] = new Variable($key, implode(' ', $words), false, 'automatic');

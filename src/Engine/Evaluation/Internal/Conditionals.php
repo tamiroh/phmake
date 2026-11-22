@@ -118,8 +118,8 @@ final class Conditionals
                                 );
                             }
                             return [
-                                rtrim(substr($argument, 1, $comma - 1), " \t"),
-                                ltrim(substr($argument, $comma + 1, $index - $comma - 1), " \t"),
+                                rtrim(substr($argument, offset: 1, length: $comma - 1), characters: " \t"),
+                                ltrim(substr($argument, $comma + 1, $index - $comma - 1), characters: " \t"),
                             ];
                         }
                         break;
@@ -129,13 +129,13 @@ final class Conditionals
                     $comma = $index;
                 }
             }
-        } elseif (in_array($argument[0] ?? '', ["'", '"'], true)) {
-            $end = strpos($argument, $argument[0], 1);
+        } elseif (in_array($argument[0] ?? '', ["'", '"'], strict: true)) {
+            $end = strpos($argument, $argument[0], offset: 1);
             if ($end !== false) {
-                $left = substr($argument, 1, $end - 1);
+                $left = substr($argument, offset: 1, length: $end - 1);
                 $rest = ltrim(substr($argument, $end + 1));
-                if (in_array($rest[0] ?? '', ["'", '"'], true)) {
-                    $end = strpos($rest, $rest[0], 1);
+                if (in_array($rest[0] ?? '', ["'", '"'], strict: true)) {
+                    $end = strpos($rest, $rest[0], offset: 1);
                     if ($end !== false) {
                         if (trim(substr($rest, $end + 1)) !== '') {
                             $expander->output?->writeWarning(
@@ -143,7 +143,7 @@ final class Conditionals
                                 $expander->source,
                             );
                         }
-                        return [$left, substr($rest, 1, $end - 1)];
+                        return [$left, substr($rest, offset: 1, length: $end - 1)];
                     }
                 }
             }

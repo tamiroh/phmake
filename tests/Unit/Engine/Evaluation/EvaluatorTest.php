@@ -192,9 +192,9 @@ final class EvaluatorTest extends TestCase
     public function commentsEndAtAnUnescapedHash(): void
     {
         $parsed = self::parse("A = x \\# y # comment\nB = \$(subst x,#,axb)\n# C = hidden\n");
-        self::assertSame('x # y ', self::expand($parsed, '$(A)'));
-        self::assertSame('a#b', self::expand($parsed, '$(B)'));
-        self::assertSame('', self::expand($parsed, '$(C)'));
+        self::assertSame('x # y ', self::expand($parsed, expression: '$(A)'));
+        self::assertSame('a#b', self::expand($parsed, expression: '$(B)'));
+        self::assertSame('', self::expand($parsed, expression: '$(C)'));
     }
 
     /**
@@ -204,7 +204,10 @@ final class EvaluatorTest extends TestCase
     #[Test]
     public function continuationLinesJoinWithASingleSpace(): void
     {
-        self::assertSame('one two three', self::expand(self::parse("A = one \\\n    two\\\n three\n"), '$(A)'));
+        self::assertSame('one two three', self::expand(
+            self::parse("A = one \\\n    two\\\n three\n"),
+            expression: '$(A)',
+        ));
     }
 
     /**
@@ -228,10 +231,13 @@ final class EvaluatorTest extends TestCase
     {
         $parsed = self::parse("define OUTER\nfirst\ndefine INNER\nsecond\nendef\n\tthird # kept\nendef\n"
         . "define SIMPLE :=\n\$(OUTER)\nendef\n");
-        self::assertSame("first\ndefine INNER\nsecond\nendef\n\tthird # kept", self::expand($parsed, '$(OUTER)'));
         self::assertSame("first\ndefine INNER\nsecond\nendef\n\tthird # kept", self::expand(
             $parsed,
-            '$(value SIMPLE)',
+            expression: '$(OUTER)',
+        ));
+        self::assertSame("first\ndefine INNER\nsecond\nendef\n\tthird # kept", self::expand(
+            $parsed,
+            expression: '$(value SIMPLE)',
         ));
     }
 
@@ -243,7 +249,7 @@ final class EvaluatorTest extends TestCase
     #[DataProvider('conditionals')]
     public function evaluatesConditionals(string $text, string $expected): void
     {
-        self::assertSame($expected, self::expand(self::parse($text), '$(V)'));
+        self::assertSame($expected, self::expand(self::parse($text), expression: '$(V)'));
     }
 
     /**
@@ -262,11 +268,11 @@ final class EvaluatorTest extends TestCase
             $sources,
             output: new FakeOutput(),
             filesystem: new FakeFilesystem(),
-        )->evaluate(MakefileParser::parse($formatted, 'source.mk'));
-        self::assertSame('included', self::expand($parsed, '$(A)'));
-        self::assertSame(['util.o', 'main.o'], self::rule(self::target($parsed, 'app'))->prerequisites->normal);
-        self::assertSame('source.mk part.mk', self::expand($parsed, '$(MAKEFILE_LIST)'));
-        self::assertSame(['@echo $(A)'], self::commands(self::target($parsed, 'app')));
+        )->evaluate(MakefileParser::parse($formatted, file: 'source.mk'));
+        self::assertSame('included', self::expand($parsed, expression: '$(A)'));
+        self::assertSame(['util.o', 'main.o'], self::rule(self::target($parsed, name: 'app'))->prerequisites->normal);
+        self::assertSame('source.mk part.mk', self::expand($parsed, expression: '$(MAKEFILE_LIST)'));
+        self::assertSame(['@echo $(A)'], self::commands(self::target($parsed, name: 'app')));
     }
 
     /**
@@ -277,7 +283,7 @@ final class EvaluatorTest extends TestCase
     public function evaluationsAreReadBeforeMakefiles(): void
     {
         $parsed = self::parse(self::sources(['Makefile' => "B := \$(A)\n"], evaluations: ['A = from-eval']));
-        self::assertSame('from-eval', self::expand($parsed, '$(B)'));
+        self::assertSame('from-eval', self::expand($parsed, expression: '$(B)'));
     }
 
     /**
@@ -288,7 +294,7 @@ final class EvaluatorTest extends TestCase
     public function exportDirectivesSelectEnvironmentVariables(): void
     {
         $parsed = self::parse("export A = 1\nB = 2\nexport B\nC = 3\nexport D := 4\nunexport D\n");
-        $environment = $parsed[0]->exports->environment(self::expander($parsed), null);
+        $environment = $parsed[0]->exports->environment(self::expander($parsed), output: null);
         self::assertSame('1', $environment['A'] ?? null);
         self::assertSame('2', $environment['B'] ?? null);
         self::assertArrayNotHasKey('C', $environment);
@@ -306,8 +312,8 @@ final class EvaluatorTest extends TestCase
             'Makefile' => "A = before\ninclude part.mk\nB := \$(A)\n",
             'part.mk' => "A = included\n",
         ]));
-        self::assertSame('included', self::expand($parsed, '$(B)'));
-        self::assertSame('Makefile part.mk', self::expand($parsed, '$(MAKEFILE_LIST)'));
+        self::assertSame('included', self::expand($parsed, expression: '$(B)'));
+        self::assertSame('Makefile part.mk', self::expand($parsed, expression: '$(MAKEFILE_LIST)'));
     }
 
     /**
@@ -330,7 +336,7 @@ final class EvaluatorTest extends TestCase
                 array_slice($sources->read, offset: 1),
             ),
         );
-        self::assertNull(self::read($sources, 1)->text);
+        self::assertNull(self::read($sources, index: 1)->text);
         self::assertSame([], $output->warnings);
     }
 
@@ -346,8 +352,8 @@ final class EvaluatorTest extends TestCase
             new FakeConfiguration(['dir']),
             ['dir'],
         );
-        self::assertSame('found', self::expand(self::parse($sources), '$(A)'));
-        self::assertSame('dir/part.mk', self::read($sources, 1)->path);
+        self::assertSame('found', self::expand(self::parse($sources), expression: '$(A)'));
+        self::assertSame('dir/part.mk', self::read($sources, index: 1)->path);
     }
 
     /**
@@ -358,8 +364,8 @@ final class EvaluatorTest extends TestCase
     {
         self::assertRejected(
             self::sources(['Makefile' => "include Makefile\n"]),
-            'Maximum makefile include depth (256) exceeded',
-            'Makefile:1',
+            message: 'Maximum makefile include depth (256) exceeded',
+            source: 'Makefile:1',
         );
     }
 
@@ -370,7 +376,7 @@ final class EvaluatorTest extends TestCase
     #[Test]
     public function readsRecipesAfterRulesAndSemicolons(): void
     {
-        $target = self::target(self::parse("all: a b | c ; first\n\tsecond\n\n# comment\n\tthird\n"), 'all');
+        $target = self::target(self::parse("all: a b | c ; first\n\tsecond\n\n# comment\n\tthird\n"), name: 'all');
         self::assertSame(['a', 'b'], self::rule($target)->prerequisites->normal);
         self::assertSame(['c'], self::rule($target)->prerequisites->orderOnly);
         self::assertSame(['first', 'second', 'third'], self::commands($target));
@@ -389,7 +395,7 @@ final class EvaluatorTest extends TestCase
     {
         self::assertSame(
             ['echo hi'],
-            self::commands(self::target(self::parse(".RECIPEPREFIX = >\nall:\n>echo hi\n"), 'all')),
+            self::commands(self::target(self::parse(".RECIPEPREFIX = >\nall:\n>echo hi\n"), name: 'all')),
         );
     }
 
@@ -401,8 +407,8 @@ final class EvaluatorTest extends TestCase
     {
         self::assertRejected(
             self::sources(['Makefile' => "A = 1\ninclude part.mk\n", 'part.mk' => "B = 2\nfoo\n"]),
-            'missing separator',
-            'part.mk:2',
+            message: 'missing separator',
+            source: 'part.mk:2',
         );
     }
 
@@ -424,9 +430,9 @@ final class EvaluatorTest extends TestCase
     public function staticPatternRulesSubstituteEachTarget(): void
     {
         $parsed = self::parse("a.o b.o: %.o: %.c %.h\n\tcc \$<\n");
-        self::assertSame(['a.c', 'a.h'], self::rule(self::target($parsed, 'a.o'))->prerequisites->normal);
-        self::assertSame(['b.c', 'b.h'], self::rule(self::target($parsed, 'b.o'))->prerequisites->normal);
-        self::assertSame('b', self::rule(self::target($parsed, 'b.o'))->stem);
+        self::assertSame(['a.c', 'a.h'], self::rule(self::target($parsed, name: 'a.o'))->prerequisites->normal);
+        self::assertSame(['b.c', 'b.h'], self::rule(self::target($parsed, name: 'b.o'))->prerequisites->normal);
+        self::assertSame('b', self::rule(self::target($parsed, name: 'b.o'))->stem);
     }
 
     /**
@@ -439,7 +445,7 @@ final class EvaluatorTest extends TestCase
         $parsed = self::parse("all: V = local\nall: override W += more\nall:\n");
         self::assertSame('local', $parsed[0]->targetVariables->definitionsFor('all')['V']->expression ?? null);
         self::assertSame('override', $parsed[0]->targetVariables->definitionsFor('all')['W']->origin ?? null);
-        self::assertSame('', self::expand($parsed, '$(V)'));
+        self::assertSame('', self::expand($parsed, expression: '$(V)'));
     }
 
     /**
@@ -453,12 +459,12 @@ final class EvaluatorTest extends TestCase
             "A = \$(B)\nB = early\nC := \$(B)\nD ?= first\nD ?= second\nE = one\nE += two\n"
             . "B = late\nF ::= \$(B)\nG :::= \$(B) \$\$\$\$\nundefine E\n",
         );
-        self::assertSame('late', self::expand($parsed, '$(A)'));
-        self::assertSame('early', self::expand($parsed, '$(C)'));
-        self::assertSame('first', self::expand($parsed, '$(D)'));
-        self::assertSame('late', self::expand($parsed, '$(F)'));
-        self::assertSame('late $$', self::expand($parsed, '$(G)'));
-        self::assertSame('undefined', self::expand($parsed, '$(origin E)'));
+        self::assertSame('late', self::expand($parsed, expression: '$(A)'));
+        self::assertSame('early', self::expand($parsed, expression: '$(C)'));
+        self::assertSame('first', self::expand($parsed, expression: '$(D)'));
+        self::assertSame('late', self::expand($parsed, expression: '$(F)'));
+        self::assertSame('late $$', self::expand($parsed, expression: '$(G)'));
+        self::assertSame('undefined', self::expand($parsed, expression: '$(origin E)'));
     }
 
     /**

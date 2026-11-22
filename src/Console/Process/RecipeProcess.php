@@ -41,7 +41,7 @@ final class RecipeProcess
         Signals::check();
         $ownsInput = !self::$inputBusy;
         self::$inputBusy = true;
-        $input = $ownsInput ? null : fopen('/dev/null', 'r');
+        $input = $ownsInput ? null : fopen('/dev/null', mode: 'r');
         if (is_resource($input)) {
             $descriptors[0] = $input;
         }
@@ -52,7 +52,8 @@ final class RecipeProcess
                 return 127;
             }
             $pid = proc_get_status($process)['pid'];
-            $observer?->__invoke($pid, null);
+            $exitCode = null;
+            $observer?->__invoke($pid, $exitCode);
             $stopped = false;
             do {
                 if (Signals::$received !== 0 && !$stopped) {

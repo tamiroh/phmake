@@ -68,7 +68,10 @@ final readonly class MakefileRemake
         foreach ($before === null ? [] : $this->filesystem->modifiedTimes($names) as $path => $modifiedAt) {
             if (
                 $modifiedAt !== ($before[$path] ?? null)
-                && !(in_array($path, $commandGoals, true) && ($this->options->dryRun || $this->options->question))
+                && !(
+                    in_array($path, $commandGoals, strict: true)
+                    && ($this->options->dryRun || $this->options->question)
+                )
             ) {
                 $changed[$path] = $modifiedAt;
             }
@@ -105,7 +108,7 @@ final readonly class MakefileRemake
                     throw $errors[$file->path];
                 }
                 if ($this->options->keepGoing) {
-                    Diagnostics::report($errors[$file->path], $this->output, false);
+                    Diagnostics::report($errors[$file->path], $this->output, stop: false);
                     $this->output->writeWarning("Failed to remake makefile '{$file->path}'.", $file->source);
                 }
                 if (!$this->options->keepGoing) {

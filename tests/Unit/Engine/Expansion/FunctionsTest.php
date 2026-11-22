@@ -18,10 +18,10 @@ final class FunctionsTest extends TestCase
     #[Test]
     public function distinguishesEmptyAndMissingArguments(): void
     {
-        self::assertSame('', Functions::subst('', '', ''));
+        self::assertSame('', Functions::subst('', to: '', text: ''));
         $this->expectException(MakefileErrorException::class);
         $this->expectExceptionMessageMatches("/^insufficient number of arguments to function 'subst'$/");
-        Functions::subst('', '');
+        Functions::subst('', to: '');
     }
 
     /**
@@ -40,10 +40,10 @@ final class FunctionsTest extends TestCase
     #[Test]
     public function foreachRejectsMissingBodyEvenWithEmptyList(): void
     {
-        self::assertSame('', Functions::foreach(new VariableExpander([]), [], 'x', '', ''));
+        self::assertSame('', Functions::foreach(new VariableExpander([]), [], name: 'x', list: '', body: ''));
         $this->expectException(MakefileErrorException::class);
         $this->expectExceptionMessageMatches("/^insufficient number of arguments \(2\) to function 'foreach'$/");
-        Functions::foreach(new VariableExpander([]), [], 'x', '');
+        Functions::foreach(new VariableExpander([]), [], name: 'x', list: '');
     }
 
     /**
@@ -56,6 +56,6 @@ final class FunctionsTest extends TestCase
         $this->expectExceptionMessageMatches("/^insufficient number of arguments to function 'if'$/");
         Functions::if(static function (string $argument): string {
             self::fail('Missing arguments must be rejected before expansion: ' . $argument);
-        }, 'yes');
+        }, condition: 'yes');
     }
 }

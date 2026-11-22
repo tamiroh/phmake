@@ -51,7 +51,7 @@ final readonly class CommandRunner
         $pending = '';
         foreach (explode("\n", $this->command->expression) as $line) {
             $pending .= $line;
-            if (((strlen($line) - strlen(rtrim($line, '\\'))) % 2) === 1) {
+            if (((strlen($line) - strlen(rtrim($line, characters: '\\'))) % 2) === 1) {
                 $pending .= "\n";
                 continue;
             }
@@ -88,11 +88,11 @@ final readonly class CommandRunner
         ?string $target,
     ): CommandResult {
         $expanded = ltrim($line);
-        $prefixLength = strspn($expanded, "@-+ \t");
-        $prefix = $this->command->prefix . substr($expanded, 0, $prefixLength);
+        $prefixLength = strspn($expanded, characters: "@-+ \t");
+        $prefix = $this->command->prefix . substr($expanded, offset: 0, length: $prefixLength);
         $expanded = ltrim(substr($expanded, $prefixLength));
         $recursive = $this->command->recursive || str_contains($prefix, '+');
-        if (trim(str_replace("\\\n", '', $expanded)) === '') {
+        if (trim(str_replace("\\\n", replace: '', subject: $expanded)) === '') {
             return new CommandResult(recursive: $recursive);
         }
         if ($output instanceof RecipeOutput) {

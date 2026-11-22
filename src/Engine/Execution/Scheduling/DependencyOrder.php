@@ -26,7 +26,7 @@ final class DependencyOrder
      */
     public static function arrange(array $names, ParallelOptions $options, Makefile $makefile): array
     {
-        if ($options->shuffle === null || self::serial($makefile) || in_array('.WAIT', $names, true)) {
+        if ($options->shuffle === null || self::serial($makefile) || in_array('.WAIT', $names, strict: true)) {
             return $names;
         }
         if ($options->shuffle === 'reverse') {

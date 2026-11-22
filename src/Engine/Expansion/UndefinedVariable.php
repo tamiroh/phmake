@@ -31,7 +31,7 @@ final class UndefinedVariable
                     'VPATH',
                     'GPATH',
                 ],
-                true,
+                strict: true,
             )
         ) {
             $expander->output?->writeWarning("warning: undefined variable '{$name}'", $expander->source);

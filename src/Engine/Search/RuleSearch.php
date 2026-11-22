@@ -134,9 +134,9 @@ final class RuleSearch
                     $this->state->mentioned[$dependency] = true;
                 }
                 $this->compatible = $scope->context->reporting->enabled('i');
-                $implicit = $this->implicit($searchName, $rule, $scope, [], $this->state, false);
+                $implicit = $this->implicit($searchName, $rule, $scope, [], $this->state, compatibility: false);
                 if ($implicit === null && $this->compatible) {
-                    $implicit = $this->implicit($searchName, $rule, $scope, [], $this->state, true);
+                    $implicit = $this->implicit($searchName, $rule, $scope, [], $this->state, compatibility: true);
                 }
                 if ($implicit !== null) {
                     $rule = $implicit;
@@ -179,12 +179,14 @@ final class RuleSearch
             if ($dependency === '.WAIT') {
                 continue;
             }
-            if (!isset($branch->mentioned[$dependency]) && !in_array($dependency, $prerequisites->literal, true)) {
+            if (
+                !isset($branch->mentioned[$dependency]) && !in_array($dependency, $prerequisites->literal, strict: true)
+            ) {
                 $branch->intermediates[$dependency] = true;
             }
             $known =
                 isset($this->makefile->targetsByName[$dependency])
-                || in_array($dependency, $explicit->prerequisites->sequence ?? [], true);
+                || in_array($dependency, $explicit->prerequisites->sequence ?? [], strict: true);
             // Target-specific scopes are built only for dependencies that must be searched.
             $child = $known
                 ? $scope
@@ -210,11 +212,11 @@ final class RuleSearch
             }
             $found = $this->implicit(
                 $dependency,
-                null,
-                $child,
-                $used + [$candidate->index => true],
-                $branch,
-                $compatibility,
+                explicit: null,
+                scope: $child,
+                used: $used + [$candidate->index => true],
+                state: $branch,
+                compatibility: $compatibility,
             );
             if ($found === null) {
                 return false;
@@ -252,9 +254,9 @@ final class RuleSearch
         DebugTrace::write(
             $scope->context->reporting,
             $this->output,
-            'i',
-            "Looking for an implicit rule for '{$name}'.",
-            count($used),
+            level: 'i',
+            message: "Looking for an implicit rule for '{$name}'.",
+            depth: count($used),
         );
         $candidates = $this->candidates($name, $used);
         $expander = new VariableExpander($scope->context, $this->output, scope: $scope);
@@ -267,9 +269,9 @@ final class RuleSearch
                 DebugTrace::write(
                     $scope->context->reporting,
                     $this->output,
-                    'i',
-                    "Trying pattern rule with stem '{$candidate->stem}'.",
-                    count($used),
+                    level: 'i',
+                    message: "Trying pattern rule with stem '{$candidate->stem}'.",
+                    depth: count($used),
                 );
                 $key = $candidate->index . ':' . $candidate->directory . ':' . $candidate->stem;
                 $branch = clone $state;
@@ -322,9 +324,9 @@ final class RuleSearch
                 DebugTrace::write(
                     $scope->context->reporting,
                     $this->output,
-                    'i',
-                    "Found an implicit rule for '{$name}'.",
-                    count($used),
+                    level: 'i',
+                    message: "Found an implicit rule for '{$name}'.",
+                    depth: count($used),
                 );
                 return new BuildRule(
                     $rule->prerequisites->merge($explicit->prerequisites ?? new Prerequisites()),
@@ -394,7 +396,9 @@ final class RuleSearch
                     $pattern,
                     $index,
                     $stem,
-                    $hasDirectory ? '' : substr($matchName, 0, strlen($matchName) - strlen(basename($matchName))),
+                    $hasDirectory
+                        ? ''
+                        : substr($matchName, offset: 0, length: strlen($matchName) - strlen(basename($matchName))),
                     $text === '%',
                 );
             }

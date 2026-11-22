@@ -40,7 +40,7 @@ final readonly class RecursiveMake implements Rule
 
     private static function basename(string $word): string
     {
-        $slash = strrpos($word, '/');
+        $slash = strrpos($word, needle: '/');
         return $slash === false ? $word : substr($word, $slash + 1);
     }
 
@@ -67,8 +67,8 @@ final readonly class RecursiveMake implements Rule
     private static function commands(string $recipe): array
     {
         // The shell joins continued lines; make removes the recipe prefix after each.
-        $text = preg_replace('/\\\\\r?\n\t?/', ' ', $recipe) ?? $recipe;
-        $text = ltrim($text, "@+- \t");
+        $text = preg_replace('/\\\\\r?\n\t?/', replacement: ' ', subject: $recipe) ?? $recipe;
+        $text = ltrim($text, characters: "@+- \t");
         $commands = [];
         $words = [];
         $word = '';
@@ -85,7 +85,7 @@ final readonly class RecursiveMake implements Rule
                 $started = true;
                 $index = $end;
             } elseif ($character === '\\') {
-                $word .= substr($text, $index, 2);
+                $word .= substr($text, $index, length: 2);
                 $plain = false;
                 $started = true;
                 $index = min($index + 1, $length - 1);
@@ -128,16 +128,16 @@ final readonly class RecursiveMake implements Rule
         $found = [];
         foreach (self::commands($recipe) as $words) {
             foreach ($words as [$word, $plain]) {
-                if (in_array($word, self::KEYWORDS, true) && $plain) {
+                if (in_array($word, self::KEYWORDS, strict: true) && $plain) {
                     continue;
                 }
                 if (preg_match('/\A[A-Za-z_][A-Za-z0-9_]*=/', $word) === 1) {
                     continue;
                 }
-                if ($plain && in_array($word, self::WRAPPERS, true)) {
+                if ($plain && in_array($word, self::WRAPPERS, strict: true)) {
                     continue;
                 }
-                if ($plain && in_array(self::basename($word), self::MAKES, true)) {
+                if ($plain && in_array(self::basename($word), self::MAKES, strict: true)) {
                     $found[] = $word;
                 }
                 break;

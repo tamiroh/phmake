@@ -40,7 +40,7 @@ final class FileTimes
             return $time;
         }
         for ($depth = 0; $depth < 40 && is_link($path); $depth++) {
-            $linkTime = self::precise($path, false);
+            $linkTime = self::precise($path, follow: false);
             if ($linkTime !== null) {
                 $time = $time === null ? $linkTime : max($time, $linkTime);
             }
@@ -82,7 +82,7 @@ final class FileTimes
         // A failed batch falls back to one command per path.
         foreach (array_chunk($existing, self::BATCH_SIZE) as $batch) {
             $stat = CapturedProcess::run(self::statCommand($batch));
-            $lines = explode("\n", rtrim($stat['output'], "\n"));
+            $lines = explode("\n", rtrim($stat['output'], characters: "\n"));
             foreach ($batch as $index => $path) {
                 $times[$path] = $stat['status'] === 0 && count($lines) === count($batch) && isset($lines[$index])
                     ? trim($lines[$index])

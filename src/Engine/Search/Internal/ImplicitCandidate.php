@@ -114,7 +114,7 @@ final readonly class ImplicitCandidate
             $name = FileName::normalize(
                 ($pattern->hasWildcard() ? $this->directory : '') . $pattern->substitute($this->stem),
             );
-            $paths = strpbrk($name, '*?[') === false ? [] : $filesystem?->matching($name) ?? [];
+            $paths = strpbrk($name, characters: '*?[') === false ? [] : $filesystem?->matching($name) ?? [];
             $result = [...$result, ...($paths === [] ? [$name] : $paths)];
         }
         return $result;

@@ -59,10 +59,10 @@ final readonly class Application
     public function status(array $arguments): int
     {
         if (($arguments[0] ?? null) === '--format') {
-            return new FormatCommand()->run(array_slice($arguments, 1));
+            return new FormatCommand()->run(array_slice($arguments, offset: 1));
         }
         if (($arguments[0] ?? null) === '--lint') {
-            return new LintCommand()->run(array_slice($arguments, 1));
+            return new LintCommand()->run(array_slice($arguments, offset: 1));
         }
         $signals = new Signals();
         $status = 0;
@@ -143,7 +143,7 @@ final readonly class Application
         } catch (CommandFailedException|MakefileErrorException $error) {
             Diagnostics::report($error, $output);
             if ($error instanceof UsageException) {
-                $output->buffer->write(Usage::text($program), true);
+                $output->buffer->write(Usage::text($program), error: true);
             }
             return 2;
         } finally {

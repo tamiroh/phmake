@@ -96,7 +96,7 @@ final class BuildFiles
     public function intermediate(string $name): bool
     {
         return (
-            !in_array($name, $this->goals, true)
+            !in_array($name, $this->goals, strict: true)
             && !($this->makefile->targetsByName[$name]->isPhony ?? false)
             && $this->intermediates->intermediate(
                 $name,

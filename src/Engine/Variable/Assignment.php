@@ -50,7 +50,7 @@ final readonly class Assignment
                 $depth--;
             } elseif ($depth === 0) {
                 if (!$allowWhitespace && str_contains(" \t", $text[$index])) {
-                    $index += strspn($text, " \t", $index);
+                    $index += strspn($text, characters: " \t", offset: $index);
                     if (preg_match('/^(:::=|::=|:=|!=|\+=|\?=|=)/', substr($text, $index)) !== 1) {
                         return null;
                     }
@@ -62,7 +62,7 @@ final readonly class Assignment
                 ) {
                     /** @var array{non-falsy-string, ':::='|'::='|':='|'!='|'+='|'?='|'='} $matches */
                     return new self(
-                        trim(substr($text, 0, $index)),
+                        trim(substr($text, offset: 0, length: $index)),
                         $matches[1],
                         ltrim(substr($text, $index + strlen($matches[1]))),
                     );
@@ -128,7 +128,7 @@ final readonly class Assignment
                 $scope,
                 $scope->expand($this->expression),
                 $output,
-                false,
+                trimNewlines: false,
             );
         }
         $previous = $variables[$this->name] ?? null;
@@ -159,7 +159,7 @@ final readonly class Assignment
             $value = $shellValue;
         }
         if ($this->operator === ':::=') {
-            $value = str_replace('$', '$$', $value);
+            $value = str_replace('$', replace: '$$', subject: $value);
         }
         if ($previous !== null && self::priority($previous->origin) > self::priority($origin)) {
             return $variables[$this->name] = $previous->withAttributes(
@@ -174,8 +174,10 @@ final readonly class Assignment
                     $previous->export,
                 );
             }
-            $separator = $this->name === 'MAKEFLAGS' ? strpos($previous->expression, ' -- ') : false;
-            $before = $separator === false ? $previous->expression : substr($previous->expression, 0, $separator);
+            $separator = $this->name === 'MAKEFLAGS' ? strpos($previous->expression, needle: ' -- ') : false;
+            $before = $separator === false
+                ? $previous->expression
+                : substr($previous->expression, offset: 0, length: $separator);
             $value = ($before === '' ? '' : $before . ' ') . $value;
         }
         return $variables[$this->name] = new Variable(

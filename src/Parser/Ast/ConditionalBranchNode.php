@@ -17,6 +17,6 @@ final readonly class ConditionalBranchNode extends Node
         foreach ($body as $node) {
             $end = $node->span;
         }
-        parent::__construct($header->span->through($end), '', [$header, ...$body]);
+        parent::__construct($header->span->through($end), raw: '', children: [$header, ...$body]);
     }
 }

@@ -51,7 +51,7 @@ final class InvocationOptions
             $variables = Builtins::withoutVariables($variables);
         }
         if ($this->noBuiltinRules) {
-            new Assignment('SUFFIXES', ':=', '')->apply($variables, 'default');
+            new Assignment('SUFFIXES', ':=', '')->apply($variables, origin: 'default');
         }
     }
 

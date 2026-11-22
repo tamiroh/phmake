@@ -43,12 +43,12 @@ final class ReportingOptions
      */
     public function addDebugFlags(string $levels): void
     {
-        foreach (explode(',', str_replace(' ', ',', rtrim($levels, ', '))) as $level) {
-            if (!in_array(strtolower($level[0] ?? ''), ['a', 'b', 'i', 'j', 'm', 'n', 'p', 'v', 'w'], true)) {
+        foreach (explode(',', str_replace(' ', replace: ',', subject: rtrim($levels, characters: ', '))) as $level) {
+            if (!in_array(strtolower($level[0] ?? ''), ['a', 'b', 'i', 'j', 'm', 'n', 'p', 'v', 'w'], strict: true)) {
                 throw new MakefileErrorException("unknown debug level specification '{$level}'");
             }
         }
-        if (!in_array($levels, $this->debugLevels, true)) {
+        if (!in_array($levels, $this->debugLevels, strict: true)) {
             $this->debugLevels[] = $levels;
         }
     }
@@ -58,16 +58,16 @@ final class ReportingOptions
         if ($this->remaking && $selected !== 'm' && !$this->enabled('m')) {
             return false;
         }
-        $enabled = $this->debugAll || $this->trace && in_array($selected, ['p', 'w'], true);
+        $enabled = $this->debugAll || $this->trace && in_array($selected, ['p', 'w'], strict: true);
         foreach ($this->debugLevels as $levels) {
-            foreach (explode(',', str_replace(' ', ',', $levels)) as $level) {
+            foreach (explode(',', str_replace(' ', replace: ',', subject: $levels)) as $level) {
                 $initial = strtolower($level[0] ?? '');
                 if ($initial === 'n') {
                     $enabled = false;
                 } elseif (
                     $initial === 'a'
                     || $initial === $selected
-                    || $selected === 'b' && in_array($initial, ['i', 'm', 'v'], true)
+                    || $selected === 'b' && in_array($initial, ['i', 'm', 'v'], strict: true)
                 ) {
                     $enabled = true;
                 }

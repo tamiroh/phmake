@@ -52,8 +52,8 @@ final class CapturedProcessTest extends TestCase
             PHP], stderr: static function (string $buffer) use (&$stderr): void {
             $stderr .= $buffer;
         });
-        self::assertSame(str_repeat('o', 1_048_576), $result['output']);
-        self::assertSame(str_repeat('e', 1_048_576), $stderr);
+        self::assertSame(str_repeat('o', times: 1_048_576), $result['output']);
+        self::assertSame(str_repeat('e', times: 1_048_576), $stderr);
         self::assertSame(7, $result['status']);
     }
 

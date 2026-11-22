@@ -20,11 +20,11 @@ final class FormatCommandTest extends TestCase
     #[Test]
     public function checkReportsFormattingWithoutWriting(): void
     {
-        $file = tempnam(sys_get_temp_dir(), 'phmake-format-');
+        $file = tempnam(sys_get_temp_dir(), prefix: 'phmake-format-');
         self::assertIsString($file);
         try {
-            file_put_contents($file, "NAME=value\n");
-            $format = dirname(__DIR__, 2) . '/phmake';
+            file_put_contents($file, data: "NAME=value\n");
+            $format = dirname(__DIR__, levels: 2) . '/phmake';
             $check = new Process([$format, '--format', '--check', $file]);
             self::assertSame(1, $check->run());
             self::assertStringContainsString($file, $check->getOutput());

@@ -100,7 +100,7 @@ final readonly class RecipeRunner
                     && preg_match('~(?:^|/)(?:ba|da|a|k|z|po)?sh(?:[ \t]|$)~', $expander->expand('$(SHELL)')) === 1
                 ) {
                     $expandedCommand = new ExpandedCommand(
-                        preg_replace('/(?<=\n)[ \t@+-]+/', '', $expandedCommand->expression)
+                        preg_replace('/(?<=\n)[ \t@+-]+/', replacement: '', subject: $expandedCommand->expression)
                         ?? $expandedCommand->expression,
                         $expandedCommand->prefix,
                         $expandedCommand->recursive,
@@ -217,7 +217,7 @@ final readonly class RecipeRunner
             return true;
         }
         foreach ($this->files->states->record($name)->names as $alias => $_) {
-            if (in_array($alias, $rule->prerequisites->sequence, true)) {
+            if (in_array($alias, $rule->prerequisites->sequence, strict: true)) {
                 return true;
             }
         }

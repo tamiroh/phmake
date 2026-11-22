@@ -30,7 +30,7 @@ final readonly class CommandInvocation
     public static function parse(string $text, string $shell, string $flags): self
     {
         $fallback = new self('exec ' . $shell . ' ' . $flags . ' ' . escapeshellarg($text));
-        if ($shell !== '/bin/sh' || !in_array($flags, ['-c', '-ec'], true)) {
+        if ($shell !== '/bin/sh' || !in_array($flags, ['-c', '-ec'], strict: true)) {
             return $fallback;
         }
         $arguments = [];
@@ -113,7 +113,7 @@ final readonly class CommandInvocation
                     'wait',
                     'while',
                 ],
-                true,
+                strict: true,
             )
         ) {
             return $fallback;

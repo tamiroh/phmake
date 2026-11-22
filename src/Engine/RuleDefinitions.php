@@ -70,7 +70,7 @@ final class RuleDefinitions
      */
     public function addRule(RuleDefinition $rule): void
     {
-        if (in_array('.SECONDEXPANSION', $rule->targetNames, true)) {
+        if (in_array('.SECONDEXPANSION', $rule->targetNames, strict: true)) {
             $this->secondary = true;
         }
         if ($rule->targetNames === []) {
@@ -321,8 +321,8 @@ final class RuleDefinitions
             if (!str_starts_with($name, '%')) {
                 continue;
             }
-            $suffix = substr($name, 1);
-            if ($suffix !== '' && !in_array($suffix, $this->suffixes, true)) {
+            $suffix = substr($name, offset: 1);
+            if ($suffix !== '' && !in_array($suffix, $this->suffixes, strict: true)) {
                 return false;
             }
         }
@@ -345,7 +345,7 @@ final class RuleDefinitions
                     $rule->prerequisites,
                     $rule->recipe,
                     $rule->doubleColon,
-                    substr($name, 0, -strlen($suffix)),
+                    substr($name, offset: 0, length: -strlen($suffix)),
                     $rule->group,
                 );
             }
@@ -381,7 +381,7 @@ final class RuleDefinitions
                 continue;
             }
             $destination = substr($target->name, strlen($source));
-            if ($destination === '' || in_array($destination, $this->suffixes, true)) {
+            if ($destination === '' || in_array($destination, $this->suffixes, strict: true)) {
                 if ($rule->prerequisites->sequence !== []) {
                     if (isset($this->targets['.POSIX'])) {
                         return null;

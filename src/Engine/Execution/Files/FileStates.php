@@ -141,10 +141,10 @@ final readonly class FileStates
 
     private function matches(string $file, string $name): bool
     {
-        $file = preg_replace('~^(?:\./)+~', '', $file);
+        $file = preg_replace('~^(?:\./)+~', replacement: '', subject: $file);
         return (
-            $file === preg_replace('~^(?:\./)+~', '', $name)
-            || $file === preg_replace('~^(?:\./)+~', '', $this->path($name))
+            $file === preg_replace('~^(?:\./)+~', replacement: '', subject: $name)
+            || $file === preg_replace('~^(?:\./)+~', replacement: '', subject: $this->path($name))
         );
     }
 }

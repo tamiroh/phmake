@@ -38,11 +38,14 @@ final class Shell implements ShellInterface
     private static function withoutPipeJobserver(array $environment): array
     {
         if (isset($environment['MAKEFLAGS']) && $environment['MAKEFLAGS'] !== false) {
-            $parts = explode(' -- ', $environment['MAKEFLAGS'], 2);
+            $parts = explode(' -- ', $environment['MAKEFLAGS'], limit: 2);
             $environment['MAKEFLAGS'] =
                 (
-                    preg_replace('/(^| )--jobserver-auth=[0-9]+,[0-9]+(?= |$)/', '$1--jobserver-auth=-2,-2', $parts[0])
-                    ?? $parts[0]
+                    preg_replace(
+                        '/(^| )--jobserver-auth=[0-9]+,[0-9]+(?= |$)/',
+                        replacement: '$1--jobserver-auth=-2,-2',
+                        subject: $parts[0],
+                    ) ?? $parts[0]
                 ) . (isset($parts[1]) ? ' -- ' . $parts[1] : '');
         }
         return $environment;
@@ -68,7 +71,7 @@ final class Shell implements ShellInterface
         }
         return CapturedProcess::run($invocation->launch(), $environment, function (string $buffer): void {
             if ($this->output !== null) {
-                $this->output->buffer->write($buffer, true);
+                $this->output->buffer->write($buffer, error: true);
             } else {
                 fwrite(STDERR, $buffer);
             }
@@ -98,8 +101,8 @@ final class Shell implements ShellInterface
                 DebugTrace::write(
                     $this->reporting,
                     $this->output,
-                    'j',
-                    $exitCode === null
+                    level: 'j',
+                    message: $exitCode === null
                         ? "Putting child PID {$pid} on the chain."
                         : 'Reaping ' . ($exitCode === 0 ? 'winning' : 'losing') . " child PID {$pid}",
                 );

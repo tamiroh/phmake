@@ -54,7 +54,7 @@ final class SearchPaths
         if ($words === []) {
             $this->selective = [];
         } elseif (isset($words[1])) {
-            $this->selective[] = [$words[0], self::directories(implode(' ', array_slice($words, 1)))];
+            $this->selective[] = [$words[0], self::directories(implode(' ', array_slice($words, offset: 1)))];
         } else {
             $this->selective = array_values(array_filter(
                 $this->selective,
@@ -84,7 +84,7 @@ final class SearchPaths
                 $expander->output?->writeWarning(".LIBPATTERNS element '{$pattern}' is not a pattern");
                 continue;
             }
-            $names[] = new Pattern($pattern)->substitute(substr($name, 2));
+            $names[] = new Pattern($pattern)->substitute(substr($name, offset: 2));
         }
         foreach ($names as $library) {
             if ($filesystem->exists($library)) {
@@ -108,7 +108,7 @@ final class SearchPaths
     public function retain(string $path): bool
     {
         foreach ($this->retained as $directory) {
-            if (rtrim($directory, '/') === dirname($path)) {
+            if (rtrim($directory, characters: '/') === dirname($path)) {
                 return true;
             }
         }
@@ -129,7 +129,7 @@ final class SearchPaths
                     if (str_starts_with($name, '/') || new Pattern($pattern)->match($name) === null) {
                         continue;
                     }
-                    $path = rtrim($directory, '/') . '/' . $name;
+                    $path = rtrim($directory, characters: '/') . '/' . $name;
                     if ($filesystem->exists($path) || isset($targets[$path])) {
                         return $path;
                     }

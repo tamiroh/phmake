@@ -115,7 +115,7 @@ final readonly class Evaluator
         $variables = &$context->variables;
         foreach ($this->defaults as $variable) {
             $variables[$variable->name] = $variable;
-            if (in_array($variable->origin, ['environment', 'environment override'], true)) {
+            if (in_array($variable->origin, ['environment', 'environment override'], strict: true)) {
                 $context->environment->inherited[$variable->name] = $variable->expression;
             }
         }
@@ -124,7 +124,7 @@ final readonly class Evaluator
         }
         $inherited = ['MAKEFLAGS', 'MAKEFILES'];
         foreach ($variables as $variable) {
-            if (in_array($variable->origin, ['environment', 'environment override'], true)) {
+            if (in_array($variable->origin, ['environment', 'environment override'], strict: true)) {
                 $inherited[] = $variable->name;
             }
         }
@@ -153,7 +153,16 @@ final readonly class Evaluator
             'default',
         );
         foreach ($this->sources->evaluations as $text) {
-            $this->readRules($text, $definitions, $variables, [], $exports, [], $scope, '<command-line>');
+            $this->readRules(
+                $text,
+                $definitions,
+                $variables,
+                [],
+                $exports,
+                [],
+                $scope,
+                evaluationSource: '<command-line>',
+            );
         }
         foreach (self::words($scope->variable('MAKEFILES') === null ? '' : $scope->expand('$(MAKEFILES)')) as $path) {
             $this->readFile(
@@ -173,7 +182,7 @@ final readonly class Evaluator
         }
         // GNU make rereads its environment flags after reading all makefiles.
         if ($scope->variable('GNUMAKEFLAGS') === null) {
-            UndefinedVariable::warn($scope, 'GNUMAKEFLAGS');
+            UndefinedVariable::warn($scope, name: 'GNUMAKEFLAGS');
         }
         $this->configuration?->finishReading($variables, $scope);
         $context->reading->initial = false;
@@ -389,7 +398,7 @@ final readonly class Evaluator
             }
             if ($node instanceof Ast\AssignmentNode) {
                 if ($node->exportAll) {
-                    $exports->set([], true);
+                    $exports->set([], export: true);
                 }
                 $this->assignments->store(
                     Assignments::assignment($node)->resolveName($expander),
@@ -428,7 +437,7 @@ final readonly class Evaluator
             }
             if ($node instanceof Ast\TargetAssignmentNode) {
                 if ($node->exportAll) {
-                    $exports->set([], true);
+                    $exports->set([], export: true);
                 }
                 [$origin, $private, $export] = Assignments::modifiers($node->assignment->modifiers);
                 $assignment = Assignments::assignment($node->assignment);
@@ -447,7 +456,7 @@ final readonly class Evaluator
             }
             if ($node instanceof Ast\RuleNode || $node instanceof Ast\ExpressionNode) {
                 if ($node instanceof Ast\RuleNode && $node->exportAll) {
-                    $exports->set([], true);
+                    $exports->set([], export: true);
                 }
                 $rule = $this->rule($node, $definitions, $scope, $expander, $evaluationSource);
                 continue;
@@ -508,7 +517,7 @@ final readonly class Evaluator
         ?string $evaluationSource,
     ): ?Rule {
         $expanded = $expander->expand($node->header);
-        if (trim($expanded, " \t\n\r\0\x0B\f") === '' && $node->inlineRecipe === null) {
+        if (trim($expanded, characters: " \t\n\r\0\x0B\f") === '' && $node->inlineRecipe === null) {
             return null;
         }
         if (!$scope->context->reading->initial) {
@@ -518,7 +527,7 @@ final readonly class Evaluator
                 contextual: !$scope->secondary,
             );
         }
-        if (DependencySyntax::delimiter($expanded, ':') === null) {
+        if (DependencySyntax::delimiter($expanded, delimiter: ':') === null) {
             if (
                 ($scope->context->variables['.RECIPEPREFIX']->expression[0] ?? "\t") === "\t"
                 && str_starts_with($node->raw, '        ')
@@ -536,7 +545,7 @@ final readonly class Evaluator
             }
         }
         $rule = RuleSyntax::parse($expanded, $node->span->startLine, $expander->source, $this->sources->filesystem);
-        if (in_array('.POSIX', $rule->targetNames, true)) {
+        if (in_array('.POSIX', $rule->targetNames, strict: true)) {
             $scope->context->reading->posix = true;
             foreach (Builtins::posixVariables() as $variable) {
                 if (($scope->context->variables[$variable->name]->origin ?? 'default') === 'default') {

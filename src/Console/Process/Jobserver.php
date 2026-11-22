@@ -123,7 +123,7 @@ final class Jobserver implements JobSlots
         if ($this->reader === null) {
             return null;
         }
-        $slot = fread($this->reader, 1);
+        $slot = fread($this->reader, length: 1);
         if ($slot === false || $slot === '') {
             return null;
         }
@@ -168,16 +168,16 @@ final class Jobserver implements JobSlots
     private function adopt(string $auth, Output $output): bool
     {
         if (str_starts_with($auth, 'fifo:')) {
-            $path = substr($auth, 5);
-            $reader = @fopen($path, 'r+');
+            $path = substr($auth, offset: 5);
+            $reader = @fopen($path, mode: 'r+');
             if (!is_resource($reader)) {
                 $output->writeWarning("cannot open jobserver {$path}: No such file or directory", $output->prefix);
                 return false;
             }
             $this->reader = $this->writer = $reader;
         } elseif (preg_match('/^([0-9]+),([0-9]+)$/D', $auth, $matches) === 1) {
-            $reader = @fopen('php://fd/' . $matches[1], 'r');
-            $writer = @fopen('php://fd/' . $matches[2], 'w');
+            $reader = @fopen('php://fd/' . $matches[1], mode: 'r');
+            $writer = @fopen('php://fd/' . $matches[2], mode: 'w');
             if (!is_resource($reader) || !is_resource($writer)) {
                 if (is_resource($reader)) {
                     fclose($reader);
@@ -193,7 +193,7 @@ final class Jobserver implements JobSlots
         } else {
             return false;
         }
-        stream_set_blocking($this->reader, false);
+        stream_set_blocking($this->reader, enable: false);
         return true;
     }
 
@@ -211,7 +211,7 @@ final class Jobserver implements JobSlots
         } catch (RandomException $error) {
             throw new MakefileErrorException($error->getMessage());
         }
-        if (!@mkdir($this->directory, 0o700)) {
+        if (!@mkdir($this->directory, permissions: 0o700)) {
             $output->writeWarning('cannot create jobserver: No such file or directory', $output->prefix);
             $this->directory = null;
             $this->pipe();
@@ -222,12 +222,12 @@ final class Jobserver implements JobSlots
             $this->pipe();
             return;
         }
-        $stream = fopen($path, 'r+');
+        $stream = fopen($path, mode: 'r+');
         if (!is_resource($stream)) {
             throw new MakefileErrorException('Cannot open jobserver FIFO');
         }
         $this->reader = $this->writer = $stream;
-        stream_set_blocking($stream, false);
+        stream_set_blocking($stream, enable: false);
         $this->options->auth = 'fifo:' . $path;
     }
 
@@ -236,12 +236,12 @@ final class Jobserver implements JobSlots
      */
     private function pipe(): void
     {
-        $pair = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, 0);
+        $pair = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, protocol: 0);
         if ($pair === false || !isset($pair[0], $pair[1])) {
             throw new MakefileErrorException('Cannot create jobserver pipe');
         }
         [$this->reader, $this->writer] = $pair;
-        stream_set_blocking($this->reader, false);
+        stream_set_blocking($this->reader, enable: false);
         $this->options->auth = '3,4';
     }
 

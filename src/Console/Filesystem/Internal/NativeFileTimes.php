@@ -27,6 +27,8 @@ use const PHP_OS_FAMILY;
  */
 final class NativeFileTimes
 {
+    private const int STATX_MTIME = 0x40;
+
     private static self|false|null $instance = false;
 
     /**
@@ -50,8 +52,8 @@ final class NativeFileTimes
         if (
             !extension_loaded('FFI')
             || PHP_INT_SIZE !== 8
-            || !in_array(php_uname('m'), ['x86_64', 'amd64', 'arm64', 'aarch64'], true)
-            || !in_array(PHP_OS_FAMILY, ['Linux', 'Darwin'], true)
+            || !in_array(php_uname('m'), ['x86_64', 'amd64', 'arm64', 'aarch64'], strict: true)
+            || !in_array(PHP_OS_FAMILY, ['Linux', 'Darwin'], strict: true)
         ) {
             return null;
         }
@@ -119,16 +121,16 @@ final class NativeFileTimes
         $call = $follow ? $this->follow : $this->link;
         if ($this->linux) {
             // AT_FDCWD, AT_NO_AUTOMOUNT | AT_SYMLINK_NOFOLLOW, STATX_MTIME.
-            if ($call(-100, $path, 0x800 | ($follow ? 0 : 0x100), 0x40, $this->buffer) !== 0) {
+            if ($call(-100, $path, 0x800 | ($follow ? 0 : 0x100), self::STATX_MTIME, $this->buffer) !== 0) {
                 return false;
             }
         } elseif ($call($path, $this->buffer) !== 0) {
             return false;
         }
-        $bytes = FFI::string($this->bytes, 256);
+        $bytes = FFI::string($this->bytes, size: 256);
         if ($this->linux) {
             $mask = unpack('Lmask', $bytes);
-            if ($mask === false || !is_int($mask['mask'] ?? null) || ($mask['mask'] & 0x40) === 0) {
+            if ($mask === false || !is_int($mask['mask'] ?? null) || ($mask['mask'] & self::STATX_MTIME) === 0) {
                 return false;
             }
         }

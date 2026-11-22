@@ -59,7 +59,7 @@ final class Filesystem implements FilesystemInterface
     public function isFile(string $path): bool
     {
         $entries = scandir(dirname($path));
-        return $entries !== false && in_array(basename($path), $entries, true) && is_file($path);
+        return $entries !== false && in_array(basename($path), $entries, strict: true) && is_file($path);
     }
 
     #[Override]
@@ -115,8 +115,8 @@ final class Filesystem implements FilesystemInterface
                     'text' => null,
                     'error' => preg_replace(
                         '/^.*Failed to open stream: /',
-                        '',
-                        error_get_last()['message'] ?? 'I/O error',
+                        replacement: '',
+                        subject: error_get_last()['message'] ?? 'I/O error',
                     ),
                     'modifiedAt' => $modifiedAt,
                 ]
@@ -179,8 +179,11 @@ final class Filesystem implements FilesystemInterface
         return new MakefileErrorException(
             $operation . ': ' . $path . ': '
                 . ucfirst(
-                    preg_replace('/^.*Failed to open stream: /', '', error_get_last()['message'] ?? 'I/O error')
-                    ?? 'I/O error',
+                    preg_replace(
+                        '/^.*Failed to open stream: /',
+                        replacement: '',
+                        subject: error_get_last()['message'] ?? 'I/O error',
+                    ) ?? 'I/O error',
                 ),
         );
     }

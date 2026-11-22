@@ -73,7 +73,7 @@ final class BuildState
     public function failure(MakefileErrorException|CommandFailedException $error, Output $output): UpdateResult
     {
         if (!$this->remaking) {
-            Diagnostics::report($error, $output, false);
+            Diagnostics::report($error, $output, stop: false);
         }
         return new UpdateResult(failure: $error);
     }

@@ -124,8 +124,8 @@ final class Functions
                 str_starts_with($path, '/') ? $path : $files->workingDirectory() . '/' . $path,
             ) as $part) {
                 if ($part === '..') {
-                    $slash = strrpos($normalized, '/');
-                    $normalized = $slash === false ? '' : substr($normalized, 0, $slash);
+                    $slash = strrpos($normalized, needle: '/');
+                    $normalized = $slash === false ? '' : substr($normalized, offset: 0, length: $slash);
                 } elseif ($part !== '' && $part !== '.') {
                     $normalized .= '/' . $part;
                 }
@@ -238,7 +238,7 @@ final class Functions
         $result = [];
         foreach (self::splitWords($text) as $word) {
             $dot = self::suffixPosition($word);
-            $result[] = $dot === null ? $word : substr($word, 0, $dot);
+            $result[] = $dot === null ? $word : substr($word, offset: 0, length: $dot);
         }
         return implode(' ', $result);
     }
@@ -267,7 +267,12 @@ final class Functions
     {
         $name = trim($arguments[0] ?? '');
         $arguments[0] = $name;
-        $result = $expander->invokeFunction($name, array_slice($arguments, 1), $expanding, true);
+        $result = $expander->invokeFunction(
+            $name,
+            array_slice($arguments, offset: 1),
+            $expanding,
+            argumentsExpanded: true,
+        );
         if ($result !== null) {
             return $result;
         }
@@ -314,8 +319,8 @@ final class Functions
             throw new MakefileErrorException("insufficient number of arguments to function 'dir'");
         }
         return implode(' ', array_map(static function (string $word): string {
-            $slash = strrpos($word, '/');
-            return $slash === false ? './' : substr($word, 0, $slash + 1);
+            $slash = strrpos($word, needle: '/');
+            return $slash === false ? './' : substr($word, offset: 0, length: $slash + 1);
         }, self::splitWords($text)));
     }
 
@@ -418,8 +423,8 @@ final class Functions
                 $contents = $read['text'] ?? '';
                 return (
                     str_ends_with($contents, "\r\n")
-                        ? substr($contents, 0, -2)
-                        : (str_ends_with($contents, "\n") ? substr($contents, 0, -1) : $contents)
+                        ? substr($contents, offset: 0, length: -2)
+                        : (str_ends_with($contents, "\n") ? substr($contents, offset: 0, length: -1) : $contents)
                 );
             }
             $files->write($path, $text === null ? '' : $text . (str_ends_with($text, "\n") ? '' : "\n"), $append);
@@ -450,7 +455,7 @@ final class Functions
         if ($patterns === null || $text === null) {
             throw new MakefileErrorException("insufficient number of arguments to function 'filter'");
         }
-        return self::filterWords($patterns, $text, false);
+        return self::filterWords($patterns, $text, exclude: false);
     }
 
     /**
@@ -474,7 +479,7 @@ final class Functions
         if ($patterns === null || $text === null) {
             throw new MakefileErrorException("insufficient number of arguments to function 'filter-out'");
         }
-        return self::filterWords($patterns, $text, true);
+        return self::filterWords($patterns, $text, exclude: true);
     }
 
     /**
@@ -698,8 +703,8 @@ final class Functions
         if (count($arguments) < 2) {
             throw new MakefileErrorException("insufficient number of arguments to function 'intcmp'", $source);
         }
-        $left = self::integer($expand($arguments[0]), 'first', $source);
-        $right = self::integer($expand($arguments[1]), 'second', $source);
+        $left = self::integer($expand($arguments[0]), position: 'first', source: $source);
+        $right = self::integer($expand($arguments[1]), position: 'second', source: $source);
         $leftNegative = str_starts_with($left, '-');
         $rightNegative = str_starts_with($right, '-');
         $comparison = $leftNegative !== $rightNegative
@@ -811,8 +816,8 @@ final class Functions
             if ($index === (count($names) - 1)) {
                 $value = $list;
             } else {
-                $length = strcspn($list, " \t\r\n\v\f");
-                $value = substr($list, 0, $length);
+                $length = strcspn($list, characters: " \t\r\n\v\f");
+                $value = substr($list, offset: 0, length: $length);
                 $list = substr($list, $length);
             }
             $variables[] = new Variable($name, $value, false, 'automatic');
@@ -842,7 +847,7 @@ final class Functions
             throw new MakefileErrorException("insufficient number of arguments to function 'notdir'");
         }
         return implode(' ', array_map(static function (string $word): string {
-            $slash = strrpos($word, '/');
+            $slash = strrpos($word, needle: '/');
             return $slash === false ? $word : substr($word, $slash + 1);
         }, self::splitWords($text)));
     }
@@ -1012,11 +1017,13 @@ final class Functions
             false,
             'override',
         );
-        $text = str_replace("\r\n", "\n", $result['output']);
+        $text = str_replace("\r\n", replace: "\n", subject: $result['output']);
         return str_replace(
             "\n",
-            ' ',
-            $trimNewlines ? rtrim($text, "\n") : (str_ends_with($text, "\n") ? substr($text, 0, -1) : $text),
+            replace: ' ',
+            subject: $trimNewlines
+                ? rtrim($text, characters: "\n")
+                : (str_ends_with($text, "\n") ? substr($text, offset: 0, length: -1) : $text),
         );
     }
 
@@ -1219,7 +1226,9 @@ final class Functions
         if ($position === null || $text === null) {
             throw new MakefileErrorException("insufficient number of arguments to function 'word'");
         }
-        return self::splitWords($text)[self::index($position, 'word', 'first', 1) - 1] ?? '';
+        return (
+            self::splitWords($text)[self::index($position, function: 'word', position: 'first', minimum: 1) - 1] ?? ''
+        );
     }
 
     /**
@@ -1243,8 +1252,8 @@ final class Functions
         if ($start === null || $end === null || $text === null) {
             throw new MakefileErrorException("insufficient number of arguments to function 'wordlist'");
         }
-        $first = self::index($start, 'wordlist', 'first', 1);
-        $last = self::index($end, 'wordlist', 'second', 0);
+        $first = self::index($start, function: 'wordlist', position: 'first', minimum: 1);
+        $last = self::index($end, function: 'wordlist', position: 'second', minimum: 0);
         return $last < $first ? '' : implode(' ', array_slice(self::splitWords($text), $first - 1, $last - $first + 1));
     }
 
@@ -1299,7 +1308,7 @@ final class Functions
                 . ($value === '' ? 'empty value' : "'{$value}'"),
             );
         }
-        $digits = ltrim(ltrim(trim($value), '+'), '0');
+        $digits = ltrim(ltrim(trim($value), characters: '+'), characters: '0');
         if (
             strlen($digits) > strlen((string) PHP_INT_MAX)
             || strlen($digits) === strlen((string) PHP_INT_MAX) && strcmp($digits, (string) PHP_INT_MAX) > 0
@@ -1330,7 +1339,7 @@ final class Functions
                 $source,
             );
         }
-        $digits = ltrim(ltrim($text, '+-'), '0');
+        $digits = ltrim(ltrim($text, characters: '+-'), characters: '0');
         return $digits === '' ? '0' : (str_starts_with($text, '-') ? '-' : '') . $digits;
     }
 
@@ -1350,8 +1359,8 @@ final class Functions
      */
     private static function suffixPosition(string $word): ?int
     {
-        $slash = strrpos($word, '/');
-        $dot = strrpos($word, '.');
+        $slash = strrpos($word, needle: '/');
+        $dot = strrpos($word, needle: '.');
         return $dot !== false && ($slash === false || $dot > $slash) ? $dot : null;
     }
 }

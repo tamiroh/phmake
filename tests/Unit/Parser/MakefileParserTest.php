@@ -141,7 +141,7 @@ final class MakefileParserTest extends TestCase
             MAKEFILE;
 
         // Act
-        $ast = MakefileParser::parse($source, 'sample.mk');
+        $ast = MakefileParser::parse($source, file: 'sample.mk');
 
         // Assert
         self::assertSame(<<<'TREE'

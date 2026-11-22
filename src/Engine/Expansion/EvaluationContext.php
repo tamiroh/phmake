@@ -66,7 +66,7 @@ final class EvaluationContext
         $this->reporting = new ReportingOptions();
         foreach ($variables as $variable) {
             $this->variables[$variable->name] = $variable;
-            if (in_array($variable->origin, ['environment', 'environment override'], true)) {
+            if (in_array($variable->origin, ['environment', 'environment override'], strict: true)) {
                 $this->environment->inherited[$variable->name] = $variable->expression;
             }
         }

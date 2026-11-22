@@ -52,7 +52,7 @@ final class CapturedProcess
                 unset($pipes[0]);
             }
             foreach ($pipes as $pipe) {
-                stream_set_blocking($pipe, false);
+                stream_set_blocking($pipe, enable: false);
             }
             $output = '';
             $stopped = false;
@@ -63,7 +63,7 @@ final class CapturedProcess
                     $stopped = true;
                 }
                 foreach ($pipes as $descriptor => $pipe) {
-                    $buffer = fread($pipe, 8192);
+                    $buffer = fread($pipe, length: 8192);
                     if ($buffer === false) {
                         throw new RuntimeException('Cannot read process output');
                     }
@@ -91,7 +91,7 @@ final class CapturedProcess
                 fclose($pipe);
             }
             if (proc_get_status($process)['running']) {
-                proc_terminate($process, 9);
+                proc_terminate($process, signal: 9);
             }
             proc_close($process);
         }

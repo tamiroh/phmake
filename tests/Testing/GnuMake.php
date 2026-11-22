@@ -53,7 +53,7 @@ final class GnuMake
 
     public static function requiredVersion(): string
     {
-        $version = file_get_contents(dirname(__DIR__, 2) . '/GNU_MAKE_VERSION');
+        $version = file_get_contents(dirname(__DIR__, levels: 2) . '/GNU_MAKE_VERSION');
         if ($version === false || trim($version) === '') {
             throw new RuntimeException('Cannot read GNU_MAKE_VERSION.');
         }
@@ -64,6 +64,6 @@ final class GnuMake
     {
         $process = new Process([self::executable(), '--version'], env: ['LC_ALL' => 'C']);
         $process->mustRun();
-        return version_compare(substr(explode("\n", $process->getOutput())[0], 9), $minimum, '>=');
+        return version_compare(substr(explode("\n", $process->getOutput())[0], offset: 9), $minimum, operator: '>=');
     }
 }

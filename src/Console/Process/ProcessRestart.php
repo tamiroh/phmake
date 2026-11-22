@@ -37,12 +37,12 @@ final class ProcessRestart
         $arguments[] = '--temp-stdin=' . $stdin;
         $program = RecursiveMake::program();
         $executable = $program[0];
-        $arguments = [...array_slice($program, 1), ...$arguments];
+        $arguments = [...array_slice($program, offset: 1), ...$arguments];
         DebugTrace::write(
             $configuration->execution->reporting,
             $output,
-            'b',
-            'Re-executing: ' . $executable . ' ' . implode(' ', $arguments),
+            level: 'b',
+            message: 'Re-executing: ' . $executable . ' ' . implode(' ', $arguments),
         );
         $output->buffer = new OutputBuffer(new ParallelOptions());
         putenv('MAKE_RESTARTS=' . ($output->directory === null ? '' : '-') . $restarts);

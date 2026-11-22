@@ -44,7 +44,10 @@ final class StreamOutput
     {
         return new OutputWriteException(
             'write error: '
-            . (preg_replace('/^.*errno=[0-9]+ /', '', error_get_last()['message'] ?? 'I/O error') ?? 'I/O error'),
+            . (
+                preg_replace('/^.*errno=[0-9]+ /', replacement: '', subject: error_get_last()['message'] ?? 'I/O error')
+                ?? 'I/O error'
+            ),
         );
     }
 }

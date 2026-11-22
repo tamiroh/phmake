@@ -35,7 +35,7 @@ final readonly class LintCommand
             }
             $file = $arguments[0] ?? $this->defaultFile();
             if (count($arguments) > 1 || str_starts_with($file, '-')) {
-                @fwrite(STDERR, "Usage: phmake --lint [FILE]\n");
+                @fwrite(STDERR, data: "Usage: phmake --lint [FILE]\n");
                 return 2;
             }
             $source = @file_get_contents($file);

@@ -13,6 +13,6 @@ final class FileName
 {
     public static function normalize(string $name): string
     {
-        return preg_replace('~^(?:\./)+(?=.)~', '', $name) ?? $name;
+        return preg_replace('~^(?:\./)+(?=.)~', replacement: '', subject: $name) ?? $name;
     }
 }

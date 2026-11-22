@@ -56,13 +56,17 @@ final class Exports
                         : null
                 )
                 ?? $this->directives[$variable->name]
-                ?? !in_array($variable->origin, ['default', 'automatic'], true)
+                ?? !in_array($variable->origin, ['default', 'automatic'], strict: true)
                     && (
-                        in_array($variable->origin, ['environment', 'environment override', 'command line'], true)
-                        || ($this->all ?? in_array($variable->name, $this->inherited, true))
+                        in_array(
+                            $variable->origin,
+                            ['environment', 'environment override', 'command line'],
+                            strict: true,
+                        )
+                        || ($this->all ?? in_array($variable->name, $this->inherited, strict: true))
                     );
             if (!$export) {
-                if (in_array($variable->name, $this->inherited, true)) {
+                if (in_array($variable->name, $this->inherited, strict: true)) {
                     $environment[$variable->name] = false;
                 }
                 continue;
@@ -73,14 +77,14 @@ final class Exports
                 || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $variable->name) === 1
             ) {
                 $environment[$variable->name] = $variable->name !== 'MAKEFLAGS'
-                && in_array($variable->origin, ['environment', 'environment override'], true)
+                && in_array($variable->origin, ['environment', 'environment override'], strict: true)
                     ? $variable->expression
                     : (
-                        ($binding = $expander->binding($variable->name, true)) === null
+                        ($binding = $expander->binding($variable->name, environment: true)) === null
                             ? ''
                             : $expander->expandBinding($binding)
                     );
-            } elseif (in_array($variable->name, $this->inherited, true)) {
+            } elseif (in_array($variable->name, $this->inherited, strict: true)) {
                 $environment[$variable->name] = false;
             }
         }

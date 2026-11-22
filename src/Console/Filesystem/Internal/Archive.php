@@ -34,34 +34,39 @@ final class Archive
      */
     public static function members(string $path): array
     {
-        $stream = @fopen($path, 'rb');
+        $stream = @fopen($path, mode: 'rb');
         if ($stream === false) {
             return [];
         }
         try {
-            if (fread($stream, 8) !== "!<arch>\n") {
+            if (fread($stream, length: 8) !== "!<arch>\n") {
                 return [];
             }
             $members = [];
             $names = '';
             while (!feof($stream)) {
                 $offset = ftell($stream);
-                $header = fread($stream, 60);
-                if ($offset === false || $header === false || strlen($header) !== 60 || substr($header, 58) !== "`\n") {
+                $header = fread($stream, length: 60);
+                if (
+                    $offset === false
+                    || $header === false
+                    || strlen($header) !== 60
+                    || substr($header, offset: 58) !== "`\n"
+                ) {
                     break;
                 }
-                $size = (int) trim(substr($header, 48, 10));
+                $size = (int) trim(substr($header, offset: 48, length: 10));
                 if ($size < 0) {
                     break;
                 }
-                $name = rtrim(substr($header, 0, 16));
+                $name = rtrim(substr($header, offset: 0, length: 16));
                 if ($name === '//') {
                     $names = $size === 0 ? '' : fread($stream, $size);
                     if ($names === false) {
                         break;
                     }
                 } elseif (str_starts_with($name, '#1/')) {
-                    $length = (int) substr($name, 3);
+                    $length = (int) substr($name, offset: 3);
                     if ($length <= 0 || $length > $size) {
                         break;
                     }
@@ -69,16 +74,16 @@ final class Archive
                     if ($name === false) {
                         break;
                     }
-                    $name = rtrim($name, "\0");
+                    $name = rtrim($name, characters: "\0");
                 } elseif (preg_match('~^/[0-9]+$~D', $name) === 1) {
-                    $name = explode("/\n", substr($names, (int) substr($name, 1)), 2)[0];
+                    $name = explode("/\n", substr($names, (int) substr($name, offset: 1)), limit: 2)[0];
                 } else {
-                    $name = rtrim($name, '/');
+                    $name = rtrim($name, characters: '/');
                 }
                 if ($name !== '' && $name !== '//') {
                     $members[$name] = [
                         'name' => $name,
-                        'time' => (int) trim(substr($header, 16, 12)),
+                        'time' => (int) trim(substr($header, offset: 16, length: 12)),
                         'offset' => $offset,
                     ];
                 }
@@ -95,8 +100,8 @@ final class Archive
     public static function modified(ArchiveMember $member): ?int
     {
         $time = self::members($member->archive)[basename($member->member)]['time'] ?? null;
-        $fileTime = FileTimes::modified($member->member, false);
-        return $time !== null && $fileTime !== null && intdiv($fileTime, 1_000_000_000) > $time ? null : $time;
+        $fileTime = FileTimes::modified($member->member, links: false);
+        return $time !== null && $fileTime !== null && intdiv($fileTime, num2: 1_000_000_000) > $time ? null : $time;
     }
 
     /**
@@ -104,11 +109,14 @@ final class Archive
      */
     public static function touch(ArchiveMember $member): void
     {
-        $stream = @fopen($member->archive, 'r+b');
+        $stream = @fopen($member->archive, mode: 'r+b');
         if ($stream === false) {
             $reason = ucfirst(
-                preg_replace('/^.*Failed to open stream: /', '', error_get_last()['message'] ?? 'I/O error')
-                ?? 'I/O error',
+                preg_replace(
+                    '/^.*Failed to open stream: /',
+                    replacement: '',
+                    subject: error_get_last()['message'] ?? 'I/O error',
+                ) ?? 'I/O error',
             );
             throw new MakefileErrorException(
                 file_exists($member->archive)
@@ -118,7 +126,7 @@ final class Archive
             );
         }
         try {
-            if (fread($stream, 8) !== "!<arch>\n") {
+            if (fread($stream, length: 8) !== "!<arch>\n") {
                 throw new MakefileErrorException(
                     "touch: '{$member->archive}' is not a valid archive",
                     contextual: false,
@@ -131,7 +139,10 @@ final class Archive
                     contextual: false,
                 );
             }
-            if (fseek($stream, $entry['offset'] + 16) !== 0 || fwrite($stream, str_pad((string) time(), 12)) !== 12) {
+            if (
+                fseek($stream, $entry['offset'] + 16) !== 0
+                || fwrite($stream, str_pad((string) time(), length: 12)) !== 12
+            ) {
                 throw new MakefileErrorException("touch: {$member->archive}: I/O error", contextual: false);
             }
         } finally {

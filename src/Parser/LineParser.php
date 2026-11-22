@@ -52,7 +52,7 @@ final readonly class LineParser
     public static function parse(Ast\SourceSpan $span, string $raw, string $line): Ast\Node
     {
         $text = self::removeComment($line);
-        if (trim($text, " \t\n\r\0\x0B\f") === '') {
+        if (trim($text, characters: " \t\n\r\0\x0B\f") === '') {
             return new Ast\TriviaNode($span, $raw);
         }
         $matches = [];
@@ -121,19 +121,19 @@ final readonly class LineParser
         if (preg_match('/^(-?load|vpath)(?:[ \t]+(.*)|$)/s', $text, $matches) === 1) {
             return new Ast\DirectiveNode($span, $raw, $matches[1], $matches[2] ?? '', $modifiers);
         }
-        $colon = self::delimiter($text, ':');
+        $colon = self::delimiter($text, delimiter: ':');
         if ($colon !== null) {
             $scopedText = substr($text, $colon + 1);
             [$value, $scopedModifiers] = self::modifiers($scopedText, scoped: true);
             $scoped = self::assignment($value);
             if ($scoped !== null) {
                 // Offsets refer to the original spelling, not the uncommented text.
-                $rawColon = self::delimiter($line, ':') ?? $colon;
+                $rawColon = self::delimiter($line, delimiter: ':') ?? $colon;
                 $assignmentSpan = self::tailSpan($span, $raw, $rawColon + 1);
                 return new Ast\TargetAssignmentNode(
                     $span,
                     $raw,
-                    substr($text, 0, $colon),
+                    substr($text, offset: 0, length: $colon),
                     new Ast\AssignmentNode(
                         $assignmentSpan,
                         substr($raw, $rawColon + 1),
@@ -152,7 +152,7 @@ final readonly class LineParser
             $offset = strlen($line) - strlen($recipe);
             $inline = new Ast\RecipeNode(self::tailSpan($span, $raw, $offset), substr($raw, $offset), $recipe);
         }
-        return self::delimiter($header, ':') === null
+        return self::delimiter($header, delimiter: ':') === null
             ? new Ast\ExpressionNode($span, $raw, $header, $inline)
             : new Ast\RuleNode($span, $raw, $header, $inline, $exportAll);
     }
@@ -180,7 +180,7 @@ final readonly class LineParser
                 $depth--;
             } elseif ($depth === 0) {
                 if (!$allowWhitespace && str_contains(" \t", $text[$index])) {
-                    $index += strspn($text, " \t", $index);
+                    $index += strspn($text, characters: " \t", offset: $index);
                     if (preg_match('/^(:::=|::=|:=|!=|\+=|\?=|=)/', substr($text, $index)) !== 1) {
                         return null;
                     }
@@ -192,7 +192,7 @@ final readonly class LineParser
                 ) {
                     /** @var array{non-falsy-string, ':::='|'::='|':='|'!='|'+='|'?='|'='} $matches */
                     return [
-                        trim(substr($text, 0, $index)),
+                        trim(substr($text, offset: 0, length: $index)),
                         $matches[1],
                         ltrim(substr($text, $index + strlen($matches[1]))),
                     ];
@@ -342,13 +342,13 @@ final readonly class LineParser
 
     private static function tailSpan(Ast\SourceSpan $span, string $raw, int $offset): Ast\SourceSpan
     {
-        $prefix = substr($raw, 0, $offset);
-        $newline = strrpos($prefix, "\n");
+        $prefix = substr($raw, offset: 0, length: $offset);
+        $newline = strrpos($prefix, needle: "\n");
         return new Ast\SourceSpan(
             $span->file,
             $span->startOffset + $offset,
             $span->endOffset,
-            $span->startLine + substr_count($prefix, "\n"),
+            $span->startLine + substr_count($prefix, needle: "\n"),
             $newline === false ? $span->startColumn + $offset : strlen($prefix) - $newline,
             $span->endLine,
             $span->endColumn,

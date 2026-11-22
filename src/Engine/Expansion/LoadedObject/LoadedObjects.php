@@ -44,7 +44,7 @@ final class LoadedObjects
             );
         }
         if ($function->maximum !== 0) {
-            $arguments = array_slice($arguments, 0, $function->maximum);
+            $arguments = array_slice($arguments, offset: 0, length: $function->maximum);
         }
         if ($function->expand && !$expanded) {
             foreach ($arguments as &$argument) {
@@ -73,13 +73,17 @@ final class LoadedObjects
             $name = $matches[1];
             $setup = $matches[2];
         }
-        $name = preg_replace('~^(?:\./)+~', '', $name) ?? $name;
+        $name = preg_replace('~^(?:\./)+~', replacement: '', subject: $name) ?? $name;
         if (isset($this->loaded[$name])) {
             return $this->loaded[$name];
         }
         $object = new LoadedObject(
             $name,
-            $setup ?? (preg_replace('/[^A-Za-z0-9_]/', '_', explode('.', basename($name), 2)[0]) ?? '') . '_gmk_setup',
+            $setup
+            ?? (
+                preg_replace('/[^A-Za-z0-9_]/', replacement: '_', subject: explode('.', basename($name), limit: 2)[0])
+                ?? ''
+            ) . '_gmk_setup',
             $expander->source,
             $optional,
         );

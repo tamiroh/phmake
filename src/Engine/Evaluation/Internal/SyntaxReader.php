@@ -66,14 +66,14 @@ final readonly class SyntaxReader
         $span = $this->lines->span();
         $raw = $this->lines->raw();
         if ($hasRule && str_starts_with($line, $prefix)) {
-            return new Ast\RecipeNode($span, $raw, substr($line, 1));
+            return new Ast\RecipeNode($span, $raw, substr($line, offset: 1));
         }
         $node = $this->lines->node;
         if (
             $node !== null
             && !$node instanceof Ast\RecipeNode
             && !$node instanceof Ast\RawNode
-            && rtrim($node->raw, "\r\n") === $line
+            && rtrim($node->raw, characters: "\r\n") === $line
         ) {
             return $node;
         }

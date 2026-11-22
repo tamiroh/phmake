@@ -128,7 +128,7 @@ final class Build
     ): array {
         $this->state->beforeRecipe = $beforeRecipe;
         $this->files->goals = $names;
-        DebugTrace::write($this->options->reporting, $this->output, 'b', 'Updating makefiles....');
+        DebugTrace::write($this->options->reporting, $this->output, level: 'b', message: 'Updating makefiles....');
         $this->state->remaking = true;
         $this->options->reporting->remaking = true;
         $errors = [];
@@ -159,8 +159,8 @@ final class Build
                 function () use ($name, $unreadable, $commandGoals): UpdateResult {
                     $executed = false;
                     $chain = clone $this->chain;
-                    $chain->commandGoal = in_array($name, $commandGoals, true);
-                    return $this->update($name, $executed, $chain, force: in_array($name, $unreadable, true));
+                    $chain->commandGoal = in_array($name, $commandGoals, strict: true);
+                    return $this->update($name, $executed, $chain, force: in_array($name, $unreadable, strict: true));
                 };
         }
         try {
@@ -208,7 +208,12 @@ final class Build
                     ),
                 ];
             }
-            DebugTrace::write($this->options->reporting, $this->output, 'b', 'Updating goal targets....');
+            DebugTrace::write(
+                $this->options->reporting,
+                $this->output,
+                level: 'b',
+                message: 'Updating goal targets....',
+            );
             $names = array_map(FileName::normalize(...), $names);
             $this->files->goals = $names;
             $names = DependencyOrder::arrange($names, $this->options->parallel, $this->makefile);
@@ -283,7 +288,7 @@ final class Build
                  */
                 function () use ($target, $rule, $modifiedAt, &$executed, $parent, $chain, &$entered): UpdateResult {
                     $entered = true;
-                    return $this->buildRule($target, $rule, $modifiedAt, $executed, $parent, $chain, true);
+                    return $this->buildRule($target, $rule, $modifiedAt, $executed, $parent, $chain, grouped: true);
                 },
             );
             // Waiting for another member only completes this member if the shared
@@ -346,9 +351,9 @@ final class Build
             DebugTrace::write(
                 $this->options->reporting,
                 $this->output,
-                'v',
-                "No need to remake target '{$target->name}'.",
-                count($chain->ancestors) - 1,
+                level: 'v',
+                message: "No need to remake target '{$target->name}'.",
+                depth: count($chain->ancestors) - 1,
             );
             return new UpdateResult();
         }
@@ -380,7 +385,7 @@ final class Build
                 }
                 if (
                     $result->changed
-                    && in_array($dependency, [...$prerequisites->normal, ...$prerequisites->extra], true)
+                    && in_array($dependency, [...$prerequisites->normal, ...$prerequisites->extra], strict: true)
                 ) {
                     $changed[] = $dependency;
                 }
@@ -389,9 +394,9 @@ final class Build
         DebugTrace::write(
             $this->options->reporting,
             $this->output,
-            'b',
-            "Must remake target '{$target->name}'.",
-            count($chain->ancestors) - 1,
+            level: 'b',
+            message: "Must remake target '{$target->name}'.",
+            depth: count($chain->ancestors) - 1,
         );
         foreach ($peers as $peer) {
             $this->files->prepare($peer);
@@ -434,9 +439,9 @@ final class Build
         DebugTrace::write(
             $this->options->reporting,
             $this->output,
-            'b',
-            "Successfully remade target file '{$target->name}'.",
-            count($chain->ancestors) - 1,
+            level: 'b',
+            message: "Successfully remade target file '{$target->name}'.",
+            depth: count($chain->ancestors) - 1,
         );
         $executed = $executed || $ran->active;
         $this->state->needsUpdate = $this->state->needsUpdate || $ran->needsUpdate;
@@ -550,7 +555,7 @@ final class Build
             ) {
                 $failure = $updated;
             }
-            if (in_array($dependency, [...$prerequisites->normal, ...$prerequisites->extra], true)) {
+            if (in_array($dependency, [...$prerequisites->normal, ...$prerequisites->extra], strict: true)) {
                 if (
                     $updated->changed
                     && (
@@ -721,17 +726,17 @@ final class Build
         DebugTrace::write(
             $this->options->reporting,
             $this->output,
-            'v',
-            "Considering target file '{$name}'.",
-            count($chain->ancestors),
+            level: 'v',
+            message: "Considering target file '{$name}'.",
+            depth: count($chain->ancestors),
         );
         if ($this->files->states->time($name) === null) {
             DebugTrace::write(
                 $this->options->reporting,
                 $this->output,
-                'b',
-                " File '{$name}' does not exist.",
-                count($chain->ancestors),
+                level: 'b',
+                message: " File '{$name}' does not exist.",
+                depth: count($chain->ancestors),
             );
         }
         $parent = $chain->scope;

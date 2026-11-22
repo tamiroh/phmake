@@ -43,7 +43,7 @@ final readonly class StdinMakefile
         }
         $directory = getenv('TMPDIR');
         $directory = $directory === false || $directory === '' ? sys_get_temp_dir() : $directory;
-        $path = is_writable($directory) ? @tempnam($directory, 'Gm') : false;
+        $path = is_writable($directory) ? @tempnam($directory, prefix: 'Gm') : false;
         if ($path === false) {
             throw new MakefileErrorException('cannot store makefile from stdin to a temporary file');
         }

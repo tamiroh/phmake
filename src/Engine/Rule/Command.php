@@ -33,6 +33,10 @@ final readonly class Command
      */
     public function prefix(): string
     {
-        return substr(ltrim($this->expression), 0, strspn(ltrim($this->expression), "@-+ \t"));
+        return substr(
+            ltrim($this->expression),
+            offset: 0,
+            length: strspn(ltrim($this->expression), characters: "@-+ \t"),
+        );
     }
 }

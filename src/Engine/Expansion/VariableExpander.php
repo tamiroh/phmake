@@ -82,7 +82,7 @@ final readonly class VariableExpander
         $length = strlen($expression);
         $index = 0;
         // Copy the text between references at once.
-        while ($index < $length && ($dollar = strpos($expression, '$', $index)) !== false) {
+        while ($index < $length && ($dollar = strpos($expression, needle: '$', offset: $index)) !== false) {
             $result .= substr($expression, $index, $dollar - $index);
             $index = $dollar + 1;
             $next = $expression[$index] ?? '';
@@ -112,7 +112,7 @@ final readonly class VariableExpander
     {
         $expanding ??= $this->expanding;
         $name = $binding->definition->name;
-        if ($binding->definition->recursive && in_array($name, $expanding, true)) {
+        if ($binding->definition->recursive && in_array($name, $expanding, strict: true)) {
             if ($this->context->environment->expandingShell) {
                 return $this->context->environment->inherited[$name] ?? '';
             }
@@ -150,8 +150,8 @@ final readonly class VariableExpander
         if ($maximum === null) {
             return $this->context->loadedObjects->invoke($name, $arguments, $this, $expanding, $argumentsExpanded);
         }
-        $arguments = array_slice($arguments, 0, $maximum);
-        if (in_array($name, ['if', 'and', 'or', 'intcmp'], true)) {
+        $arguments = array_slice($arguments, offset: 0, length: $maximum);
+        if (in_array($name, ['if', 'and', 'or', 'intcmp'], strict: true)) {
             $expand = $argumentsExpanded
                 ? static fn(string $argument): string => $argument
                 : /** @throws MakefileErrorException */
@@ -170,7 +170,7 @@ final readonly class VariableExpander
             };
         }
         if (!$argumentsExpanded) {
-            if (in_array($name, ['info', 'warning', 'error'], true)) {
+            if (in_array($name, ['info', 'warning', 'error'], strict: true)) {
                 $arguments[0] = ltrim($arguments[0] ?? '');
             }
             foreach ($arguments as &$argument) {

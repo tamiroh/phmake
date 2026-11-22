@@ -16,8 +16,8 @@ final readonly class DefineNode extends Node
     ) {
         parent::__construct(
             $header->span->through(($terminator ?? $body)->span),
-            '',
-            $terminator === null ? [$header, $body] : [$header, $body, $terminator],
+            raw: '',
+            children: $terminator === null ? [$header, $body] : [$header, $body, $terminator],
         );
     }
 }

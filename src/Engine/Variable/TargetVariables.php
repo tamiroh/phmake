@@ -58,14 +58,14 @@ final class TargetVariables
         $scope = $pattern ? $expander : $this->definitionScope($variables, $expander);
         $assignment = $assignment->resolveName($scope);
         if ($pattern) {
-            $evaluated = in_array($assignment->operator, [':=', '::='], true)
+            $evaluated = in_array($assignment->operator, [':=', '::='], strict: true)
                 ? $scope->expand($assignment->expression)
                 : null;
             $global = $expander->context->variables[$assignment->name] ?? null;
             if (
                 $origin !== 'override'
                 && $global !== null
-                && in_array($global->origin, ['command line', 'environment override'], true)
+                && in_array($global->origin, ['command line', 'environment override'], strict: true)
             ) {
                 $assignment = new Assignment($assignment->name, $assignment->operator, $global->expression);
                 $origin = $global->origin;
@@ -101,7 +101,7 @@ final class TargetVariables
         if (
             $value->origin !== 'override'
             && $global !== null
-            && in_array($global->origin, ['command line', 'environment override'], true)
+            && in_array($global->origin, ['command line', 'environment override'], strict: true)
         ) {
             // Command-line precedence replaces the value, not the local modifiers.
             $value = new Variable(
@@ -197,7 +197,7 @@ final class TargetVariables
             if (
                 $global !== null
                 && $variable->origin !== 'override'
-                && in_array($global->origin, ['command line', 'environment override'], true)
+                && in_array($global->origin, ['command line', 'environment override'], strict: true)
             ) {
                 $variables[$variable->name] = $global;
             }

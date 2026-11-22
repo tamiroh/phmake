@@ -25,7 +25,7 @@ final class AstTree
 {
     public static function dump(Node $node, string $indent = ''): string
     {
-        $separator = strrpos($node::class, '\\');
+        $separator = strrpos($node::class, needle: '\\');
         $line = $indent . ($separator === false ? $node::class : substr($node::class, $separator + 1));
         foreach (self::fields($node) as $name => $value) {
             $encoded = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

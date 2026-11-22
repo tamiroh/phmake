@@ -87,7 +87,7 @@ final class EngineTest extends TestCase
         ]);
         $shell = new FakeShell(execute: static function (string $command) use ($filesystem): int {
             if ($command === 'generate') {
-                $filesystem->write('generated.mk', "VALUE = generated\n", false);
+                $filesystem->write('generated.mk', text: "VALUE = generated\n", append: false);
             }
             return 0;
         });

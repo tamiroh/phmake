@@ -18,7 +18,7 @@ final readonly class ConditionalNode extends Node
         public array $branches,
         public ?ConditionalDirectiveNode $terminator,
     ) {
-        parent::__construct($span, '', $children);
+        parent::__construct($span, raw: '', children: $children);
     }
 
     /**

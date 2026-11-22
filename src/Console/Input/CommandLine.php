@@ -83,12 +83,12 @@ final class CommandLine implements Configuration
         $this->options = new InvocationOptions();
         $this->execution = new ExecutionOptions();
         // Inherited flags have command-line priority, but actual arguments are read last.
-        $this->readFlags($gnumakeflags, $defaults, 'command line');
+        $this->readFlags($gnumakeflags, $defaults, origin: 'command line');
         if ($this->execution->reporting->warnUndefinedVariables && !isset($defaults['MAKEFLAGS'])) {
             new Output()->writeWarning("warning: undefined variable 'MAKEFLAGS'");
         }
-        $this->readFlags($makeflags, $defaults, 'command line');
-        $this->readArguments($arguments, false, $defaults, 'command line');
+        $this->readFlags($makeflags, $defaults, origin: 'command line');
+        $this->readArguments($arguments, inherited: false, defaults: $defaults, origin: 'command line');
         $this->options->noBuiltinRules = $this->options->noBuiltinRules || $this->options->noBuiltinVariables;
     }
 
@@ -126,10 +126,10 @@ final class CommandLine implements Configuration
     public function finishReading(array &$variables, VariableExpander $expander): void
     {
         if (isset($variables['GNUMAKEFLAGS'])) {
-            $this->readFlags($expander->expand('$(GNUMAKEFLAGS)'), $variables, 'environment');
+            $this->readFlags($expander->expand('$(GNUMAKEFLAGS)'), $variables, origin: 'environment');
         }
         $variables['GNUMAKEFLAGS'] = new Variable('GNUMAKEFLAGS', '', false, 'override');
-        $this->updateMakeflags($variables, $expander, 'environment');
+        $this->updateMakeflags($variables, $expander, origin: 'environment');
         $this->options->afterReading($variables);
         MakeFlags::define($this->options, $this->execution, $variables, $expander->context->reading->posix);
     }
@@ -214,7 +214,9 @@ final class CommandLine implements Configuration
                 $this->readOption($argument, $arguments, $index, $inherited, $origin);
             } elseif (
                 !$this->assign(
-                    $inherited && $origin === 'command line' ? str_replace('$$', '$', $argument) : $argument,
+                    $inherited && $origin === 'command line'
+                        ? str_replace('$$', replace: '$', subject: $argument)
+                        : $argument,
                     $defaults,
                     $origin,
                 )
@@ -236,7 +238,7 @@ final class CommandLine implements Configuration
         if (isset($arguments[0]) && !str_starts_with($arguments[0], '-') && !str_contains($arguments[0], '=')) {
             $arguments[0] = '-' . $arguments[0];
         }
-        $this->readArguments($arguments, true, $defaults, $origin);
+        $this->readArguments($arguments, inherited: true, defaults: $defaults, origin: $origin);
     }
 
     /**
@@ -275,7 +277,7 @@ final class CommandLine implements Configuration
             default => $argument,
         };
         if (str_starts_with($argument, '--temp-stdin=')) {
-            $this->input->temporaryStdin = substr($argument, 13);
+            $this->input->temporaryStdin = substr($argument, offset: 13);
             return;
         }
         if ($argument === '--warn-undefined-variables') {
@@ -291,46 +293,52 @@ final class CommandLine implements Configuration
             return;
         }
         if (str_starts_with($argument, '--debug=')) {
-            $this->execution->reporting->addDebugFlags(substr($argument, 8));
+            $this->execution->reporting->addDebugFlags(substr($argument, offset: 8));
             return;
         }
         if ($argument === '--shuffle' || str_starts_with($argument, '--shuffle=')) {
-            $shuffle = $argument === '--shuffle' ? 'random' : substr($argument, 10);
+            $shuffle = $argument === '--shuffle' ? 'random' : substr($argument, offset: 10);
             if ($shuffle === 'random') {
                 try {
-                    $shuffle = (string) random_int(0, 2_147_483_647);
+                    $shuffle = (string) random_int(0, max: 2_147_483_647);
                 } catch (RandomException $error) {
                     throw new MakefileErrorException($error->getMessage());
                 }
             }
-            if (!in_array($shuffle, ['none', 'identity', 'reverse'], true) && !ctype_digit($shuffle)) {
+            if (!in_array($shuffle, ['none', 'identity', 'reverse'], strict: true) && !ctype_digit($shuffle)) {
                 throw new MakefileErrorException("invalid shuffle mode: '{$shuffle}'");
             }
-            $this->execution->parallel->shuffle = in_array($shuffle, ['none', 'identity'], true) ? null : $shuffle;
+            $this->execution->parallel->shuffle = in_array($shuffle, ['none', 'identity'], strict: true)
+                ? null
+                : $shuffle;
             return;
         }
         if (str_starts_with($argument, '--sync-mutex=')) {
-            $this->execution->parallel->mutex = substr($argument, 13);
+            $this->execution->parallel->mutex = substr($argument, offset: 13);
             return;
         }
         if (str_starts_with($argument, '--jobserver-auth=')) {
-            $this->execution->parallel->auth = substr($argument, 17);
+            $this->execution->parallel->auth = substr($argument, offset: 17);
             return;
         }
         if (str_starts_with($argument, '--jobserver-style=')) {
-            $style = substr($argument, 18);
-            if (!in_array($style, ['fifo', 'pipe'], true)) {
+            $style = substr($argument, offset: 18);
+            if (!in_array($style, ['fifo', 'pipe'], strict: true)) {
                 throw new MakefileErrorException("unknown jobserver auth style '{$style}'");
             }
             $this->execution->parallel->style = $style;
             return;
         }
         if ($argument === '--no-print-directory') {
-            $this->options->switches->set('printDirectory', false, $origin);
+            $this->options->switches->set('printDirectory', value: false, origin: $origin);
             return;
         }
         if ($argument === '--no-silent' || $argument === '--no-quiet') {
-            $this->execution->reporting->silent = $this->options->switches->set('silent', false, $origin);
+            $this->execution->reporting->silent = $this->options->switches->set(
+                'silent',
+                value: false,
+                origin: $origin,
+            );
             return;
         }
         foreach ([
@@ -364,7 +372,7 @@ final class CommandLine implements Configuration
                 case 'O':
                     $sync = substr($argument, $offset + 1);
                     $sync = $sync === '' ? 'target' : $sync;
-                    if (!in_array($sync, ['none', 'line', 'target', 'recurse'], true)) {
+                    if (!in_array($sync, ['none', 'line', 'target', 'recurse'], strict: true)) {
                         throw new MakefileErrorException("unknown output-sync type '{$sync}'");
                     }
                     $this->execution->parallel->sync = $sync;
@@ -424,16 +432,28 @@ final class CommandLine implements Configuration
                     $this->execution->alwaysMake = true;
                     break;
                 case 'k':
-                    $this->execution->keepGoing = $this->options->switches->set('keepGoing', true, $origin);
+                    $this->execution->keepGoing = $this->options->switches->set(
+                        'keepGoing',
+                        value: true,
+                        origin: $origin,
+                    );
                     break;
                 case 'S':
-                    $this->execution->keepGoing = $this->options->switches->set('keepGoing', false, $origin);
+                    $this->execution->keepGoing = $this->options->switches->set(
+                        'keepGoing',
+                        value: false,
+                        origin: $origin,
+                    );
                     break;
                 case 'i':
                     $this->execution->ignoreErrors = true;
                     break;
                 case 's':
-                    $this->execution->reporting->silent = $this->options->switches->set('silent', true, $origin);
+                    $this->execution->reporting->silent = $this->options->switches->set(
+                        'silent',
+                        value: true,
+                        origin: $origin,
+                    );
                     break;
                 case 'v':
                     $this->version = true;
@@ -448,7 +468,7 @@ final class CommandLine implements Configuration
                     $this->options->environmentOverrides = true;
                     break;
                 case 'w':
-                    $this->options->switches->set('printDirectory', true, $origin);
+                    $this->options->switches->set('printDirectory', value: true, origin: $origin);
                     break;
                 case 'f':
                 case 'C':
@@ -469,12 +489,12 @@ final class CommandLine implements Configuration
                     if ($option === 'I') {
                         if ($path === '-') {
                             $this->options->includes = ['-'];
-                        } elseif (!in_array($path, $this->options->includes, true)) {
+                        } elseif (!in_array($path, $this->options->includes, strict: true)) {
                             $this->options->includes[] = $path;
                         }
                     } elseif ($option === 'E') {
-                        $path = $inherited ? str_replace('$$', '$', $path) : $path;
-                        if (!$inherited || !in_array($path, $this->options->evaluations, true)) {
+                        $path = $inherited ? str_replace('$$', replace: '$', subject: $path) : $path;
+                        if (!$inherited || !in_array($path, $this->options->evaluations, strict: true)) {
                             $this->options->evaluations[] = $path;
                         }
                     } elseif (!$inherited) {
@@ -483,7 +503,7 @@ final class CommandLine implements Configuration
                         } elseif ($option === 'o') {
                             $this->execution->files->oldFiles[] = $path;
                         } elseif ($option === 'f') {
-                            if ($path === '-' && in_array('-', $this->input->makefiles, true)) {
+                            if ($path === '-' && in_array('-', $this->input->makefiles, strict: true)) {
                                 throw new MakefileErrorException('Makefile from standard input specified twice');
                             }
                             $this->input->makefiles[] = $path;

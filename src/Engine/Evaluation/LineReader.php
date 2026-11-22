@@ -65,7 +65,7 @@ final class LineReader
         foreach ($original as $index => $line) {
             $offsets[] = $offset;
             $terminated = $index < (count($original) - 1);
-            $lines[] = $terminated && str_ends_with($line, "\r") ? substr($line, 0, -1) : $line;
+            $lines[] = $terminated && str_ends_with($line, "\r") ? substr($line, offset: 0, length: -1) : $line;
             $offset += strlen($line) + ($terminated ? 1 : 0);
         }
         $this->lines = $lines;
@@ -100,7 +100,7 @@ final class LineReader
         foreach (self::leaves($source) as $node) {
             $raw = $node->raw;
             if ($first && str_starts_with($raw, "\xEF\xBB\xBF")) {
-                $raw = substr($raw, 3);
+                $raw = substr($raw, offset: 3);
                 $offset = 3;
             }
             $first = false;
@@ -109,7 +109,7 @@ final class LineReader
             }
             $index = count($lines);
             // Only complete single-line leaves may bypass contextual syntax parsing.
-            if ($pending === '' && !str_contains(rtrim($raw, "\n"), "\n")) {
+            if ($pending === '' && !str_contains(rtrim($raw, characters: "\n"), "\n")) {
                 $nodes[$index] = $node;
             } else {
                 unset($nodes[$index]);
@@ -152,7 +152,10 @@ final class LineReader
             if ($recipe) {
                 $line .= "\n" . (str_starts_with($next, $recipePrefix) ? substr($next, offset: 1) : $next);
             } else {
-                $line = ($posix ? substr($line, 0, -1) : rtrim(substr($line, 0, -1))) . ' ' . ltrim($next);
+                $line =
+                    ($posix ? substr($line, offset: 0, length: -1) : rtrim(substr($line, offset: 0, length: -1)))
+                    . ' '
+                    . ltrim($next);
                 $recipe = !$definition && str_contains($next, ';') && $this->isRecipe($line, $recipePrefix, $hasRule);
             }
         }
@@ -196,7 +199,11 @@ final class LineReader
         }
         $hasColon = false;
         $length = strlen($line);
-        for ($index = strcspn($line, '\\#:;'); $index < $length; $index += 1 + strcspn($line, '\\#:;', $index + 1)) {
+        for (
+            $index = strcspn($line, characters: '\\#:;');
+            $index < $length;
+            $index += 1 + strcspn($line, characters: '\\#:;', offset: $index + 1)
+        ) {
             if ($line[$index] === '\\') {
                 $index++;
             } elseif ($line[$index] === '#') {

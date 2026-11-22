@@ -46,7 +46,7 @@ final readonly class RuleNode extends Node
     public function syntaxChildren(): array
     {
         // The first source child is the raw header already represented by this node.
-        $body = array_slice($this->children, 1);
+        $body = array_slice($this->children, offset: 1);
         return $this->inlineRecipe === null ? $body : [$this->inlineRecipe, ...$body];
     }
 }

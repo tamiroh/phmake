@@ -73,7 +73,11 @@ final class ExpansionSyntax
             } elseif (--$depth === 0) {
                 $reference = substr($expression, $start, $index - $start);
                 return str_contains($reference, "\\\n")
-                    ? preg_replace('/[ \t]*' . preg_quote("\\\n", '/') . '[ \t]*/', ' ', $reference) ?? $reference
+                    ? preg_replace(
+                        '/[ \t]*' . preg_quote("\\\n", delimiter: '/') . '[ \t]*/',
+                        replacement: ' ',
+                        subject: $reference,
+                    ) ?? $reference
                     : $reference;
             }
         }

@@ -37,10 +37,15 @@ final class RecursiveMakeTest extends TestCase
             'VALUE=1 ' . self::make(),
             'make all',
         ] as $command) {
-            self::assertNull(RecursiveMake::parse($command, [], '/bin/sh', '-c'), $command);
+            self::assertNull(RecursiveMake::parse($command, [], shell: '/bin/sh', flags: '-c'), $command);
         }
-        self::assertNull(RecursiveMake::parse(self::make(), [], '/bin/bash', '-c'));
-        self::assertNull(RecursiveMake::parse('cd src && ' . self::make(), ['CDPATH' => '/tmp'], '/bin/sh', '-c'));
+        self::assertNull(RecursiveMake::parse(self::make(), [], shell: '/bin/bash', flags: '-c'));
+        self::assertNull(RecursiveMake::parse(
+            'cd src && ' . self::make(),
+            ['CDPATH' => '/tmp'],
+            shell: '/bin/sh',
+            flags: '-c',
+        ));
     }
 
     #[Test]
@@ -51,8 +56,8 @@ final class RecursiveMakeTest extends TestCase
             RecursiveMake::parse(
                 self::make() . ' all SYSCFLAGS="-DLUA_USE_LINUX" SYSLIBS="-Wl,-E -ldl" it\\\'s "a\\\\b"',
                 [],
-                '/bin/sh',
-                '-c',
+                shell: '/bin/sh',
+                flags: '-c',
             ),
         );
     }
@@ -62,7 +67,7 @@ final class RecursiveMakeTest extends TestCase
     {
         self::assertSame(
             ['src', ['linux']],
-            RecursiveMake::parse('cd src && ' . self::make() . ' linux', [], '/bin/sh', '-ec'),
+            RecursiveMake::parse('cd src && ' . self::make() . ' linux', [], shell: '/bin/sh', flags: '-ec'),
         );
     }
 }

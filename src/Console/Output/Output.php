@@ -90,6 +90,6 @@ final class Output implements RecipeOutput
     #[Override]
     public function writeWarning(string $message, ?string $source = null): void
     {
-        $this->buffer->write(($source ?? $this->prefix) . ": {$message}" . PHP_EOL, true);
+        $this->buffer->write(($source ?? $this->prefix) . ": {$message}" . PHP_EOL, error: true);
     }
 }

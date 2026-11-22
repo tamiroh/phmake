@@ -29,7 +29,7 @@ final readonly class Pattern
     {
         $prefix = '';
         $offset = 0;
-        while (($percent = strpos($expression, '%', $offset)) !== false) {
+        while (($percent = strpos($expression, needle: '%', offset: $offset)) !== false) {
             $slashStart = $percent;
             while ($slashStart > $offset && $expression[$slashStart - 1] === '\\') {
                 $slashStart--;
@@ -38,7 +38,11 @@ final readonly class Pattern
             $escaped = (strlen($slashes) % 2) !== 0;
             $prefix .=
                 substr($expression, $offset, $slashStart - $offset)
-                . str_replace('\\\\', '\\', $escaped ? substr($slashes, 0, -1) : $slashes);
+                . str_replace(
+                    '\\\\',
+                    replace: '\\',
+                    subject: $escaped ? substr($slashes, offset: 0, length: -1) : $slashes,
+                );
             if (!$escaped) {
                 return [$prefix, substr($expression, $percent + 1)];
             }

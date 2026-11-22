@@ -86,7 +86,7 @@ final class MakeFlags
                     : ' -O' . $execution->parallel->sync
             )
             . implode('', array_map(
-                static fn(string $levels): string => ' --debug=' . str_replace(' ', '\\ ', $levels),
+                static fn(string $levels): string => ' --debug=' . str_replace(' ', replace: '\\ ', subject: $levels),
                 $execution->reporting->debugLevels,
             ))
             . ($execution->parallel->auth === null ? '' : ' --jobserver-auth=' . $execution->parallel->auth)
@@ -106,7 +106,7 @@ final class MakeFlags
             return $flags === '' || str_starts_with($flags, '-') ? $flags : '-' . $flags;
         }
         $reference = $posix ? CommandVariables::INTERNAL_NAME : 'MAKEOVERRIDES';
-        $flags = str_replace('$', '$$', $flags);
+        $flags = str_replace('$', replace: '$$', subject: $flags);
         if (($variables[$reference]->expression ?? '') !== '') {
             $flags .= ' -- $(' . $reference . ')';
         }

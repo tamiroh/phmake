@@ -43,7 +43,7 @@ final readonly class MakefileParser
         $column = 1;
         $length = strlen($source);
         if (str_starts_with($source, "\xEF\xBB\xBF")) {
-            $nodes[] = new TriviaNode(new SourceSpan($file, 0, 3, 1, 1, 1, 4), substr($source, 0, 3));
+            $nodes[] = new TriviaNode(new SourceSpan($file, 0, 3, 1, 1, 1, 4), substr($source, offset: 0, length: 3));
             $offset = 3;
             $column = 4;
         }
@@ -52,11 +52,11 @@ final readonly class MakefileParser
             $startLine = $line;
             $startColumn = $column;
             do {
-                $newline = strpos($source, "\n", $offset);
+                $newline = strpos($source, needle: "\n", offset: $offset);
                 $end = $newline === false ? $length : $newline + 1;
                 $physical = substr($source, $offset, $end - $offset);
-                $text = rtrim($physical, "\r\n");
-                $continued = ((strlen($text) - strlen(rtrim($text, '\\'))) % 2) === 1;
+                $text = rtrim($physical, characters: "\r\n");
+                $continued = ((strlen($text) - strlen(rtrim($text, characters: '\\'))) % 2) === 1;
                 $offset = $end;
                 if ($newline === false) {
                     $column += strlen($physical);
@@ -75,9 +75,9 @@ final readonly class MakefileParser
 
     private static function classify(SourceSpan $span, string $raw): Node
     {
-        $line = rtrim($raw, "\r\n");
+        $line = rtrim($raw, characters: "\r\n");
         return str_starts_with($raw, "\t")
-            ? new RecipeNode($span, $raw, substr($line, 1))
+            ? new RecipeNode($span, $raw, substr($line, offset: 1))
             : LineParser::parse($span, $raw, $line);
     }
 
@@ -167,7 +167,7 @@ final readonly class MakefileParser
                 $node = self::definition($node, $nodes, $index);
             }
             if ($node instanceof ConditionalDirectiveNode) {
-                if (in_array($node->directive, ['ifeq', 'ifneq', 'ifdef', 'ifndef'], true)) {
+                if (in_array($node->directive, ['ifeq', 'ifneq', 'ifdef', 'ifndef'], strict: true)) {
                     $stack[] = [$node];
                     continue;
                 }
@@ -187,7 +187,7 @@ final readonly class MakefileParser
             }
         }
         while ($stack !== []) {
-            $node = self::conditional(array_pop($stack), null);
+            $node = self::conditional(array_pop($stack), terminator: null);
             if ($stack === []) {
                 $result[] = $node;
             } else {

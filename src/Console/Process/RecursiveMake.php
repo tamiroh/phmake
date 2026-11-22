@@ -88,15 +88,15 @@ final class RecursiveMake
             if (
                 $directory === ''
                 || str_starts_with($directory, '-')
-                || in_array('..', explode('/', $directory), true)
+                || in_array('..', explode('/', $directory), strict: true)
                 || is_string($search) && $search !== '' && !str_starts_with($directory, '/')
             ) {
                 return null;
             }
-            $words = array_slice($words, 3);
+            $words = array_slice($words, offset: 3);
         }
         $program = self::program();
-        if (array_slice($words, 0, count($program)) !== $program) {
+        if (array_slice($words, offset: 0, length: count($program)) !== $program) {
             return null;
         }
         $arguments = [];
@@ -117,7 +117,7 @@ final class RecursiveMake
     public static function program(): array
     {
         $executable = Phar::running(false);
-        return $executable === '' ? [PHP_BINARY, dirname(__DIR__, 3) . '/phmake'] : [$executable];
+        return $executable === '' ? [PHP_BINARY, dirname(__DIR__, levels: 3) . '/phmake'] : [$executable];
     }
 
     /**
@@ -155,7 +155,8 @@ final class RecursiveMake
                 Signals::reset();
                 self::child($directory, $arguments, $environment);
             }
-            $observer($pid, null);
+            $exitCode = null;
+            $observer($pid, $exitCode);
             $stopped = false;
             $delay = 20;
             while (true) {
@@ -248,7 +249,7 @@ final class RecursiveMake
         $normalized = '';
         foreach (explode('/', $path) as $part) {
             if ($part === '..') {
-                $normalized = substr($normalized, 0, (int) strrpos($normalized, '/'));
+                $normalized = substr($normalized, offset: 0, length: (int) strrpos($normalized, needle: '/'));
             } elseif ($part !== '' && $part !== '.') {
                 $normalized .= '/' . $part;
             }
@@ -270,7 +271,7 @@ final class RecursiveMake
         for ($index = 0; $index < $length; $index++) {
             $character = $text[$index];
             if ($character === "'") {
-                $end = strpos($text, "'", $index + 1);
+                $end = strpos($text, needle: "'", offset: $index + 1);
                 if ($end === false) {
                     return null;
                 }

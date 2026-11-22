@@ -102,8 +102,8 @@ final class OutputBuffer
         if ($group === null || $group->paused) {
             return [];
         }
-        fseek($group->out, 0, SEEK_END);
-        fseek($group->err, 0, SEEK_END);
+        fseek($group->out, offset: 0, whence: SEEK_END);
+        fseek($group->err, offset: 0, whence: SEEK_END);
         return [1 => $group->out, 2 => $group->err];
     }
 
@@ -132,18 +132,18 @@ final class OutputBuffer
             return;
         }
         if ($this->options->mutex !== null && str_starts_with($this->options->mutex, 'fnm:')) {
-            $path = substr($this->options->mutex, 4);
+            $path = substr($this->options->mutex, offset: 4);
         } else {
-            $path = @tempnam(sys_get_temp_dir(), 'phmake-output-');
+            $path = @tempnam(sys_get_temp_dir(), prefix: 'phmake-output-');
             if ($path === false) {
                 $this->options->sync = 'none';
-                fwrite(STDERR, "phmake: warning: cannot create temporary file: suppressing output-sync.\n");
+                fwrite(STDERR, data: "phmake: warning: cannot create temporary file: suppressing output-sync.\n");
                 return;
             }
             $this->owned = $path;
             $this->options->mutex = 'fnm:' . $path;
         }
-        $lock = fopen($path, 'c+');
+        $lock = fopen($path, mode: 'c+');
         if ($lock === false) {
             throw new RuntimeException('Cannot open output synchronization lock');
         }
@@ -158,7 +158,7 @@ final class OutputBuffer
             return;
         }
         $stream = $error ? $group->err : $group->out;
-        fseek($stream, 0, SEEK_END);
+        fseek($stream, offset: 0, whence: SEEK_END);
         StreamOutput::write($stream, $text);
     }
 
@@ -185,10 +185,10 @@ final class OutputBuffer
         try {
             // Recursive makes share an open file description; refresh PHP's cached position.
             if (stream_get_meta_data(STDOUT)['seekable']) {
-                fseek(STDOUT, 0, SEEK_END);
+                fseek(STDOUT, offset: 0, whence: SEEK_END);
             }
             if (stream_get_meta_data(STDERR)['seekable']) {
-                fseek(STDERR, 0, SEEK_END);
+                fseek(STDERR, offset: 0, whence: SEEK_END);
             }
             if ($this->directory !== null) {
                 StreamOutput::write(
@@ -201,10 +201,10 @@ final class OutputBuffer
             if (!$group->combined) {
                 rewind($group->err);
                 StreamOutput::copy($group->err, STDERR);
-                ftruncate($group->err, 0);
+                ftruncate($group->err, size: 0);
                 rewind($group->err);
             }
-            ftruncate($group->out, 0);
+            ftruncate($group->out, size: 0);
             rewind($group->out);
             if ($this->directory !== null) {
                 StreamOutput::write(

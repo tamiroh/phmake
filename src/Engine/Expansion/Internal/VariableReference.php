@@ -75,14 +75,14 @@ final class VariableReference
             }
         }
         $reference = $expander->expand($reference, $expanding);
-        $colon = strpos($reference, ':');
+        $colon = strpos($reference, needle: ':');
         if ($colon === false || !str_contains(substr($reference, $colon + 1), '=')) {
             return self::value($expander, $reference, $expanding);
         }
-        [$from, $to] = explode('=', substr($reference, $colon + 1), 2);
+        [$from, $to] = explode('=', substr($reference, $colon + 1), limit: 2);
         $words = preg_split(
             '/\s+/',
-            trim(self::value($expander, substr($reference, 0, $colon), $expanding)),
+            trim(self::value($expander, substr($reference, offset: 0, length: $colon), $expanding)),
             -1,
             PREG_SPLIT_NO_EMPTY,
         );
@@ -92,7 +92,9 @@ final class VariableReference
                 $stem = new Pattern($from)->match($word);
                 $result[] = $stem === null ? $word : new Pattern($to)->substitute($stem);
             } else {
-                $result[] = str_ends_with($word, $from) ? substr($word, 0, strlen($word) - strlen($from)) . $to : $word;
+                $result[] = str_ends_with($word, $from)
+                    ? substr($word, offset: 0, length: strlen($word) - strlen($from)) . $to
+                    : $word;
             }
         }
         return implode(' ', $result);

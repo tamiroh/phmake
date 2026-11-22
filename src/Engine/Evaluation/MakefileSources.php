@@ -65,7 +65,10 @@ final class MakefileSources
         foreach ($this->read as $file) {
             if (
                 $file->text !== null
-                && (in_array($file->path, $this->main, true) || !$file->rebuild && in_array('-', $this->main, true))
+                && (
+                    in_array($file->path, $this->main, strict: true)
+                    || !$file->rebuild && in_array('-', $this->main, strict: true)
+                )
             ) {
                 return true;
             }
@@ -127,12 +130,12 @@ final class MakefileSources
                 $paths = [];
                 $defaults = [];
             } else {
-                $paths[] = rtrim($path, '/') === '' ? '/' : rtrim($path, '/');
+                $paths[] = rtrim($path, characters: '/') === '' ? '/' : rtrim($path, characters: '/');
             }
         }
         $result = [];
         foreach ([...$paths, ...$defaults] as $path) {
-            if ($this->filesystem->isDirectory($path) && !in_array($path, $result, true)) {
+            if ($this->filesystem->isDirectory($path) && !in_array($path, $result, strict: true)) {
                 $result[] = $path;
             }
         }

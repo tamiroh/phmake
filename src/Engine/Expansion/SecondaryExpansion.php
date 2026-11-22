@@ -49,13 +49,15 @@ final class SecondaryExpansion
             : preg_replace_callback(
                 '/\S+/',
                 static function (array $match): string {
-                    $percent = strpos($match[0], '%');
-                    return $percent === false ? $match[0] : substr_replace($match[0], '$*', $percent, 1);
+                    $percent = strpos($match[0], needle: '%');
+                    return $percent === false
+                        ? $match[0]
+                        : substr_replace($match[0], replace: '$*', offset: $percent, length: 1);
                 },
                 $expression->text,
             ) ?? $expression->text;
         return DependencySyntax::parse(
-            $expression->secondary ? $expander->expand(str_replace('\\:', ':', $text)) : $text,
+            $expression->secondary ? $expander->expand(str_replace('\\:', replace: ':', subject: $text)) : $text,
             $filesystem,
         );
     }
@@ -144,7 +146,7 @@ final class SecondaryExpansion
                 sequence: $part->sequence,
                 literal: new Pattern($word)->hasWildcard() ? [] : $part->sequence,
             );
-            $orderOnly = $orderOnly || DependencySyntax::delimiter($text, '|') !== null;
+            $orderOnly = $orderOnly || DependencySyntax::delimiter($text, delimiter: '|') !== null;
         }
     }
 
@@ -159,14 +161,14 @@ final class SecondaryExpansion
         $variables = AutomaticVariables::forRule(
             $name,
             new BuildRule($previous, stem: $expression->stem === null ? '' : $directory . $expression->stem),
-            null,
-            [],
-            $filesystem,
+            modifiedAt: null,
+            changed: [],
+            filesystem: $filesystem,
         );
         foreach (['?', '?D', '?F'] as $variable) {
             $variables[] = new Variable($variable, '', false, 'automatic');
         }
-        return $expander->withVariables($variables)->atSource($expression->source, true);
+        return $expander->withVariables($variables)->atSource($expression->source, secondary: true);
     }
 
     private static function substitute(string $text, string $stem): string

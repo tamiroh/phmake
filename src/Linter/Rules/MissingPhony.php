@@ -60,7 +60,7 @@ final readonly class MissingPhony implements Rule
      */
     private static function header(string $header): ?array
     {
-        $header = str_replace(["\\\r\n", "\\\n"], ' ', $header);
+        $header = str_replace(["\\\r\n", "\\\n"], replace: ' ', subject: $header);
         $text = '';
         $depth = 0;
         for ($index = 0; $index < strlen($header); $index++) {
@@ -76,17 +76,17 @@ final readonly class MissingPhony implements Rule
                 $text .= $character;
             }
         }
-        $colon = strpos($text, ':');
+        $colon = strpos($text, needle: ':');
         if ($colon === false) {
             return null;
         }
-        $targets = substr($text, 0, $colon);
-        $rest = ltrim(substr($text, $colon + 1), ':');
+        $targets = substr($text, offset: 0, length: $colon);
+        $rest = ltrim(substr($text, $colon + 1), characters: ':');
         // Variable targets are unknown, and a second colon makes a static pattern rule.
         if (str_contains($targets, '$') || str_contains($rest, ':')) {
             return null;
         }
-        return [self::words($targets, '&'), self::words($rest, '|')];
+        return [self::words($targets, separator: '&'), self::words($rest, separator: '|')];
     }
 
     /**
@@ -94,13 +94,13 @@ final readonly class MissingPhony implements Rule
      */
     private static function refersToTarget(string $name, array $lines): bool
     {
-        $mention = '/(?<![\w.\/-])' . preg_quote($name, '/') . '(?![\w.\/-])/';
+        $mention = '/(?<![\w.\/-])' . preg_quote($name, delimiter: '/') . '(?![\w.\/-])/';
         foreach ($lines as $line) {
             // An even run of dollars before "$@" escapes it for the shell.
             if (preg_match('/(?<!\$)(?:\$\$)*\$(?:@|[({]@)/', $line) === 1) {
                 return true;
             }
-            if (!in_array($name, self::CONVENTIONAL, true) && preg_match($mention, $line) === 1) {
+            if (!in_array($name, self::CONVENTIONAL, strict: true) && preg_match($mention, $line) === 1) {
                 return true;
             }
         }
@@ -155,7 +155,7 @@ final readonly class MissingPhony implements Rule
             if (!$child instanceof RuleNode || $header === null) {
                 return;
             }
-            if (in_array('.PHONY', $header[0], true)) {
+            if (in_array('.PHONY', $header[0], strict: true)) {
                 foreach ($header[1] as $name) {
                     if (str_contains($name, '$')) {
                         $dynamic = true;

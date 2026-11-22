@@ -92,9 +92,9 @@ final class DependencySyntax
 
     public static function parse(string $text, ?Filesystem $filesystem = null, string $directory = ''): Prerequisites
     {
-        $order = self::delimiter($text, '|');
+        $order = self::delimiter($text, delimiter: '|');
         return new Prerequisites(
-            self::paths($order === null ? $text : substr($text, 0, $order), $filesystem, $directory),
+            self::paths($order === null ? $text : substr($text, offset: 0, length: $order), $filesystem, $directory),
             $order === null ? [] : self::paths(substr($text, $order + 1), $filesystem, $directory),
         );
     }
@@ -155,7 +155,7 @@ final class DependencySyntax
         $result = [];
         foreach (self::words(ArchiveMember::expand($text)) as $word) {
             $word = FileName::normalize($directory . $word);
-            $paths = strpbrk($word, '*?[') === false ? [] : $filesystem?->matching($word) ?? [];
+            $paths = strpbrk($word, characters: '*?[') === false ? [] : $filesystem?->matching($word) ?? [];
             $result = [...$result, ...($paths === [] ? [$word] : $paths)];
         }
         return $result;
