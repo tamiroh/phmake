@@ -13,6 +13,7 @@ use Tamiroh\Phmake\Engine\Rule\Recipe;
 use Tamiroh\Phmake\Engine\Variable\Variable;
 
 use function array_filter;
+use function array_map;
 use function implode;
 use function in_array;
 

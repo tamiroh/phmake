@@ -13,6 +13,9 @@ use Tamiroh\Phmake\Engine\ReadFile;
 use Tamiroh\Phmake\Engine\Reporting\Diagnostics;
 use Tamiroh\Phmake\Engine\Rule\FileName;
 
+use function array_map;
+use function in_array;
+
 /**
  * Updates the makefiles that were read and decides whether make must restart.
  */

@@ -20,7 +20,7 @@ integrations = ["phpunit"]
 # Native timestamp access is deliberately isolated to this OS adapter.
 no-ffi = { exclude = ["src/Console/Filesystem/Internal/NativeFileTimes.php"] }
 prefer-early-continue = { enabled = false }
-ambiguous-function-call = { enabled = true }
+ambiguous-function-call = { enabled = true, level = "error" }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }
 too-many-methods = { exclude = ["tests/**", "src/Engine/Expansion/Functions.php", "src/Engine/IO/Filesystem.php", "src/Console/Filesystem/Filesystem.php"] }

@@ -10,6 +10,10 @@ use Tamiroh\Phmake\Console\Process\Internal\ModuleChannel;
 use Tamiroh\Phmake\Engine\IO\LoadedObjectApi;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 
+use function count;
+use function getenv;
+use function is_executable;
+
 /**
  * Transport native plugin calls without requiring PHP's FFI extension.
  */

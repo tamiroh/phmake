@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Engine\IO\Filesystem;
 use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 use Tamiroh\Phmake\Engine\Rule\BuildRule;
 
+use function array_map;
 use function array_unique;
 use function implode;
 use function in_array;

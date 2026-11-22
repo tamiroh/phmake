@@ -25,6 +25,7 @@ use function array_map;
 use function array_values;
 use function count;
 use function in_array;
+use function preg_replace_callback;
 use function str_contains;
 use function str_ends_with;
 use function str_starts_with;

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Engine\Rule;
 
+use function array_map;
+use function implode;
+use function preg_match;
+use function preg_replace_callback;
+
 /**
  * An archive member has its own timestamp but uses the archive as its recipe target.
  */

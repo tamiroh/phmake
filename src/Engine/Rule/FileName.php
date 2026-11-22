@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamiroh\Phmake\Engine\Rule;
 
+use function preg_replace;
+
 /**
  * A leading current-directory component does not distinguish make targets.
  *

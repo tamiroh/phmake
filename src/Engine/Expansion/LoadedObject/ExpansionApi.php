@@ -10,6 +10,9 @@ use Tamiroh\Phmake\Engine\Expansion\VariableExpander;
 use Tamiroh\Phmake\Engine\IO\LoadedObjectApi;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 
+use function preg_match;
+use function strlen;
+
 /**
  * Serve a loaded object's requests in the expansion context that called it, including nested eval.
  *

@@ -12,6 +12,9 @@ use Tamiroh\Phmake\Engine\IO\LoadedObjectApi;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use WeakMap;
 
+use function preg_match;
+use function str_starts_with;
+
 /**
  * Each object file has its own native host process, closed before rebuilding the file.
  */

@@ -35,6 +35,7 @@ use Tamiroh\Phmake\Engine\RunResult;
 use Tamiroh\Phmake\Engine\Search\RuleSearch;
 use Tamiroh\Phmake\Engine\Variable\VariableScope;
 
+use function array_map;
 use function array_unique;
 use function count;
 use function implode;

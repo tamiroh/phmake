@@ -35,6 +35,7 @@ use function getenv;
 use function implode;
 use function max;
 use function preg_match;
+use function rtrim;
 
 use const STDERR;
 

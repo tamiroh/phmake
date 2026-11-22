@@ -8,6 +8,19 @@ use Closure;
 use Tamiroh\Phmake\Console\Output\Output;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 
+use function count;
+use function fclose;
+use function fread;
+use function fwrite;
+use function getmypid;
+use function ord;
+use function pack;
+use function proc_close;
+use function proc_open;
+use function proc_terminate;
+use function strlen;
+use function substr;
+
 /**
  * Exchange length-prefixed messages with the module host process.
  *

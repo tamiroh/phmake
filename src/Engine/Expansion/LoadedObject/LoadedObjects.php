@@ -9,6 +9,14 @@ use Tamiroh\Phmake\Engine\IO\LoadableObjects;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Variable\Variable;
 
+use function array_slice;
+use function basename;
+use function count;
+use function explode;
+use function implode;
+use function preg_match;
+use function preg_replace;
+
 final class LoadedObjects
 {
     /** @var array<string, LoadedFunction> */

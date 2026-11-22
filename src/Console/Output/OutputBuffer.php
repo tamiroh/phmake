@@ -16,6 +16,7 @@ use function fopen;
 use function fseek;
 use function fstat;
 use function ftruncate;
+use function fwrite;
 use function getmypid;
 use function rewind;
 use function str_starts_with;

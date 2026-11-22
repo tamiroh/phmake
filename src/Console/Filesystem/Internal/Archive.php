@@ -7,7 +7,30 @@ namespace Tamiroh\Phmake\Console\Filesystem\Internal;
 use Tamiroh\Phmake\Engine\MakefileErrorException;
 use Tamiroh\Phmake\Engine\Rule\ArchiveMember;
 
+use function basename;
+use function error_get_last;
+use function explode;
+use function fclose;
+use function feof;
+use function file_exists;
+use function fnmatch;
+use function fopen;
+use function fread;
+use function fseek;
+use function ftell;
+use function fwrite;
 use function intdiv;
+use function preg_match;
+use function preg_replace;
+use function rtrim;
+use function sort;
+use function str_pad;
+use function str_starts_with;
+use function strlen;
+use function substr;
+use function time;
+use function trim;
+use function ucfirst;
 
 /**
  * Read Unix ar member headers, including GNU and BSD extended member names.

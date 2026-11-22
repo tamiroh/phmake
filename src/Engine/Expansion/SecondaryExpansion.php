@@ -19,6 +19,8 @@ use function ksort;
 use function preg_replace_callback;
 use function str_contains;
 use function str_replace;
+use function strpos;
+use function substr_replace;
 
 /**
  * @internal
