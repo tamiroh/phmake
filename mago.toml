@@ -24,11 +24,13 @@ no-else-clause = { enabled = false }
 no-boolean-flag-parameter = { enabled = false }
 no-nested-ternary = { enabled = false }
 no-isset = { enabled = false }
+no-multi-assignments = { enabled = false }
 ambiguous-function-call = { enabled = true, level = "error" }
 cyclomatic-complexity = { enabled = false }
 kan-defect = { enabled = false }
 too-many-methods = { exclude = ["tests/**", "src/Engine/Expansion/Functions.php", "src/Engine/IO/Filesystem.php", "src/Console/Filesystem/Filesystem.php"] }
 excessive-parameter-list = { enabled = false }
+excessive-nesting = { enabled = false }
 no-error-control-operator = { enabled = false }
 halstead = { enabled = false, effort-threshold = 7000 }
 
