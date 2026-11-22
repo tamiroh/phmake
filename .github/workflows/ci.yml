@@ -293,10 +293,7 @@ jobs:
         run: ./phmake --lint Makefile
 
       - name: Check the project Makefile formatting
-        run: |
-          cp Makefile "$RUNNER_TEMP/Makefile"
-          ./phmake --format "$RUNNER_TEMP/Makefile"
-          diff -u Makefile "$RUNNER_TEMP/Makefile"
+        run: ./phmake --format --check Makefile
 
   lint:
     runs-on: ubuntu-latest

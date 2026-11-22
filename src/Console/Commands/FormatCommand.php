@@ -9,6 +9,7 @@ use Tamiroh\Phmake\Console\Output\OutputWriteException;
 use Tamiroh\Phmake\Formatter\Formatter;
 use Tamiroh\Phmake\Parser\MakefileParser;
 
+use function array_shift;
 use function count;
 use function file_get_contents;
 use function file_put_contents;
@@ -21,6 +22,8 @@ use const STDERR;
 
 final readonly class FormatCommand
 {
+    private const string USAGE = "Usage: phmake --format [--check] [FILE]\n";
+
     /**
      * @param list<string> $arguments
      */
@@ -30,12 +33,20 @@ final readonly class FormatCommand
         try {
             $first = $arguments[0] ?? null;
             if (count($arguments) === 1 && ($first === '--help' || $first === '-h')) {
-                $output->write("Usage: phmake --format [FILE]\nFormat FILE in place without evaluating it.\n");
+                $output->write(
+                    self::USAGE
+                    . "Format FILE in place without evaluating it.\n"
+                    . "With --check, leave FILE unchanged and exit 1 if formatting is needed.\n",
+                );
                 return 0;
+            }
+            $check = $first === '--check';
+            if ($check) {
+                array_shift($arguments);
             }
             $file = $arguments[0] ?? $this->defaultFile();
             if (count($arguments) > 1 || str_starts_with($file, '-')) {
-                @fwrite(STDERR, "Usage: phmake --format [FILE]\n");
+                @fwrite(STDERR, self::USAGE);
                 return 2;
             }
             $source = @file_get_contents($file);
@@ -44,14 +55,21 @@ final readonly class FormatCommand
                 return 2;
             }
             $formatted = new Formatter()->format(MakefileParser::parse($source, $file));
-            if ($formatted !== $source && @file_put_contents($file, $formatted) !== strlen($formatted)) {
+            if ($formatted === $source) {
+                return 0;
+            }
+            if ($check) {
+                $output->write("Would reformat {$file}\n");
+                return 1;
+            }
+            if (@file_put_contents($file, $formatted) !== strlen($formatted)) {
                 @fwrite(STDERR, "phmake: cannot write '{$file}'\n");
                 return 2;
             }
             return 0;
         } catch (OutputWriteException $error) {
             @fwrite(STDERR, 'phmake: ' . $error->getMessage() . "\n");
-            return 1;
+            return 2;
         }
     }
 

@@ -18,7 +18,7 @@ final class Usage
     {
         return (
             "Usage: {$program} [options] [target ...]\n"
-            . "  --format [FILE]            Format a Makefile in place (standalone).\n"
+            . "  --format [--check] [FILE]  Format a Makefile or check its formatting.\n"
             . "  --lint [FILE]              Report problems in a Makefile (standalone).\n"
             . "  -f FILE, --file=FILE       Read FILE as a makefile (- for standard input).\n"
             . "  -C DIR, --directory=DIR    Change directory before reading makefiles.\n"
