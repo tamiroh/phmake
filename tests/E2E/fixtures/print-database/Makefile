@@ -9,3 +9,7 @@ first second directory:
 %.result: %.input
 	@echo $<
 all: LOCAL := $(VALUE)
+broken::
+	@false
+broken::
+	@true

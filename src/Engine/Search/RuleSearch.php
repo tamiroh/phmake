@@ -248,6 +248,7 @@ final class RuleSearch
         SearchState &$state,
         bool $compatibility,
     ): ?BuildRule {
+        $state->searched[$name] = true;
         DebugTrace::write(
             $scope->context->reporting,
             $this->output,

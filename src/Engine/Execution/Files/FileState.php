@@ -22,6 +22,9 @@ final class FileState
 
     public ?UpdateResult $result = null;
 
+    /** @var array<int, UpdateResult> */
+    public array $ruleResults = [];
+
     public bool $simulated = false;
 
     public function __construct(

@@ -17,6 +17,9 @@ final class SearchState
     public array $targets = [];
 
     /** @var array<string, true> */
+    public array $searched = [];
+
+    /** @var array<string, true> */
     public array $intermediates = [];
 
     /** @var array<string, true> attributes inherited from accepted implicit rules */

@@ -12,3 +12,25 @@ $ grep -E '^(all: LOCAL|%.result:)|^[[:space:]]+@echo' dump | LC_ALL=C sort
 	@echo ran
 %.result: %.input
 all: LOCAL := after
+$ touch sample.input && ./phmake -rRqp sample.result > dump; echo "exit $?"; awk '/^sample.result:/{show=1} !NF{show=0} show && (/^sample.result:/ || /search has|pattern stem|been updated|Needs to be updated|@echo/)' dump
+exit 1
+sample.result: sample.input
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'sample'
+#  File has been updated.
+#  Needs to be updated (-q is set).
+	@echo $<
+$ ./phmake -rRp sample.result > dump && awk '/^sample.result:/{show=1} !NF{show=0} show && /Successfully updated/' dump
+#  Successfully updated.
+$ ./phmake -rRp broken > dump 2>/dev/null; echo "exit $?"; awk '/^broken::/{show=1} !NF{show=0} show && (/^broken::/ || /File has|Failed to be updated/)' dump
+exit 2
+broken::
+#  File has been updated.
+#  Failed to be updated.
+broken::
+#  File has not been updated.
+$ ./phmake -rRp absent > dump 2>/dev/null; echo "exit $?"; awk '/^absent:/{show=1} !NF{show=0} show && (/^absent:/ || /search has|File has/)' dump
+exit 2
+absent:
+#  Implicit rule search has been done.
+#  File has not been updated.

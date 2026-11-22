@@ -136,7 +136,7 @@ final readonly class MakeCommand
                 $result = $engine->run($sources->read, $this->commandLine->targets, $restarts);
             } finally {
                 if ($configuration->options->printDatabase) {
-                    $this->output->write(DatabasePrinter::format($makefile, $context));
+                    $this->output->write(DatabasePrinter::format($makefile, $context, $build));
                 }
             }
             if ($result === RunResult::NeedsReevaluation) {

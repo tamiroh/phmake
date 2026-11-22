@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamiroh\Phmake\Engine\Execution;
 
 use Closure;
+use Generator;
 use Tamiroh\Phmake\Engine\Execution\Files\BuildFiles;
 use Tamiroh\Phmake\Engine\Execution\Internal\MissingTargetException;
 use Tamiroh\Phmake\Engine\Execution\Internal\PrerequisiteChain;
@@ -45,6 +46,11 @@ use function spl_object_id;
  */
 final class Build
 {
+    /** @var Generator<int, array{string, BuildRule, bool, ?UpdateResult}> */
+    public Generator $databaseFiles {
+        get => $this->state->databaseFiles($this->makefile, $this->search->state);
+    }
+
     private readonly BuildState $state;
 
     private readonly ExtraPrerequisites $extra;
@@ -768,7 +774,7 @@ final class Build
                 $changed = false;
                 $needsUpdate = false;
                 $failure = null;
-                foreach ($target->rules as $rule) {
+                foreach ($target->rules as $index => $rule) {
                     try {
                         $updated = $this->buildRule(
                             $target,
@@ -781,6 +787,13 @@ final class Build
                         );
                     } catch (MissingTargetException|CommandFailedException $error) {
                         if (!$this->options->keepGoing && !$this->state->remaking) {
+                            if ($error instanceof CommandFailedException && $error->target === $target->name) {
+                                $file = $this->files->states->record($name);
+                                $file->result = new UpdateResult(failure: $error);
+                                if ($rule->doubleColon) {
+                                    $file->ruleResults[$index] = $file->result;
+                                }
+                            }
                             if ($this->parallel() && $error instanceof CommandFailedException) {
                                 $this->state->failure($error, $this->output);
                                 if ($this->jobs->running > 0 && !$this->state->waiting) {
@@ -791,6 +804,9 @@ final class Build
                             throw $error;
                         }
                         $updated = $this->state->failure($error, $this->output);
+                    }
+                    if ($rule->doubleColon && !$deferred) {
+                        $this->files->states->record($name)->ruleResults[$index] = $updated;
                     }
                     if ($updated->failure !== null) {
                         if (!$this->options->keepGoing && !$this->state->remaking) {
