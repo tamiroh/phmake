@@ -299,6 +299,30 @@ jobs:
             done
           } >> "$GITHUB_STEP_SUMMARY"
 
+  dogfood:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@2.40.0
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
+
+      - name: Lint the project Makefile
+        run: ./phmake --lint Makefile
+
+      - name: Check the project Makefile formatting
+        run: |
+          cp Makefile "$RUNNER_TEMP/Makefile"
+          ./phmake --format "$RUNNER_TEMP/Makefile"
+          diff -u Makefile "$RUNNER_TEMP/Makefile"
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -313,15 +337,6 @@ jobs:
 
       - name: Install dependencies
         run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
-
-      - name: Lint the project Makefile
-        run: ./phmake --lint Makefile
-
-      - name: Check the project Makefile formatting
-        run: |
-          cp Makefile "$RUNNER_TEMP/Makefile"
-          ./phmake --format "$RUNNER_TEMP/Makefile"
-          diff -u Makefile "$RUNNER_TEMP/Makefile"
 
       - name: Run lint
         run: make lint
