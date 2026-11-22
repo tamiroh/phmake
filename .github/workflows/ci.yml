@@ -314,6 +314,15 @@ jobs:
       - name: Install dependencies
         run: composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
 
+      - name: Lint the project Makefile
+        run: ./phmake --lint Makefile
+
+      - name: Check the project Makefile formatting
+        run: |
+          cp Makefile "$RUNNER_TEMP/Makefile"
+          ./phmake --format "$RUNNER_TEMP/Makefile"
+          diff -u Makefile "$RUNNER_TEMP/Makefile"
+
       - name: Run lint
         run: make lint
 
