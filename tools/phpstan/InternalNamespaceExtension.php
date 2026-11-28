@@ -34,20 +34,20 @@ final readonly class InternalNamespaceExtension implements RestrictedClassNameUs
         if (!str_starts_with($normalized, 'tamiroh\\phmake\\')) {
             return null;
         }
-        $boundary = strrpos($normalized, '\\internal\\');
+        $boundary = strrpos($normalized, needle: '\\internal\\');
         if ($boundary === false) {
             return null;
         }
-        $owner = substr($normalized, 0, $boundary);
+        $owner = substr($normalized, offset: 0, length: $boundary);
         $namespace = strtolower($scope->getNamespace() ?? '');
         if ($namespace === $owner || str_starts_with($namespace, $owner . '\\')) {
             return null;
         }
-        $displayOwner = substr($name, 0, $boundary);
+        $displayOwner = substr($name, offset: 0, length: $boundary);
         return RestrictedUsage::create(
             $location->createMessage("internal class {$name}")
                 . " Only {$displayOwner} and its subnamespaces may use it.",
-            'architecture.internalNamespace',
+            identifier: 'architecture.internalNamespace',
         );
     }
 }

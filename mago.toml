@@ -2,7 +2,7 @@ php-version = "8.5.0"
 
 [source]
 workspace = "."
-paths = ["phmake", "src/", "tests/"]
+paths = ["phmake", "src/", "tests/", "tools/phpstan/"]
 includes = ["vendor"]
 excludes = []
 
@@ -35,6 +35,7 @@ no-error-control-operator = { enabled = false }
 halstead = { enabled = false, effort-threshold = 7000 }
 
 [analyzer]
+excludes = ["tools/phpstan/**"]
 plugins = []
 find-unused-definitions = true
 find-unused-expressions = true
@@ -54,6 +55,19 @@ register-super-globals = true
 # Evaluation consumes syntax; Parser remains independent of Engine.
 [guard]
 mode = "perimeter"
+
+[[guard.perimeter.restrictions]]
+dependency = """**\\{\
+    fwrite,fputs,fprintf,printf,vprintf,var_dump,error_log,\
+    exec,system,passthru,shell_exec,popen,proc_*,pcntl_*,posix_*,\
+    fopen,opendir,scandir,glob,file,file_*,is_file,is_dir,is_link,is_readable,\
+    is_writable,filemtime,stat,lstat,clearstatcache,touch,unlink,rename,\
+    copy,mkdir,rmdir,readlink,realpath,tempnam,tmpfile,getcwd,\
+    chdir,getenv,putenv,sleep,\
+    usleep,time_nanosleep,time,microtime,hrtime,\
+    rand,mt_rand,random_int,random_bytes}"""
+kinds = ["function"]
+allow-from = ['Tamiroh\Phmake\Console\', 'Tamiroh\Phmake\Tests\']
 
 [[guard.perimeter.rules]]
 namespace = "@global"
@@ -90,3 +104,7 @@ permit = ["@self", "@native", 'Tamiroh\Phmake\Engine\**', 'Tamiroh\Phmake\Parser
 [[guard.perimeter.rules]]
 namespace = 'Tamiroh\Phmake\Tests\'
 permit = ["@all"]
+
+[[guard.perimeter.rules]]
+namespace = 'Tamiroh\Phmake\PHPStan\'
+permit = ["@self", "@native", 'PHPStan\**']
